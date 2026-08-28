@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理者 | ビジネス道場</title>
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="icon" href="../assets/icon-48.png" type="image/png" sizes="48x48">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" sizes="180x180">
+  <script>
+    (function () {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "../config/version.js?_=" + Date.now(), false);
+        xhr.send(null);
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+          (0, eval)(xhr.responseText);
+        }
+      } catch (e) { /* fall through */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="../css/base.css" id="css-base">
+  <link rel="stylesheet" href="../css/header.css" id="css-header">
+  <link rel="stylesheet" href="../css/admin.css" id="css-admin">
+  <script>
+    (function () {
+      var v = typeof APP_VERSION !== "undefined" ? APP_VERSION : Date.now();
+      ["css-base", "css-header", "css-admin"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var base = el.getAttribute("href").split("?")[0];
+        el.href = base + "?v=" + encodeURIComponent(v);
+      });
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="site-title">ビジネス<span>道場</span> <small class="admin-subtitle">管理者</small></h1>
+      <nav class="site-nav">
+        <a class="nav-btn" href="../index.html">クイズへ戻る</a>
+        <button class="nav-btn auth-btn hidden" id="admin-logout-btn">ログアウト</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container admin-reports-page">
+    <section id="reports-gate" class="card">
+      <h2 class="card-title">管理者ログイン</h2>
+      <p class="modal-note" id="gate-message">管理者としてログインしてください。</p>
+      <div class="login-form">
+        <input type="email" id="admin-email" class="text-input" placeholder="管理者メールアドレス" autocomplete="username">
+        <input type="password" id="admin-password" class="text-input" placeholder="パスワード" autocomplete="current-password">
+        <button type="button" class="primary-btn" id="admin-login-btn">ログイン</button>
+      </div>
+      <p class="setting-hint">
+        管理者: <code>yoshida.hayato0126@gmail.com</code>（
+        <code>config/admin-config.js</code> と <code>firestore.rules</code> の
+        <code>isReportAdmin()</code> で設定）
+      </p>
+    </section>
+
+    <section id="reports-main" class="hidden">
+      <div class="card">
+        <div class="admin-head-row">
+          <h2 class="card-title">管理者ダッシュボード</h2>
+          <p class="modal-note admin-user-line">ログイン中: <span id="admin-user"></span></p>
+        </div>
+        <nav class="admin-tabs" aria-label="管理者メニュー">
+          <button type="button" class="admin-tab is-active" data-tab="analytics">利用状況</button>
+          <button type="button" class="admin-tab" data-tab="reports">問題指摘</button>
+          <button type="button" class="admin-tab" data-tab="inquiries">お問い合わせ</button>
+          <button type="button" class="admin-tab" data-tab="premium">プレミアム要望</button>
+        </nav>
+      </div>
+
+      <div id="panel-analytics" class="admin-panel">
+        <div id="analytics-summary" class="analytics-summary"></div>
+        <div class="card">
+          <h3 class="card-subtitle">ユーザ別（回答数順）</h3>
+          <p class="analytics-note">ログインユーザと未ログイン端末を分けて表示します。未ログインは端末ごとの匿名IDで集計しています。</p>
+          <div id="analytics-users" class="analytics-table-wrap"></div>
+        </div>
+        <div class="card">
+          <h3 class="card-subtitle">問題別（正答率が低い順・5回以上）</h3>
+          <p class="analytics-note">みんなの正答率（questionStats）から集計。ログイン有無は問いません。</p>
+          <div class="reports-filters" style="margin-bottom:12px">
+            <label class="reports-filter">
+              <span>科目</span>
+              <select id="analytics-q-subject" class="text-input">
+                <option value="all">すべて</option>
+              </select>
+            </label>
+            <label class="reports-filter">
+              <span>方式</span>
+              <select id="analytics-q-mode" class="text-input">
+                <option value="all">すべて</option>
+                <option value="choice">選択</option>
+                <option value="input">記述</option>
+              </select>
+            </label>
+          </div>
+          <div id="analytics-questions" class="analytics-table-wrap"></div>
+        </div>
+      </div>
+
+      <div id="panel-reports" class="admin-panel hidden">
+        <div class="reports-toolbar card">
+          <div class="reports-toolbar-text">
+            <strong>問題指摘</strong>
+            <span id="reports-open-count" class="reports-open-count">未対応 —</span>
+          </div>
+          <div class="reports-toolbar-actions">
+            <button type="button" class="secondary-btn" id="reports-copy-open" disabled>
+              未対応を一括コピー
+            </button>
+            <button type="button" class="primary-btn" id="reports-resolve-all-open" disabled>
+              未対応を一括で対応済にする
+            </button>
+          </div>
+        </div>
+        <div class="reports-filters card">
+          <label class="reports-filter">
+            <span>科目</span>
+            <select id="reports-filter-subject" class="text-input">
+              <option value="all">すべて</option>
+            </select>
+          </label>
+          <label class="reports-filter">
+            <span>指摘元</span>
+            <select id="reports-filter-reporter" class="text-input">
+              <option value="all">すべて</option>
+              <option value="admin">管理者からの指摘</option>
+              <option value="others">管理者以外</option>
+            </select>
+          </label>
+          <label class="reports-filter">
+            <span>状態</span>
+            <select id="reports-filter-status" class="text-input">
+              <option value="all">すべて</option>
+              <option value="open">未対応</option>
+              <option value="resolved">対応済</option>
+              <option value="dismissed">却下</option>
+            </select>
+          </label>
+        </div>
+        <p id="reports-bulk-status" class="reports-bulk-status hidden" role="status"></p>
+        <p id="reports-copy-status" class="reports-bulk-status hidden" role="status"></p>
+        <div id="reports-list"></div>
+      </div>
+
+      <div id="panel-inquiries" class="admin-panel hidden">
+        <div class="reports-toolbar card">
+          <div class="reports-toolbar-text">
+            <strong>サイト全体のお問い合わせ</strong>
+            <span id="inquiries-open-count" class="reports-open-count">未対応 —</span>
+          </div>
+        </div>
+        <div class="reports-filters card">
+          <label class="reports-filter">
+            <span>状態</span>
+            <select id="inquiries-filter-status" class="text-input">
+              <option value="all">すべて</option>
+              <option value="open">未対応</option>
+              <option value="resolved">対応済</option>
+              <option value="dismissed">却下</option>
+            </select>
+          </label>
+          <label class="reports-filter">
+            <span>種別</span>
+            <select id="inquiries-filter-category" class="text-input">
+              <option value="all">すべて</option>
+            </select>
+          </label>
+        </div>
+        <div id="inquiries-list"></div>
+      </div>
+
+      <div id="panel-premium" class="admin-panel hidden">
+        <div class="reports-toolbar card">
+          <div class="reports-toolbar-text">
+            <strong>プレミアムパック要望</strong>
+            <span id="premium-open-count" class="reports-open-count">未対応 —</span>
+          </div>
+        </div>
+        <div class="reports-filters card">
+          <label class="reports-filter">
+            <span>状態</span>
+            <select id="premium-filter-status" class="text-input">
+              <option value="all">すべて</option>
+              <option value="open">未対応</option>
+              <option value="resolved">対応済</option>
+              <option value="dismissed">却下</option>
+            </select>
+          </label>
+          <label class="reports-filter">
+            <span>種別</span>
+            <select id="premium-filter-type" class="text-input">
+              <option value="all">すべて</option>
+            </select>
+          </label>
+        </div>
+        <div id="premium-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+  <script>
+    (function () {
+      var CORE = [
+        "../config/firebase-config.js",
+        "../subjects/registry.js",
+        "../config/admin-config.js",
+        "../js/dom-util.js",
+        "../js/admin-reports.js",
+      ];
+
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement("script");
+          s.src = src;
+          s.async = false;
+          s.onload = function () { resolve(); };
+          s.onerror = function () { reject(new Error("スクリプト読込失敗: " + src)); };
+          document.head.appendChild(s);
+        });
+      }
+
+      async function boot() {
+        var v = typeof APP_VERSION !== "undefined" ? APP_VERSION : String(Date.now());
+        for (var i = 0; i < CORE.length; i++) {
+          await loadScript(CORE[i] + "?v=" + encodeURIComponent(v));
+        }
+      }
+
+      boot().catch(function (err) {
+        console.error(err);
+      });
+    })();
+  </script>
+</body>
+</html>

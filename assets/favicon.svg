@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SAP道場">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="40" x2="448" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0a6ed1"/>
+      <stop offset="1" stop-color="#0854a0"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="120" y1="100" x2="400" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd54a"/>
+      <stop offset="1" stop-color="#f5a623"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- 道場の輪（円） -->
+  <circle cx="256" cy="248" r="168" fill="none" stroke="url(#ring)" stroke-width="28"/>
+  <circle cx="256" cy="248" r="132" fill="none" stroke="#ffffff" stroke-width="10" opacity="0.35"/>
+  <!-- 「道」 -->
+  <text
+    x="256"
+    y="268"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, Yu Gothic UI, Noto Sans JP, sans-serif"
+    font-size="200"
+    font-weight="800"
+    fill="#ffffff"
+  >道</text>
+  <!-- 下の帯 -->
+  <rect x="118" y="420" width="276" height="36" rx="18" fill="#ffd54a"/>
+</svg>

@@ -1,0 +1,136 @@
+/* プレミアム：問題追加・要望デスク */
+
+body.premium-screen-active {
+  background:
+    radial-gradient(1200px 480px at 10% -10%, rgba(11, 94, 215, 0.18), transparent 60%),
+    radial-gradient(900px 420px at 100% 0%, rgba(255, 213, 74, 0.16), transparent 55%),
+    linear-gradient(180deg, #f3f7fc 0%, #eef3f9 48%, #f7f8fa 100%);
+}
+
+.premium-stage {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 28px;
+}
+
+.premium-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 28px 24px 26px;
+  color: #f8fbff;
+  background:
+    linear-gradient(145deg, #062844 0%, #0b4f96 48%, #0a6ed1 100%);
+  box-shadow: 0 16px 36px rgba(8, 42, 84, 0.28);
+  margin-bottom: 16px;
+}
+
+.premium-hero::after {
+  content: "";
+  position: absolute;
+  right: -40px;
+  top: -50px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 213, 74, 0.35), transparent 70%);
+  pointer-events: none;
+}
+
+.premium-hero-badge {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #062844;
+  background: #ffd54a;
+  border-radius: 999px;
+  padding: 5px 10px;
+  margin-bottom: 12px;
+}
+
+.premium-hero-title {
+  margin: 0 0 10px;
+  font-size: clamp(22px, 4vw, 30px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+
+.premium-hero-lead {
+  margin: 0;
+  max-width: 36em;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(248, 251, 255, 0.9);
+}
+
+.premium-perks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.premium-perk {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(11, 94, 215, 0.12);
+  border-radius: 14px;
+  padding: 12px 12px 14px;
+  box-shadow: 0 6px 16px rgba(15, 40, 70, 0.05);
+}
+
+.premium-perk-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #0a4f96;
+  margin-bottom: 6px;
+}
+
+.premium-perk-text {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.premium-form-card {
+  border: 1px solid rgba(11, 94, 215, 0.14);
+  box-shadow: 0 12px 28px rgba(15, 40, 70, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), #ffffff);
+}
+
+.premium-form-title {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0b2a4a;
+}
+
+.premium-request-textarea {
+  min-height: 180px;
+}
+
+.premium-submit-btn {
+  background: linear-gradient(135deg, #0b4f96, #0a6ed1);
+  border: none;
+  box-shadow: 0 8px 18px rgba(10, 110, 209, 0.28);
+}
+
+.premium-submit-btn:hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 720px) {
+  .premium-perks {
+    grid-template-columns: 1fr;
+  }
+
+  .premium-hero {
+    padding: 22px 18px 20px;
+  }
+}

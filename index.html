@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="index,follow">
+  <base href="/">
+  <title>ビジネス道場</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="icon" href="assets/icon-48.png" type="image/png" sizes="48x48">
+  <link rel="icon" href="assets/icon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
+  <script>
+    // /sap など科目パス、または前回選択科目があるときはピッカーを見せずローディングから始める
+    (function () {
+      try {
+        var known = {
+          sap: 1,
+          "windows-shortcuts": 1,
+          "biz-career": 1
+        };
+        var seg = (location.pathname || "/").split("/").filter(Boolean)[0];
+        var fromPath = seg && known[seg];
+        var fromStore = localStorage.getItem("biz_dojo_selected_subject");
+        if (fromPath || fromStore) {
+          document.documentElement.classList.add("boot-resume-subject");
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+  <script>
+    // iOS が version.js を握ると更新判定が壊れるため、常に bust 付きで同期取得する
+    (function () {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "config/version.js?_=" + Date.now(), false);
+        xhr.send(null);
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+          (0, eval)(xhr.responseText);
+        }
+      } catch (e) { /* fall through */ }
+    })();
+  </script>
+  <!-- 初回は科目ピッカー＋ヘッダ分のみ。quiz/stats/browsers/admin は遅延 -->
+  <link rel="stylesheet" href="css/base.css" data-app-css="css/base.css" id="css-base">
+  <link rel="stylesheet" href="css/header.css" data-app-css="css/header.css" id="css-header">
+  <link rel="stylesheet" href="css/subjects.css" data-app-css="css/subjects.css" id="css-subjects">
+  <script>
+    (function () {
+      var v = typeof APP_VERSION !== "undefined" ? APP_VERSION : Date.now();
+      ["css-base", "css-header", "css-subjects"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var base = el.getAttribute("href").split("?")[0];
+        el.href = base + "?v=" + encodeURIComponent(v);
+      });
+      ["assets/favicon.svg", "assets/icon-48.png", "assets/icon-32.png", "assets/apple-touch-icon.png"].forEach(function (path) {
+        document.querySelectorAll('link[href^="' + path + '"]').forEach(function (el) {
+          el.href = path + "?v=" + encodeURIComponent(v);
+        });
+      });
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="site-title" id="site-title">ビジネス<span>道場</span></h1>
+      <nav class="site-nav" id="site-nav">
+        <button class="nav-btn active" data-nav="home" id="nav-home">ホーム</button>
+        <button class="nav-btn hidden" data-nav="tcodes" id="nav-tcodes">Tコード</button>
+        <button class="nav-btn hidden" data-nav="syntax" id="nav-syntax">構文</button>
+        <button class="nav-btn hidden" data-nav="shortcuts" id="nav-shortcuts">ショートカット一覧</button>
+        <button class="nav-btn auth-btn hidden" id="login-btn">ログイン</button>
+        <div class="nav-divider hidden" id="nav-divider" aria-hidden="true"></div>
+        <button
+          class="nav-btn nav-btn-util nav-btn-premium is-locked"
+          data-nav="premium"
+          id="nav-premium"
+          aria-disabled="true"
+          title="プレミアムパック限定"
+        >
+          <span class="nav-lock" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          </span>
+          問題追加要望（プレミアムパック限定）
+        </button>
+        <button class="nav-btn nav-btn-util" data-nav="contact" id="nav-contact">お問い合わせ</button>
+        <button class="nav-btn nav-btn-switch hidden" data-nav="subjects" id="nav-change-subject">科目を変更</button>
+        <button class="nav-btn nav-btn-logout auth-btn hidden" id="logout-btn">ログアウト</button>
+      </nav>
+      <div class="header-actions">
+        <button class="header-icon-btn" data-nav="stats" id="nav-stats" title="成績・段位" aria-label="成績・段位">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V8"/></svg>
+        </button>
+        <button class="header-icon-btn" data-nav="mypage" id="nav-mypage" title="マイページ" aria-label="マイページ">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/></svg>
+        </button>
+        <button class="bell-btn" id="bell-btn" title="問題の更新履歴" aria-label="問題の更新履歴">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="bell-dot hidden" id="bell-dot"></span>
+        </button>
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="メニューを開く" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+    <div class="bell-panel hidden" id="bell-panel">
+      <div class="bell-panel-title">問題の更新履歴</div>
+      <div id="changelog-list"></div>
+      <p class="bell-panel-note">問題が追加されると昇段条件の基準（累計正解数・習得率など）が変わるため、段位が一時的に下がることがあります。成績データは保持されます。</p>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ===== 科目選択 ===== -->
+    <section id="screen-subjects" class="screen">
+      <div class="card subject-pick-card">
+        <h2 class="card-title">科目を選ぶ</h2>
+        <p class="setting-hint" id="subjects-pick-hint">同じ形のクイズで、さまざまなビジネス学習ができます。科目ごとの成績は分かれます。各問題集は<strong>1日20問まで無料</strong>です。</p>
+        <p class="site-notice site-notice-quality">
+          問題は AI を活用して作成しているため、<strong>誤りや不自然な表現が残ることがあります</strong>。
+          おかしいと思ったときは回答後の指摘やお問い合わせで教えてください。フィードバックが多いほど、問題の精度を上げやすくなります。
+        </p>
+        <div class="subject-list" id="subject-list"></div>
+        <div class="billing-footer">
+          <p class="site-notice site-notice-support" id="subjects-support-notice">
+            問題作成の AI 費用とサーバ運用費をまかなうため、<strong>購読でのご協力</strong>をお願いしています。プレミアムパック（全問題集＋要望提出）もご検討ください。
+          </p>
+          <p class="site-notice site-notice-thanks hidden" id="subjects-thanks-notice">
+            プレミアムパックをご利用いただきありがとうございます。全問題集が無制限です。ご要望はメニューの「問題追加要望（プレミアムパック限定）」から送れます。
+          </p>
+          <button type="button" class="link-btn hidden" id="billing-manage-btn">契約・お支払いの管理</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ホーム（出題設定）画面 ===== -->
+    <section id="screen-home" class="screen hidden">
+      <div class="subject-bar">
+        <span class="subject-bar-label">科目: <strong id="current-subject-label">—</strong></span>
+      </div>
+      <div class="rank-banner card">
+        <div class="rank-badge" id="home-rank-badge">10級</div>
+        <div class="rank-info">
+          <div class="rank-label">現在の段位</div>
+          <div class="rank-alias" id="home-rank-alias"></div>
+          <div class="rank-progress-text" id="home-rank-progress"></div>
+          <div class="progress-bar small"><div class="progress-fill" id="home-rank-bar"></div></div>
+          <div class="home-rank-hint">累計成績の詳細は「成績・段位」で確認できます</div>
+        </div>
+      </div>
+      <div class="save-mode-note" id="save-mode-note"></div>
+      <div class="home-note">科目を選ぶと説明が表示されます。</div>
+
+      <div class="card settings-card">
+        <h2 class="card-title">出題設定</h2>
+
+        <div class="setting-row">
+          <div class="setting-group half">
+            <div class="setting-label">出題数</div>
+            <select id="count-select" class="select">
+              <option value="10" selected>10問</option>
+              <option value="20">20問</option>
+              <option value="30">30問</option>
+              <option value="all">全問</option>
+            </select>
+          </div>
+        </div>
+
+        <details class="settings-details" id="advanced-settings">
+          <summary>詳細オプション（カテゴリ・モジュール・優先度 など）</summary>
+
+          <div class="setting-group">
+            <div class="setting-label">出題カテゴリ</div>
+            <div class="chip-group" id="category-chips"></div>
+            <div class="setting-hint">件数は、モジュール・優先度・出題対象・解答方式に合う問題数です。</div>
+          </div>
+
+          <div class="setting-group" id="module-group">
+            <div class="setting-label">モジュール・分野</div>
+            <div class="chip-group" id="module-chips"></div>
+            <div class="chip-actions" id="module-actions">
+              <button class="link-btn" id="module-all">すべて選択</button>
+              <button class="link-btn" id="module-none">すべて解除</button>
+            </div>
+            <div class="setting-hint">件数は、カテゴリ・優先度・出題対象・解答方式に合う問題数です。</div>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">暗記優先度</div>
+            <div class="chip-group" id="priority-chips"></div>
+            <div class="setting-hint">※ 優先度は実務での出現頻度・つまずきやすさに基づく目安です。</div>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">出題対象</div>
+            <select class="select" id="pool-mode-select">
+              <option value="unmastered" selected>未習得の問題のみ（2回連続で正解した問題は出題しない）</option>
+              <option value="wrong">間違えたことのある問題のみ</option>
+              <option value="all">すべての問題</option>
+            </select>
+            <div class="setting-hint">※ 選択式の習得と記述式の習得は別です。「両方出題」ではTコードを選択式枠・記述式枠で二重に数え、各枠で未習得のものだけ出します。</div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-group half" id="direction-group">
+              <div class="setting-label">出題形式</div>
+              <select id="direction-select" class="select">
+                <option value="mixed">ランダム（両方向）</option>
+                <option value="code2name">コード → 機能を答える</option>
+                <option value="name2code">機能 → コードを答える</option>
+              </select>
+              <div class="setting-hint" id="direction-hint"></div>
+            </div>
+            <div class="setting-group half" id="answer-mode-group">
+              <div class="setting-label">解答方式</div>
+              <select id="answer-mode-select" class="select">
+                <option value="choice">選択式（6択）</option>
+                <option value="input">記述式（Tコードを入力）</option>
+                <option value="both" selected>両方出題（選択式＋記述式）</option>
+              </select>
+              <div class="setting-hint" id="answer-mode-hint"></div>
+            </div>
+          </div>
+        </details>
+
+        <div class="start-area">
+          <div class="pool-count" id="pool-count"></div>
+          <button class="primary-btn" id="start-btn">クイズを開始する</button>
+        </div>
+      </div>
+
+      <div class="card home-plan-card hidden" id="home-plan-card">
+        <h2 class="card-title" id="home-plan-title">プラン・無料枠</h2>
+        <div class="free-quota-note" id="free-quota-note"></div>
+        <div class="plan-paywall-notice hidden" id="plan-paywall-notice">
+          <p id="plan-paywall-text">本日の無料回答枠（20問）に達しました。翌日になると枠がリセットされます。</p>
+        </div>
+        <div class="home-billing-actions" id="home-billing-actions">
+          <button type="button" class="secondary-btn" id="home-buy-subject-btn">この問題集を購入</button>
+          <button type="button" class="secondary-btn" id="home-buy-pack-btn">プレミアムパック</button>
+          <button type="button" class="link-btn hidden" id="home-billing-manage-btn">契約・お支払いの管理</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== クイズ画面 ===== -->
+    <section id="screen-quiz" class="screen hidden">
+      <div class="quiz-header">
+        <div class="quiz-progress-text" id="quiz-progress-text"></div>
+        <div class="quiz-score" id="quiz-score"></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="quiz-progress-bar"></div></div>
+
+      <div class="card question-card">
+        <div class="question-meta" id="question-meta"></div>
+        <div class="question-text" id="question-text"></div>
+        <div class="cloze-prompt hidden" id="cloze-prompt"></div>
+        <div class="reorder-board hidden" id="reorder-board"></div>
+        <div class="abbr-progress hidden" id="abbr-progress"></div>
+        <div class="choices" id="choices"></div>
+        <div class="judgment-multi-actions hidden" id="judgment-multi-actions">
+          <p class="judgment-multi-hint">該当する記述をすべて選んでから確定してください（複数選択可）</p>
+          <button class="primary-btn" id="judgment-submit-btn">回答を確定する</button>
+        </div>
+        <div class="input-area hidden" id="input-area">
+          <input type="text" id="answer-input" class="answer-input" placeholder="Tコードを入力（例: VA01）" autocomplete="off" spellcheck="false">
+          <button class="primary-btn" id="answer-submit-btn">回答する</button>
+        </div>
+      </div>
+
+      <div class="card feedback-card hidden" id="feedback-card">
+        <div class="feedback-result" id="feedback-result"></div>
+        <div class="feedback-answer" id="feedback-answer"></div>
+        <div class="feedback-explanation" id="feedback-explanation"></div>
+        <div class="question-global-rate hidden" id="question-global-rate"></div>
+        <details class="question-report" id="question-report">
+          <summary>この問題について指摘する</summary>
+          <p class="question-report-hint">
+            問題は AI で作成しているため誤りが残ることがあります。指摘を送っていただけるほど精度を上げやすくなります（複数選択可）。
+          </p>
+          <div class="report-reason-list" id="question-report-reasons" role="group" aria-label="指摘の種類"></div>
+          <textarea id="question-report-message" class="text-input report-textarea" rows="3" maxlength="2000" placeholder="補足（任意。例: 委託在庫は入庫時点では買掛計上されないはず…）"></textarea>
+          <div class="question-report-actions">
+            <button type="button" class="secondary-btn" id="question-report-submit">指摘を送信</button>
+            <span class="question-report-status hidden" id="question-report-status"></span>
+          </div>
+        </details>
+        <button class="primary-btn" id="next-btn">次の問題へ</button>
+      </div>
+
+      <div class="quiz-footer">
+        <button class="link-btn" id="quit-btn">中断してホームへ戻る</button>
+      </div>
+    </section>
+
+    <!-- ===== 結果画面 ===== -->
+    <section id="screen-result" class="screen hidden">
+      <div class="card result-card">
+        <h2 class="card-title">結果</h2>
+        <div class="result-score-area">
+          <div class="result-circle">
+            <div class="result-percent" id="result-percent"></div>
+            <div class="result-fraction" id="result-fraction"></div>
+          </div>
+          <div class="result-message" id="result-message"></div>
+        </div>
+        <div class="rank-up-banner hidden" id="rank-up-banner"></div>
+        <div class="xp-area">
+          <div class="xp-badge" id="xp-badge">10級</div>
+          <div class="xp-info">
+            <div class="xp-label" id="xp-label"></div>
+            <div class="progress-bar xp-bar"><div class="progress-fill xp-fill" id="xp-fill"></div></div>
+            <div class="xp-text" id="xp-text"></div>
+          </div>
+        </div>
+        <div class="mastered-area">
+          <div class="mastered-badge" id="mastered-badge">0</div>
+          <div class="mastered-info">
+            <div class="mastered-label">選択式習得（2回連続正解）</div>
+            <div class="progress-bar mastered-bar"><div class="progress-fill mastered-fill" id="mastered-fill"></div></div>
+            <div class="mastered-text" id="mastered-text"></div>
+            <div class="mastered-new-list hidden" id="mastered-new-list"></div>
+          </div>
+        </div>
+        <div class="mastered-area is-input hidden" id="input-mastered-area">
+          <div class="mastered-badge" id="input-mastered-badge">0</div>
+          <div class="mastered-info">
+            <div class="mastered-label">記述式習得（Tコード・2回連続正解）</div>
+            <div class="progress-bar mastered-bar"><div class="progress-fill mastered-fill" id="input-mastered-fill"></div></div>
+            <div class="mastered-text" id="input-mastered-text"></div>
+            <div class="mastered-new-list hidden" id="input-mastered-new-list"></div>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="primary-btn" id="retry-btn">同じ設定でもう一度</button>
+          <button class="secondary-btn" id="result-home-btn">ホームへ戻る</button>
+        </div>
+      </div>
+
+      <div class="card hidden" id="wrong-list-card">
+        <h2 class="card-title">間違えた問題の復習 <span class="wrong-count-badge hidden" id="wrong-count-badge"></span></h2>
+        <div id="wrong-list"></div>
+      </div>
+    </section>
+
+    <!-- ===== マイページ ===== -->
+    <section id="screen-mypage" class="screen hidden">
+      <div class="card mypage-hero">
+        <h2 class="card-title">マイページ</h2>
+        <p class="setting-hint" id="mypage-account">アカウント情報を読み込み中…</p>
+        <div class="mypage-hero-actions">
+          <button type="button" class="secondary-btn hidden" id="mypage-login-btn">ログイン</button>
+          <button type="button" class="link-btn hidden" id="mypage-portal-btn">契約・お支払いの管理（解約・カード変更）</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">購読状況</h2>
+        <p class="setting-hint" id="mypage-billing-hint">単品またはプレミアムパックの状態です。購入・解約はここから進められます。プレミアムパックを購入すると、単品の購読は自動で解約されます。</p>
+        <p class="site-notice site-notice-support" id="mypage-support-notice">
+          購読料は、問題作成の AI 費用とサーバ運用の維持に充てています。継続学習のご支援をいただけると助かります。
+        </p>
+        <p class="site-notice site-notice-thanks hidden" id="mypage-thanks-notice">
+          プレミアムパックをご利用いただきありがとうございます。ご支援のおかげで問題の改善と運用を続けられます。
+        </p>
+        <div id="mypage-billing" class="mypage-billing">
+          <p class="subject-list-loading">読み込み中…</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">学習履歴（全科目）</h2>
+        <p class="setting-hint">全科目の回答を日ごとに合算しています。色が濃い日ほど解いた問題数が多いです。</p>
+        <div id="mypage-activity-cal"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">全科目の成績</h2>
+        <p class="setting-hint">各問題集の段位・正答率・習得状況の一覧です。詳細分析は科目を開いて「成績・段位」から確認できます。</p>
+        <div id="mypage-stats" class="mypage-stats">
+          <p class="subject-list-loading">読み込み中…</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== プレミアム：問題追加要望 ===== -->
+    <section id="screen-premium" class="screen hidden">
+      <div class="premium-stage">
+        <div class="premium-hero">
+          <div class="premium-hero-badge">Premium Member</div>
+          <h2 class="premium-hero-title">問題追加・要望デスク</h2>
+          <p class="premium-hero-lead">
+            プレミアムパック会員限定の優先窓口です。学習中に感じた不足や、追加したい題材をそのまま送れます。
+          </p>
+        </div>
+
+        <div class="premium-perks" aria-label="特典の説明">
+          <div class="premium-perk">
+            <span class="premium-perk-label">優先確認</span>
+            <span class="premium-perk-text">機能要望は通常より優先して目を通します</span>
+          </div>
+          <div class="premium-perk">
+            <span class="premium-perk-label">たたき台OK</span>
+            <span class="premium-perk-text">メモや箇条書きで十分。問題形式は不要です</span>
+          </div>
+          <div class="premium-perk">
+            <span class="premium-perk-label">科目提案</span>
+            <span class="premium-perk-text">新しい科目のアイデアも受け付けます（要検討）</span>
+          </div>
+        </div>
+
+        <div class="card premium-form-card">
+          <h3 class="premium-form-title">リクエストを送る</h3>
+          <label class="setting-label" for="premium-request-type">種別</label>
+          <select id="premium-request-type" class="text-input contact-select" aria-label="要望の種別"></select>
+          <p class="setting-hint" id="premium-request-type-hint"></p>
+          <label class="setting-label" for="premium-request-subject">関連する科目（任意）</label>
+          <select id="premium-request-subject" class="text-input contact-select" aria-label="関連科目">
+            <option value="">指定なし</option>
+          </select>
+          <label class="setting-label" for="premium-request-message">内容</label>
+          <textarea
+            id="premium-request-message"
+            class="text-input report-textarea premium-request-textarea"
+            rows="9"
+            maxlength="12000"
+            placeholder="例）・在庫移動の手順をもっと細かく&#10;・このマニュアルの要点をクイズにしてほしい&#10;・○○画面の操作を追加してほしい"
+          ></textarea>
+          <div class="question-report-actions contact-actions">
+            <button type="button" class="primary-btn premium-submit-btn" id="premium-request-submit">優先送信する</button>
+            <span class="question-report-status hidden" id="premium-request-status"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== お問い合わせ（サイト全体） ===== -->
+    <section id="screen-contact" class="screen hidden">
+      <div class="card">
+        <h2 class="card-title">お問い合わせ</h2>
+        <p class="setting-hint">
+          サイト全体についてのご意見・不具合についてフィードバックください。
+          個別の問題内容の指摘は、クイズ回答後の「この問題について指摘する」から送れます。
+        </p>
+        <p class="site-notice site-notice-quality">
+          問題は AI を活用して作成しているため、誤りや分かりにくい箇所が残ることがあります。
+          ご指摘・ご意見をいただけるほど、問題集全体の精度を上げていけます。
+        </p>
+        <label class="setting-label" for="contact-category">種別</label>
+        <select id="contact-category" class="text-input contact-select" aria-label="問い合わせ種別"></select>
+        <label class="setting-label" for="contact-message">内容</label>
+        <textarea id="contact-message" class="text-input report-textarea" rows="6" maxlength="2500" placeholder="できるだけ具体的にご記入ください（必須・5文字以上）"></textarea>
+        <div class="question-report-actions contact-actions">
+          <button type="button" class="primary-btn" id="contact-submit">送信する</button>
+          <span class="question-report-status hidden" id="contact-status"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 成績・段位画面 ===== -->
+    <section id="screen-stats" class="screen hidden">
+      <div class="rank-banner card">
+        <div class="rank-badge" id="stats-rank-badge">10級</div>
+        <div class="rank-info">
+          <div class="rank-label">現在の段位</div>
+          <div class="rank-alias" id="stats-rank-alias"></div>
+          <div class="rank-progress-text" id="stats-rank-progress"></div>
+          <div class="progress-bar small"><div class="progress-fill" id="stats-rank-bar"></div></div>
+        </div>
+      </div>
+      <p class="rank-update-note">段位は全問題数に連動しています。問題追加後は昇段条件の基準が変わり、一時的に下がることがあります。</p>
+
+      <div class="card">
+        <h2 class="card-title">累計成績</h2>
+        <div class="stats-user hidden" id="stats-user"></div>
+        <div class="stats-summary" id="stats-summary"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">学習履歴</h2>
+        <p class="setting-hint stats-chart-hint">色が濃い日ほど、その日に解いた問題数が多いです。この端末の日付で記録します（導入前の回答は日付に載りません）。</p>
+        <div id="stats-activity-cal"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">選択式・直近正答率の推移</h2>
+        <p class="setting-hint stats-chart-hint">各時点での「直近500問」の正答率の変化です。</p>
+        <div id="stats-acc-trend"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">記述式・直近正答率の推移</h2>
+        <p class="setting-hint stats-chart-hint">各時点での「直近100問」の正答率の変化です。</p>
+        <div id="stats-input-acc-trend" class="is-input-trend"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">カテゴリ別の習得率・正答率</h2>
+        <p class="setting-hint stats-chart-hint">習得率＝2回連続正解の割合（未挑戦も分母に含む。Tコード記述は記述式習得）。正答率＝累計正解÷累計回答。</p>
+        <div id="stats-by-category" class="dual-stat-grid"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">優先度別の習得率・正答率</h2>
+        <p class="setting-hint stats-chart-hint">習得率＝選択式で2回連続正解した問題の割合（未挑戦も分母に含む）。正答率＝その優先度の累計正解÷累計回答。</p>
+        <div id="stats-by-priority"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">モジュール別の習得率・正答率</h2>
+        <p class="setting-hint stats-chart-hint">習得率＝選択式で2回連続正解の割合（未挑戦も分母に含む）。正答率が全体平均より低い分野は棒を赤系で表示します。</p>
+        <div id="stats-by-module" class="dual-stat-grid is-modules"></div>
+      </div>
+
+      <div class="card stats-review-card">
+        <h2 class="card-title">復習の優先順位</h2>
+        <p class="setting-hint stats-chart-hint">不正解の多さ・正答率の低さ・★優先度・未習得を総合して並べています。</p>
+        <div id="stats-review-top"></div>
+        <div class="stats-review-actions">
+          <button class="primary-btn hidden" id="stats-review-quiz-btn">優先問題で復習クイズ</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Tコード確認画面 ===== -->
+    <section id="screen-tcodes" class="screen hidden">
+      <div class="card tcode-search-card">
+        <h2 class="card-title">Tコード確認</h2>
+        <p class="setting-hint stats-chart-hint">
+          日本語でやりたいこと（例: 「在庫を確認したい」「受注を登録」）や、Tコードそのもの（例: VA01）で検索できます。問題に無い周辺Tコードも含みます。
+        </p>
+        <div class="tcode-search-row">
+          <input
+            type="search"
+            id="tcode-search"
+            class="tcode-search-input"
+            placeholder="例: 在庫 / 入庫 / VA01 / 請求書照合 / 権限エラー"
+            autocomplete="off"
+            enterkeyhint="search"
+          />
+          <button type="button" class="secondary-btn tcode-clear-btn" id="tcode-search-clear">クリア</button>
+        </div>
+        <div class="tcode-meta">
+          <span id="tcode-result-count"></span>
+        </div>
+        <div class="chip-group tcode-module-chips" id="tcode-module-chips"></div>
+      </div>
+      <div class="tcode-list" id="tcode-list"></div>
+    </section>
+
+    <section id="screen-syntax" class="screen hidden">
+      <div class="card tcode-search-card">
+        <h2 class="card-title">ABAP構文確認</h2>
+        <p class="setting-hint stats-chart-hint">
+          「こういうことをしたい」で検索すると、目的に合う構文が一覧で出ます。例: 変数を宣言 / 余り / デバッグ / MESSAGE / LOOP
+        </p>
+        <div class="tcode-search-row">
+          <input
+            type="search"
+            id="syntax-search"
+            class="tcode-search-input"
+            placeholder="例: 変数を宣言 / 空かどうか / INTO TABLE / /h / Changing"
+            autocomplete="off"
+            enterkeyhint="search"
+          />
+          <button type="button" class="secondary-btn tcode-clear-btn" id="syntax-search-clear">クリア</button>
+        </div>
+        <div class="tcode-meta">
+          <span id="syntax-result-count"></span>
+        </div>
+        <div class="chip-group tcode-module-chips" id="syntax-group-chips"></div>
+      </div>
+      <div class="tcode-list" id="syntax-list"></div>
+    </section>
+
+    <!-- ===== ショートカット一覧 ===== -->
+    <section id="screen-shortcuts" class="screen hidden">
+      <div class="card tcode-search-card">
+        <h2 class="card-title">ショートカット一覧</h2>
+        <p class="setting-hint stats-chart-hint">
+          やりたいこと（例: 「コピー」「ミュート」「枠の固定」）や、キーそのもの（例: Ctrl+C / Win+1 / Alt+H+V+V）で検索できます。
+        </p>
+        <div class="tcode-search-row">
+          <input
+            type="search"
+            id="shortcut-search"
+            class="tcode-search-input"
+            placeholder="例: コピー / ミュート / Win+1 / Alt+H+V+V / タブ"
+            autocomplete="off"
+            enterkeyhint="search"
+          />
+          <button type="button" class="secondary-btn tcode-clear-btn" id="shortcut-search-clear">クリア</button>
+        </div>
+        <div class="tcode-meta">
+          <span id="shortcut-result-count"></span>
+        </div>
+        <div class="chip-group tcode-module-chips" id="shortcut-module-chips"></div>
+      </div>
+      <div class="tcode-list" id="shortcut-list"></div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <nav class="site-footer-links" aria-label="法務情報">
+      <a href="/legal/terms.html">利用規約</a>
+      <a href="/legal/privacy.html">プライバシーポリシー</a>
+      <a href="/legal/commerce.html">特定商取引法に基づく表記</a>
+    </nav>
+    <p class="site-footer-copy">ビジネス道場</p>
+  </footer>
+
+  <!-- ===== アップデート通知（スマホ向け） ===== -->
+  <div class="modal-overlay update-overlay hidden" id="update-modal">
+    <div class="modal card update-modal">
+      <div class="update-modal-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-3-6.7"/>
+          <polyline points="21 3 21 9 15 9"/>
+        </svg>
+      </div>
+      <h2 class="update-modal-title">新しいバージョンがあります</h2>
+      <p class="update-modal-lead">問題の追加や機能改善が反映されています。</p>
+      <div class="update-modal-changelog hidden" id="update-modal-changelog"></div>
+      <p class="update-modal-rank-note">問題が追加されると昇段条件の基準（累計正解数・習得率など）が変わるため、最新版を読み込んだあと段位が一時的に下がることがあります。成績データは消えません。</p>
+      <button type="button" class="primary-btn update-reload-btn" id="update-reload-btn">
+        <span class="update-reload-label">最新版を読み込む</span>
+      </button>
+      <button type="button" class="link-btn update-skip-btn" id="update-skip-btn">あとで更新する（このまま使う）</button>
+      <p class="update-modal-hint">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        成績データは消えません
+      </p>
+      <p class="update-modal-error hidden" id="update-modal-error"></p>
+    </div>
+  </div>
+
+      <!-- ===== 科目読込オーバーレイ ===== -->
+  <div class="subject-loading-overlay hidden" id="subject-loading-overlay" aria-live="polite" aria-busy="true">
+    <div class="subject-loading-card">
+      <div class="subject-loading-ring" aria-hidden="true"></div>
+      <p class="subject-loading-title" id="subject-loading-title">問題を読み込んでいます</p>
+      <p class="subject-loading-sub" id="subject-loading-sub">しばらくお待ちください</p>
+      <div class="subject-loading-bars" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+      <!-- ===== ログインモーダル ===== -->
+  <div class="modal-overlay hidden" id="login-modal">
+    <div class="modal card">
+      <button class="modal-close" id="login-modal-close" aria-label="閉じる">×</button>
+      <h2 class="card-title">ログイン</h2>
+      <p class="modal-note">ログインすると成績がアカウントに保存され、どの端末でも引き継げます。</p>
+      <div class="login-form">
+        <form id="login-form" novalidate>
+          <input type="email" id="login-email" class="text-input" placeholder="メールアドレス" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <input type="password" id="login-password" class="text-input" placeholder="パスワード（6文字以上）" autocomplete="current-password">
+          <div class="login-message hidden" id="login-message"></div>
+          <button type="submit" class="primary-btn" id="email-login-btn">ログイン</button>
+        </form>
+        <button type="button" class="secondary-btn" id="email-register-btn">新規登録（上のメールとパスワードで作成）</button>
+        <button type="button" class="link-btn" id="password-reset-btn">パスワードを忘れた場合（再設定メールを送る）</button>
+      </div>
+      <div class="login-divider"><span>または</span></div>
+      <button class="secondary-btn google-login-btn" id="google-login-btn">Googleでログイン</button>
+    </div>
+  </div>
+
+  <!-- Firebase（Functions SDK は課金・移行時に遅延読込） -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+  <script>
+    (function () {
+      var CORE = [
+        "config/pricing.js",
+        "subjects/registry.js",
+        "config/firebase-config.js",
+        "js/script-loader.js",
+        "js/app-bridge.js",
+        "js/storage.js",
+        "js/entitlement.js",
+        "js/billing.js",
+        "js/subject-loader.js",
+        "js/app-state.js",
+        "js/dom-util.js",
+        "js/rank.js",
+        "js/subject-config.js",
+        "js/screens-nav.js",
+        "js/billing-ui.js",
+        "js/screens-subjects.js",
+        "js/app-chrome.js",
+        "js/auth.js",
+        "js/app.js",
+      ];
+
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement("script");
+          s.src = src;
+          s.async = false;
+          s.onload = function () { resolve(); };
+          s.onerror = function () { reject(new Error("スクリプト読込失敗: " + src)); };
+          document.head.appendChild(s);
+        });
+      }
+
+      async function boot() {
+        var v = typeof APP_VERSION !== "undefined" ? APP_VERSION : String(Date.now());
+        for (var i = 0; i < CORE.length; i++) {
+          await loadScript(CORE[i] + "?v=" + encodeURIComponent(v));
+        }
+        if (typeof AppScripts !== "undefined") {
+          AppScripts.markLoadedMany(CORE);
+          AppScripts.markCssLoadedMany([
+            "css/base.css",
+            "css/header.css",
+            "css/subjects.css",
+          ]);
+        }
+      }
+
+      boot().catch(function (err) {
+        console.error(err);
+        var el = document.createElement("p");
+        el.style.cssText = "padding:1.5rem;color:#b91c1c;font-family:sans-serif;";
+        el.textContent = "アプリの読込に失敗しました。再読み込みしてください。";
+        document.body.appendChild(el);
+      });
+    })();
+  </script>
+</body>
+</html>

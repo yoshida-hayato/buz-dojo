@@ -1,0 +1,9 @@
+node_modules/
+functions/node_modules/
+.firebase/
+.cursor/
+.DS_Store
+*.log
+.venv-agent/
+__pycache__/
+*.pyc

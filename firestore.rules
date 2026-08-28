@@ -1,0 +1,220 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || isReportAdmin());
+      allow write: if request.auth != null && request.auth.uid == uid;
+
+      match /subjects/{subjectId} {
+        allow read: if request.auth != null
+          && (request.auth.uid == uid || isReportAdmin());
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      match /private/{docId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if request.auth != null
+          && request.auth.uid == uid
+          && docId != "entitlements";
+      }
+    }
+
+    function isReportAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "yoshida.hayato0126@gmail.com";
+    }
+
+    function validReportCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          "questionId", "message", "status", "createdAt"
+        ])
+        && data.questionId is string
+        && data.questionId.size() > 0
+        && data.message is string
+        && data.message.size() >= 1
+        && data.message.size() <= 2500
+        && data.status == "open";
+    }
+
+    match /questionReports/{reportId} {
+      allow create: if validReportCreate();
+      allow read, update: if isReportAdmin();
+      allow delete: if false;
+    }
+
+    function validInquiryCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          "message", "status", "createdAt"
+        ])
+        && data.message is string
+        && data.message.size() >= 5
+        && data.message.size() <= 2500
+        && data.status == "open";
+    }
+
+    match /siteInquiries/{inquiryId} {
+      allow create: if validInquiryCreate();
+      allow read, update: if isReportAdmin();
+      allow delete: if false;
+    }
+
+    function userHasPremiumPack() {
+      return request.auth != null
+        && (
+          isReportAdmin()
+          || (
+            exists(/databases/$(database)/documents/users/$(request.auth.uid)/private/entitlements)
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)/private/entitlements).data.pack == true
+          )
+        );
+    }
+
+    function validPremiumRequestCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          "type", "message", "status", "createdAt", "userId"
+        ])
+        && data.userId == request.auth.uid
+        && data.type in ["feature", "content", "subject"]
+        && data.message is string
+        && data.message.size() >= 10
+        && data.message.size() <= 12000
+        && data.status == "open";
+    }
+
+    match /premiumRequests/{requestId} {
+      allow create: if request.auth != null
+        && userHasPremiumPack()
+        && validPremiumRequestCreate();
+      allow read, update: if isReportAdmin();
+      allow delete: if false;
+    }
+
+    match /anonUsers/{anonId} {
+      allow read: if isReportAdmin();
+      allow create, update: if anonId.matches('a_[a-z0-9_]+')
+        && anonId.size() >= 16
+        && anonId.size() <= 64
+        && request.resource.data.isAnonymous == true;
+      allow delete: if false;
+
+      match /subjects/{subjectId} {
+        allow read: if isReportAdmin();
+        allow create, update: if anonId.matches('a_[a-z0-9_]+')
+          && anonId.size() >= 16
+          && anonId.size() <= 64
+          && request.resource.data.isAnonymous == true
+          && request.resource.data.subjectId == subjectId
+          && request.resource.data.answered is int
+          && request.resource.data.answered >= 0
+          && request.resource.data.answered <= 1000000;
+        allow delete: if false;
+      }
+    }
+
+    // 移行メタ（Admin SDK のみ書込）
+    match /system/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 選択式 attempts/correct と記述式 inputAttempts/inputCorrect を別集計で許可
+    function qStatKeysOk(data) {
+      return data.keys().hasOnly(["attempts", "correct"])
+        || data.keys().hasOnly(["inputAttempts", "inputCorrect"])
+        || data.keys().hasOnly(["attempts", "correct", "inputAttempts", "inputCorrect"])
+        || data.keys().hasOnly(["attempts", "correct", "subjectId"])
+        || data.keys().hasOnly(["inputAttempts", "inputCorrect", "subjectId"])
+        || data.keys().hasOnly(["attempts", "correct", "inputAttempts", "inputCorrect", "subjectId"]);
+    }
+
+    function qStatChoiceOk(data) {
+      return !("attempts" in data)
+        || (
+          data.attempts is int
+          && data.correct is int
+          && data.correct >= 0
+          && data.correct <= data.attempts
+          && data.attempts >= 0
+          && data.attempts <= 1000000
+        );
+    }
+
+    function qStatInputOk(data) {
+      return !("inputAttempts" in data)
+        || (
+          data.inputAttempts is int
+          && data.inputCorrect is int
+          && data.inputCorrect >= 0
+          && data.inputCorrect <= data.inputAttempts
+          && data.inputAttempts >= 0
+          && data.inputAttempts <= 1000000
+        );
+    }
+
+    function qStatShapeOk(data) {
+      return qStatKeysOk(data) && qStatChoiceOk(data) && qStatInputOk(data);
+    }
+
+    function qStatCreate() {
+      let data = request.resource.data;
+      let subjectOk = !("subjectId" in data) || (data.subjectId is string && data.subjectId.size() <= 80);
+      let choiceCreate = data.keys().hasOnly(["attempts", "correct"])
+        || data.keys().hasOnly(["attempts", "correct", "subjectId"]);
+      let inputCreate = data.keys().hasOnly(["inputAttempts", "inputCorrect"])
+        || data.keys().hasOnly(["inputAttempts", "inputCorrect", "subjectId"]);
+      let choiceVals = data.attempts == 1 && data.correct in [0, 1];
+      let inputVals = data.inputAttempts == 1 && data.inputCorrect in [0, 1];
+      return qStatShapeOk(data)
+        && subjectOk
+        && ((choiceCreate && choiceVals) || (inputCreate && inputVals));
+    }
+
+    function qStatChoiceBump() {
+      let beforeA = resource.data.get("attempts", 0);
+      let beforeC = resource.data.get("correct", 0);
+      let afterA = request.resource.data.get("attempts", 0);
+      let afterC = request.resource.data.get("correct", 0);
+      let beforeIA = resource.data.get("inputAttempts", 0);
+      let beforeIC = resource.data.get("inputCorrect", 0);
+      let afterIA = request.resource.data.get("inputAttempts", 0);
+      let afterIC = request.resource.data.get("inputCorrect", 0);
+      return afterA == beforeA + 1
+        && afterC >= beforeC
+        && afterC <= beforeC + 1
+        && afterIA == beforeIA
+        && afterIC == beforeIC;
+    }
+
+    function qStatInputBump() {
+      let beforeA = resource.data.get("attempts", 0);
+      let beforeC = resource.data.get("correct", 0);
+      let afterA = request.resource.data.get("attempts", 0);
+      let afterC = request.resource.data.get("correct", 0);
+      let beforeIA = resource.data.get("inputAttempts", 0);
+      let beforeIC = resource.data.get("inputCorrect", 0);
+      let afterIA = request.resource.data.get("inputAttempts", 0);
+      let afterIC = request.resource.data.get("inputCorrect", 0);
+      return afterIA == beforeIA + 1
+        && afterIC >= beforeIC
+        && afterIC <= beforeIC + 1
+        && afterA == beforeA
+        && afterC == beforeC;
+    }
+
+    function qStatUpdate() {
+      return qStatShapeOk(request.resource.data)
+        && (qStatChoiceBump() || qStatInputBump());
+    }
+
+    match /questionStats/{questionId} {
+      allow read: if true;
+      allow create: if qStatCreate();
+      allow update: if qStatUpdate();
+      allow delete: if false;
+    }
+  }
+}

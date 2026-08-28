@@ -1,0 +1,277 @@
+/* admin.css — auto-split from style.css */
+/* ===== 管理者：問題指摘 ===== */
+.admin-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-sub);
+  margin-left: 8px;
+}
+.admin-reports-page { max-width: 900px; }
+.reports-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.reports-toolbar-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.reports-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.reports-open-count {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.reports-bulk-status {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin: 0 0 12px;
+}
+.reports-loading, .reports-empty, .reports-error {
+  color: var(--text-sub);
+  padding: 16px 0;
+}
+
+.report-card { margin-bottom: 14px; }
+.report-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.report-status {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+}
+.report-status.status-open { background: #fff3cd; color: #856404; }
+.report-status.status-resolved { background: #d4edda; color: #155724; }
+.report-status.status-dismissed { background: #e2e3e5; color: #383d41; }
+.report-date { font-size: 12px; color: var(--text-sub); }
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-bottom: 8px;
+}
+.report-q {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.report-answers {
+  font-size: 13px;
+  background: #f7f9fc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.report-answers .ra-label {
+  display: inline-block;
+  min-width: 5em;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.report-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.report-reason-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sap-blue-dark);
+  background: var(--sap-blue-light);
+  border-radius: 999px;
+  padding: 3px 10px;
+  line-height: 1.35;
+}
+.report-message {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+}
+.analytics-q-table .aq-id {
+  margin-bottom: 4px;
+}
+.analytics-q-table .aq-text,
+.analytics-q-table .aq-answer {
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 280px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.analytics-q-table .aq-answer {
+  color: var(--text-sub);
+}
+.report-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-sub);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.report-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* ===== 管理者：利用状況 ===== */
+.admin-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.admin-user-line { margin: 0; }
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.admin-tab {
+  border: 1px solid var(--border);
+  background: #f7f9fc;
+  color: var(--text-sub);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admin-tab.is-active {
+  background: var(--sap-blue);
+  border-color: var(--sap-blue);
+  color: #fff;
+}
+.admin-panel { margin-top: 14px; }
+
+.reports-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+  align-items: flex-end;
+}
+.reports-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  flex: 1;
+}
+.reports-filter span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.reports-filter .text-input {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.report-admin-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e8f0fe;
+  color: #1a56db;
+}
+.contact-select {
+  margin-bottom: 12px;
+}
+.contact-actions {
+  margin-top: 12px;
+}
+.setting-label {
+  display: block;
+}
+.card-subtitle {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+.analytics-note {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin: 0 0 12px;
+}
+.analytics-summary { margin-bottom: 14px; }
+.analytics-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.analytics-stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.analytics-stat-label {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+.analytics-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--sap-blue-dark);
+  line-height: 1.2;
+}
+.analytics-stat-sub {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.analytics-table-wrap { overflow-x: auto; }
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.analytics-table th,
+.analytics-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+.analytics-table th {
+  font-size: 11px;
+  color: var(--text-sub);
+  font-weight: 700;
+  background: #f7f9fc;
+}
+.analytics-table tbody tr:hover { background: #fafbfd; }
+.analytics-table code {
+  font-size: 12px;
+  background: #eef2f7;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+

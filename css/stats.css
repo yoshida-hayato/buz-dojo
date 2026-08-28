@@ -1,0 +1,563 @@
+/* stats.css — auto-split from style.css */
+/* ===== 成績画面 ===== */
+.stats-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+@media (min-width: 561px) {
+  .stats-summary { grid-template-columns: repeat(3, 1fr); }
+}
+.stat-box { background: #f7f9fc; border-radius: 10px; padding: 14px; text-align: center; }
+.stat-box .sb-value { font-size: 24px; font-weight: 800; color: var(--sap-blue-dark); }
+.stat-box .sb-label { font-size: 12px; color: var(--text-sub); }
+
+/* ===== 学習履歴カレンダー ===== */
+.cal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cal-view-switch {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  background: #f7f9fc;
+}
+.cal-view-btn {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.cal-view-btn.is-on {
+  background: var(--sap-blue-light);
+  color: var(--sap-blue-dark);
+  font-weight: 700;
+}
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.cal-icon-btn,
+.cal-today-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  border-radius: 8px;
+  min-height: 32px;
+}
+.cal-icon-btn { width: 36px; font-size: 22px; line-height: 1; }
+.cal-today-btn { padding: 4px 10px; font-size: 13px; }
+.cal-icon-btn:hover,
+.cal-today-btn:hover { background: var(--sap-blue-light); color: var(--sap-blue-dark); }
+.cal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+.cal-period { font-size: 13px; color: var(--text-sub); }
+.cal-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+.cal-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.cal-heat-0 { background: color-mix(in srgb, var(--border) 70%, #fff); }
+.cal-heat-1 { background: color-mix(in srgb, var(--sap-blue) 22%, #fff); }
+.cal-heat-2 { background: color-mix(in srgb, var(--sap-blue) 42%, #fff); }
+.cal-heat-3 { background: color-mix(in srgb, var(--sap-blue) 68%, #fff); color: #fff; }
+.cal-heat-4 { background: var(--sap-blue-dark); color: #fff; }
+.cal-weekdays {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 4px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+.cal-weekdays-7 { grid-template-columns: repeat(7, 1fr); }
+.cal-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-cell {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+  padding: 6px;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.08s ease;
+}
+.cal-cell:active { transform: scale(0.98); }
+.cal-cell-week { min-height: 72px; }
+.cal-cell.is-today { border-color: color-mix(in srgb, var(--sap-blue) 45%, transparent); }
+.cal-cell.is-selected {
+  border-color: var(--sap-blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sap-blue) 28%, transparent);
+}
+.cal-cell.is-outside { opacity: 0.38; }
+.cal-wd { font-size: 10px; color: var(--text-sub); }
+.cal-num { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cal-count { margin-top: auto; font-size: 10px; color: var(--text-sub); }
+.cal-heat-3 .cal-count,
+.cal-heat-4 .cal-count,
+.cal-heat-3 .cal-wd,
+.cal-heat-4 .cal-wd { color: rgba(255,255,255,0.85); }
+.cal-heat-3 .cal-num,
+.cal-heat-4 .cal-num { color: #fff; }
+.cal-detail {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.cal-detail strong { color: var(--text); }
+.cal-breakdown {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cal-breakdown-block {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.cal-breakdown-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--sap-blue-dark);
+}
+.cal-breakdown-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.cal-breakdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cal-breakdown-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 13px;
+}
+.cal-breakdown-name {
+  font-weight: 700;
+  color: var(--text);
+  min-width: 0;
+}
+.cal-breakdown-meta {
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cal-year-wrap { overflow-x: auto; padding-bottom: 4px; }
+.cal-year-inner { min-width: 100%; }
+.cal-year-months,
+.cal-year-row {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 3px;
+}
+.cal-year-months span,
+.cal-year-wd {
+  font-size: 9px;
+  color: var(--text-sub);
+  text-align: center;
+}
+.cal-year-wd { display: flex; align-items: center; }
+.cal-year-cell {
+  aspect-ratio: 1;
+  min-height: 10px;
+  max-height: 16px;
+  width: 100%;
+  border: none;
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+}
+.cal-year-empty { min-height: 10px; }
+.cal-year-cell.is-today { box-shadow: 0 0 0 1px var(--sap-blue); }
+.cal-year-cell.is-selected { box-shadow: 0 0 0 2px var(--sap-blue); }
+@media (max-width: 560px) {
+  .cal-week-grid { gap: 3px; }
+  .cal-cell-week { min-height: 64px; padding: 4px; }
+  .cal-num { font-size: 12px; }
+}
+
+.module-stat-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.module-stat-row .ms-name { width: 90px; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.module-stat-row .ms-bar { flex: 1; }
+.module-stat-row .ms-value { width: 110px; text-align: right; font-size: 12px; color: var(--text-sub); flex-shrink: 0; }
+.module-stat-row.is-below-avg .ms-name { color: var(--red); }
+.category-stat-row {
+  display: grid;
+  grid-template-columns: minmax(132px, 34%) 1fr 108px;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.category-stat-row:last-child { border-bottom: none; }
+.category-stat-row .cs-name { font-size: 13px; font-weight: 700; line-height: 1.35; }
+.category-stat-row .cs-bar { min-width: 0; }
+.category-stat-row .cs-value { text-align: right; font-size: 12px; color: var(--text-sub); white-space: nowrap; }
+.category-stat-row.is-below-avg .cs-name { color: var(--red); }
+
+.dual-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 720px) {
+  .dual-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .dual-stat-grid.is-modules { grid-template-columns: repeat(3, 1fr); }
+}
+.dual-stat-block {
+  background: #f7f9fc;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.dual-stat-block.is-below-avg {
+  background: #fff7f7;
+  border: 1px solid #fecaca;
+}
+.dual-stat-block .priority-stat-head { margin-bottom: 8px; }
+.dual-stat-block .priority-metric-row { margin-bottom: 8px; }
+.dual-stat-block .priority-metric-row:last-child { margin-bottom: 0; }
+.dual-stat-block.is-below-avg .priority-stat-title { color: var(--red); }
+.dual-stat-block .priority-no-data { padding: 2px 0 0; font-size: 12px; }
+.progress-fill.is-warning { background: linear-gradient(90deg, #fca5a5, #ef4444); }
+
+.weak-item { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.weak-item:last-child { border-bottom: none; }
+.weak-item .wk-code { font-family: "SF Mono", Menlo, Consolas, monospace; font-weight: 700; color: var(--sap-blue-dark); min-width: 90px; }
+.weak-item .wk-name { flex: 1; }
+.weak-item .wk-rate { font-size: 12px; color: var(--red); font-weight: 700; white-space: nowrap; }
+.empty-note { color: var(--text-sub); font-size: 13px; padding: 8px 0; }
+
+/* ===== 成績分析・復習優先 ===== */
+.stats-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+  align-items: center;
+}
+.stats-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.review-priority-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.review-priority-item:last-child { border-bottom: none; }
+.rp-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--sap-blue-dark);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rp-body { flex: 1; min-width: 0; }
+.rp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.rp-code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 700;
+  color: var(--sap-blue-dark);
+  font-size: 13px;
+}
+.rp-pri { font-size: 11px; color: #b45309; font-weight: 700; }
+.rp-module {
+  font-size: 11px;
+  color: var(--text-sub);
+  background: #eef2f7;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.rp-name {
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rp-meta { font-size: 12px; color: var(--text-sub); }
+
+/* ===== 優先度別統計 ===== */
+#stats-by-priority {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 720px) {
+  #stats-by-priority { grid-template-columns: repeat(3, 1fr); }
+}
+.priority-stat-block {
+  background: #f7f9fc;
+  border-radius: 10px;
+  padding: 14px;
+}
+.priority-stat-block.is-priority-1 {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 1px solid #fde68a;
+}
+.priority-stat-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.priority-stat-title { font-size: 14px; font-weight: 800; color: var(--sap-blue-dark); }
+.priority-stat-count { font-size: 12px; color: var(--text-sub); }
+.priority-metric-row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  grid-template-rows: auto auto;
+  gap: 4px 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.priority-metric-row:last-child { margin-bottom: 0; }
+.priority-metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+  grid-row: 1 / 3;
+}
+.priority-metric-row .ms-bar { grid-column: 2; }
+.priority-metric-value {
+  grid-column: 2;
+  font-size: 11px;
+  color: var(--text-sub);
+  text-align: right;
+}
+.progress-fill.is-mastery { background: linear-gradient(90deg, #6ee7b7, #059669); }
+.priority-no-data { margin: 0; padding: 4px 0; font-size: 12px; }
+
+/* ===== 直近正答率の折れ線 ===== */
+.acc-trend-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-bottom: 8px;
+}
+.acc-trend-current {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--sap-blue-dark);
+  line-height: 1.1;
+}
+.acc-trend-meta {
+  font-size: 13px;
+  color: var(--text-sub);
+  font-weight: 600;
+}
+.acc-trend-chart-wrap {
+  width: 100%;
+  background: #f7f9fc;
+  border-radius: 10px;
+  padding: 8px 4px 4px;
+}
+.acc-trend-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+}
+.acc-trend-grid {
+  stroke: #dde4ec;
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.acc-trend-axis {
+  fill: var(--text-sub);
+  font-size: 10px;
+  font-family: inherit;
+}
+.acc-trend-x {
+  fill: var(--text-sub);
+  font-size: 10px;
+  font-family: inherit;
+}
+.acc-trend-area {
+  fill: rgba(10, 110, 209, 0.12);
+}
+.acc-trend-line {
+  stroke: var(--sap-blue);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.acc-trend-dot {
+  fill: #fff;
+  stroke: var(--sap-blue-dark);
+  stroke-width: 2;
+}
+.acc-trend-dot.is-end {
+  fill: var(--sap-blue);
+  stroke: var(--sap-blue-dark);
+}
+
+/* 記述式の推移（色分け） */
+.is-input-trend .acc-trend-current { color: #0f766e; }
+.is-input-trend .acc-trend-area { fill: rgba(13, 148, 136, 0.14); }
+.is-input-trend .acc-trend-line { stroke: #0d9488; }
+.is-input-trend .acc-trend-dot { stroke: #0f766e; }
+.is-input-trend .acc-trend-dot.is-end { fill: #0d9488; stroke: #0f766e; }
+
+/* 旧棒グラフ（詳細ページ以外では未使用） */
+.stats-chart-card { padding-top: 18px; }
+.stats-chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.stats-chart-head .card-title { margin-bottom: 0; }
+.stats-detail-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sap-blue);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.stats-detail-link:hover { text-decoration: underline; }
+.stats-chart-hint { margin: 0 0 8px; }
+.stats-chart-summary {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sap-blue-dark);
+  margin-bottom: 14px;
+}
+.stats-chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+@media (min-width: 720px) {
+  .stats-chart-grid { grid-template-columns: 1fr 1fr; }
+}
+.stats-bar-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin-bottom: 10px;
+}
+.stats-bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.stats-bar-row {
+  display: grid;
+  grid-template-columns: 68px 1fr 52px;
+  gap: 10px;
+  align-items: center;
+}
+.stats-bar-label {
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stats-bar-track {
+  height: 22px;
+  background: #eef2f7;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.stats-bar-fill {
+  height: 100%;
+  min-width: 4px;
+  border-radius: 6px;
+  transition: width 0.35s ease;
+}
+.stats-bar-fill.is-wrong { background: linear-gradient(90deg, #fca5a5, #ef4444); }
+.stats-bar-fill.is-wrong-soft { background: linear-gradient(90deg, #fecaca, #f87171); }
+.stats-bar-fill.is-weak { background: linear-gradient(90deg, #fdba74, #ea580c); }
+.stats-bar-fill.is-weak-low { background: linear-gradient(90deg, #f87171, #dc2626); }
+.stats-bar-fill.is-weak-soft { background: linear-gradient(90deg, #fed7aa, #fb923c); }
+.stats-bar-value {
+  font-size: 11px;
+  text-align: right;
+  color: var(--text-sub);
+  font-weight: 700;
+}
+
+/* ===== 成績詳細ページ ===== */
+.site-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+.stats-detail-page .stats-detail-lead {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+.stats-detail-page .stats-detail-lead a {
+  color: var(--sap-blue);
+  font-weight: 700;
+}
+

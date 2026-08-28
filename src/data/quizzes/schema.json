@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://buz-dojo.web.app/schemas/quiz-v1.json",
+  "title": "BusinessDojoQuiz",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "category",
+    "difficulty",
+    "question",
+    "options",
+    "answer_index",
+    "explanation",
+    "key_takeaway",
+    "ogp_copy"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 8,
+      "description": "一意のID（UUIDまたはタイムスタンプベース）"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 120
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "マーケティング",
+        "財務会計",
+        "戦略",
+        "組織行動",
+        "経営全般",
+        "生産管理",
+        "品質管理"
+      ]
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["初級", "中級", "上級"]
+    },
+    "question": {
+      "type": "string",
+      "minLength": 20
+    },
+    "options": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "answer_index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "explanation": {
+      "type": "string",
+      "minLength": 80
+    },
+    "key_takeaway": {
+      "type": "string",
+      "minLength": 20
+    },
+    "ogp_copy": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 80
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "buz-dojo-functions",
+  "description": "ビジネス道場 — Stripe / X投稿 Cloud Functions",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "predeploy": "python3 ../_dev/sync-shared.py",
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.8",
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.3.0",
+    "stripe": "^17.7.0",
+    "twitter-api-v2": "^1.29.1"
+  },
+  "private": true
+}

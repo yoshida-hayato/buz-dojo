@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="index,follow">
+  <base href="/">
+  <title>特定商取引法に基づく表記 — ビジネス道場</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/legal.css">
+</head>
+<body class="legal-body">
+  <div class="legal-wrap">
+    <a class="legal-brand" href="/">ビジネス道場</a>
+    <article class="legal-card">
+      <h1>特定商取引法に基づく表記</h1>
+      <p class="legal-updated">最終更新日: 2026年8月27日</p>
+
+      <table class="legal-table">
+        <tbody>
+          <tr>
+            <th>販売事業者</th>
+            <td id="operator-name">請求があった場合に遅滞なく開示します。</td>
+          </tr>
+          <tr>
+            <th>サービス名</th>
+            <td>ビジネス道場</td>
+          </tr>
+          <tr>
+            <th>所在地</th>
+            <td>請求があった場合に遅滞なく開示します。</td>
+          </tr>
+          <tr>
+            <th>連絡先</th>
+            <td>
+              本サービスの<a href="/#contact">お問い合わせ画面</a>よりご連絡ください。<br>
+              電話番号および販売事業者の氏名は、請求があった場合に遅滞なく開示します。
+            </td>
+          </tr>
+          <tr>
+            <th>販売価格</th>
+            <td>
+              各商品の購入画面およびサイト上に表示する価格（税込表示）。<br>
+              科目単品の月額サブスクリプション（問題数100問以下は無料、101問以上は問題数に応じて ¥290〜¥980、3000問以上は ¥980）、およびプレミアムパックの月額サブスクリプションがあります。
+            </td>
+          </tr>
+          <tr>
+            <th>商品代金以外の必要料金</th>
+            <td>インターネット接続料金、通信費等は利用者の負担とします。</td>
+          </tr>
+          <tr>
+            <th>支払方法</th>
+            <td>クレジットカード決済（Stripe 経由）</td>
+          </tr>
+          <tr>
+            <th>支払時期</th>
+            <td>申込時（初回決済時）。以降は契約に従い定期的に自動課金されます。</td>
+          </tr>
+          <tr>
+            <th>役務の提供時期</th>
+            <td>決済完了後、速やかに有料機能をご利用いただけます。</td>
+          </tr>
+          <tr>
+            <th>解約</th>
+            <td>
+              Stripe のカスタマーポータル（本サービス内の解約・カード管理導線）からの自己解約が正式な手続きです。<br>
+              解約後も、当該請求期間の末日までは原則として有料機能を利用できます。日割り返金は行いません（下記返金の場合を除く）。
+            </td>
+          </tr>
+          <tr>
+            <th>返品・キャンセル・返金</th>
+            <td>
+              デジタルコンテンツ／オンラインサービスの性質上、利用者都合の返品・返金は原則できません。<br>
+              ただし、決済不具合やサービス障害等により正当な対価に応じた提供ができなかった場合、購入日から7日以内にお問い合わせいただければ、状況を確認のうえ返金等を検討します。詳細は<a href="/legal/terms.html">利用規約</a>をご覧ください。
+            </td>
+          </tr>
+          <tr>
+            <th>動作環境</th>
+            <td>一般的なスマートフォン／PCの最新ブラウザ。一部機能にはログインが必要です。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="legal-note">
+        本サービスは学習支援を目的とし、資格合格や業務成果を保証しません。問題・解説の一部は AI により作成・補助されており、誤りを含む可能性があります。
+      </p>
+
+      <nav class="legal-nav" aria-label="関連ページ">
+        <a href="/legal/terms.html">利用規約</a>
+        <a href="/legal/privacy.html">プライバシーポリシー</a>
+        <a href="/">トップへ戻る</a>
+      </nav>
+    </article>
+  </div>
+  <script src="config/legal.js"></script>
+  <script>
+    (function () {
+      var nameEl = document.getElementById("operator-name");
+      if (!nameEl) return;
+      var name =
+        typeof LEGAL_OPERATOR !== "undefined" && LEGAL_OPERATOR.name
+          ? String(LEGAL_OPERATOR.name).trim()
+          : "";
+      var onRequest =
+        typeof LEGAL_OPERATOR !== "undefined" && LEGAL_OPERATOR.discloseNameOnRequest;
+      if (name && !onRequest) {
+        nameEl.textContent = name;
+      } else {
+        nameEl.textContent = "請求があった場合に遅滞なく開示します。";
+      }
+    })();
+  </script>
+</body>
+</html>
