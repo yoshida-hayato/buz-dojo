@@ -9,7 +9,8 @@
     "predeploy": "python3 ../_dev/sync-shared.py",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "jest"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.8",
@@ -17,6 +18,9 @@
     "firebase-functions": "^6.3.0",
     "stripe": "^17.7.0",
     "twitter-api-v2": "^1.29.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   },
   "private": true
 }
