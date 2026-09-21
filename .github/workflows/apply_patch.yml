@@ -1,0 +1,72 @@
+name: Apply Patch from Slack
+
+# Cowork のスケジュールタスク（Claude）が Slack に投稿した改善パッチを取り込み、
+# テストが通った場合のみ main に反映する。
+#
+# 必要な設定:
+#   Secrets: SLACK_BOT_TOKEN（xoxb- で始まるボットトークン）
+#   ボットは #buz-dojo-agent に招待されている必要がある
+
+on:
+  schedule:
+    # Cowork 側（UTC 0/6/12/18時）の1時間後に起動する
+    - cron: "0 1,7,13,19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-patch
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL_ID: C0C34F5M1QV
+      # このユーザーが投稿したパッチだけを受け付ける（他人による混入を防ぐ）
+      ALLOWED_SLACK_USER_ID: U0C37AGEFKQ
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install test dependencies
+        run: |
+          npm install --prefix functions
+          npm install
+
+      - name: Configure git identity
+        run: |
+          git config user.name "Auto Improve Agent"
+          git config user.email "auto-improve@users.noreply.github.com"
+
+      - name: Record base commit
+        id: base
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Apply patch from Slack
+        run: python scripts/bridge/apply_patch.py
+
+      - name: Push commit (if any)
+        run: |
+          if [ "$(git rev-parse HEAD)" = "${{ steps.base.outputs.sha }}" ]; then
+            echo "新しいコミットはありません"
+            exit 0
+          fi
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
