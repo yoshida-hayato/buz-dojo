@@ -7,3 +7,6 @@ functions/node_modules/
 .venv-agent/
 __pycache__/
 *.pyc
+
+# 自動改善エージェントの作業用レポート
+improve-report.md
