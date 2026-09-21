@@ -1,0 +1,15 @@
+{
+  "name": "buz-dojo-tests",
+  "private": true,
+  "description": "リポジトリ全体のテスト用(Firestoreルールテストなど)。アプリ本体はビルド不要の静的サイトのため依存無し。",
+  "scripts": {
+    "test:rules": "firebase emulators:exec --only firestore --project buz-dojo-rules-test \"jest firestore-tests\"",
+    "test:functions": "npm --prefix functions test",
+    "test": "npm run test:functions && npm run test:rules"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase-tools": "^13.29.0",
+    "jest": "^29.7.0"
+  }
+}

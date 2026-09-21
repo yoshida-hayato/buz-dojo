@@ -1,0 +1,34 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  functions-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install functions dependencies
+        run: npm install
+        working-directory: functions
+      - name: Run unit tests (pricing / entitlements)
+        run: npm test
+        working-directory: functions
+
+  firestore-rules-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install root dependencies (firebase-tools, jest, rules-unit-testing)
+        run: npm install
+      - name: Run Firestore security rules tests
+        run: npm run test:rules
