@@ -35,15 +35,43 @@
   const SUBJECT_CATALOG = {
     sap: {
       title: "SAP",
-      questionCount: 4482,
+      questionCount: 4951,
     },
     "windows-shortcuts": {
       title: "Windowsショートカット",
-      questionCount: 236,
+      questionCount: 341,
     },
     "biz-career": {
       title: "ビジネスキャリア検定（生産管理）",
-      questionCount: 385,
+      questionCount: 823,
+    },
+    "biz-pm-planning": {
+      title: "ビジネスキャリア検定（生産管理プランニング専門知識）",
+      questionCount: 321,
+    },
+    "biz-pm-operation": {
+      title: "ビジネスキャリア検定（生産管理オペレーション2級・専門知識）",
+      questionCount: 60,
+    },
+    "excel-functions": {
+      title: "Excel関数・表計算実務",
+      questionCount: 150,
+    },
+    "outlook-mail": {
+      title: "Outlookメール実務",
+      questionCount: 100,
+    },
+    "teams-collab": {
+      title: "Teamsの使い方",
+      questionCount: 95,
+    },
+    "ai-ontology-intro": {
+      title: "オントロジー入門",
+      questionCount: 60,
+    },
+    "ai-ontology-core": {
+      title: "オントロジー基礎",
+      questionCount: 107,
     },
   };
 

@@ -65,10 +65,30 @@ const Entitlement = (function () {
     ) {
       return QUIZ_DATA.length;
     }
+    if (typeof SubjectCatalog !== "undefined") {
+      const live = SubjectCatalog.getQuestionCountSync(subjectId);
+      if (live > 0) return live;
+    }
     if (P && P.SUBJECT_CATALOG && P.SUBJECT_CATALOG[subjectId]) {
       return Number(P.SUBJECT_CATALOG[subjectId].questionCount) || 0;
     }
     return null;
+  }
+
+  async function resolveQuestionCountAsync(subjectId) {
+    if (
+      typeof CURRENT_SUBJECT !== "undefined" &&
+      CURRENT_SUBJECT &&
+      CURRENT_SUBJECT.id === subjectId &&
+      typeof QUIZ_DATA !== "undefined" &&
+      Array.isArray(QUIZ_DATA)
+    ) {
+      return QUIZ_DATA.length;
+    }
+    if (typeof SubjectCatalog !== "undefined") {
+      return SubjectCatalog.getQuestionCount(subjectId);
+    }
+    return resolveQuestionCount(subjectId);
   }
 
   function getSubjectPriceYen(subjectId) {
@@ -264,6 +284,7 @@ const Entitlement = (function () {
     jstDateKey,
     priceForQuestionCount,
     getSubjectPriceYen,
+    resolveQuestionCountAsync,
     isFreeSubject,
     getEntitlements,
     hasAccess,

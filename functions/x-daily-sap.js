@@ -34,7 +34,15 @@ const xAccessSecret = defineSecret("X_ACCESS_SECRET");
 
 const SECRETS = [xApiKey, xApiSecret, xAccessToken, xAccessSecret];
 
-const POSTABLE = new Set(["tcode", "term", "scenario", "judgment"]);
+const POSTABLE = new Set([
+  "tcode",
+  "term",
+  "scenario",
+  "judgment",
+  "shortcut",
+  "abbr",
+  "cloze",
+]);
 const MODULE_LABEL = {
   FI: "FI（財務）",
   CO: "CO（管理会計）",
@@ -61,18 +69,20 @@ function assertAdmin(request) {
 }
 
 function weekdayCategory(date = new Date()) {
-  // JST の曜日でローテ（0=日 … 6=土）
-  const jst = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-  const map = {
-    0: "tcode",
-    1: "tcode",
-    2: "term",
-    3: "judgment",
-    4: "scenario",
-    5: "tcode",
-    6: "term",
+  const jst = getJstDate(date);
+  const dateKey = getJstDateKey(date);
+  // 曜日ごとに複数カテゴリから日付で決定論的に選ぶ（バリエーション増）
+  const poolByDay = {
+    0: ["tcode", "shortcut"],
+    1: ["tcode", "abbr"],
+    2: ["term", "cloze"],
+    3: ["judgment", "scenario"],
+    4: ["scenario", "judgment"],
+    5: ["tcode", "shortcut"],
+    6: ["term", "abbr"],
   };
-  return map[jst.getDay()] || "tcode";
+  const pool = poolByDay[jst.getDay()] || ["tcode"];
+  return pool[hashSeed(dateKey + ":cat") % pool.length];
 }
 
 async function fetchQuizData() {
@@ -112,19 +122,108 @@ function shuffle(arr) {
   return a;
 }
 
+function hashSeed(str) {
+  let h = 2166136261;
+  const s = String(str || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(a) {
+  let state = a >>> 0;
+  return function rng() {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function makeSeededShuffle(seed) {
+  const rng = mulberry32(hashSeed(String(seed)));
+  return function seededShuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+}
+
+function getJstDate(date = new Date()) {
+  return new Date(date.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+}
+
+function getJstDateKey(date = new Date()) {
+  const d = getJstDate(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatJstDateLabel(dateKey) {
+  const [y, m, d] = String(dateKey).split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const wd = ["日", "月", "火", "水", "木", "金", "土"][dt.getDay()];
+  return `${m}/${d}（${wd}）`;
+}
+
+function addJstDays(dateKey, days) {
+  const [y, m, d] = String(dateKey).split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+const CATEGORY_LABEL = {
+  tcode: "Tコード",
+  term: "用語",
+  judgment: "正誤",
+  scenario: "シナリオ",
+  shortcut: "ショートカット",
+  abbr: "略称",
+  cloze: "穴埋め",
+};
+
+const LAYOUT_LABEL = {
+  standard: "4択",
+  judgment: "正誤",
+  shortcut: "ショートカット",
+  cloze: "穴埋め",
+  abbr: "略称",
+};
+
+/** 背景は全レイアウト共通の青系グラデーション */
+const BG_BLUE = ["#0b5fff", "#0854a0", "#0a3d73"];
+
+function isPostedOnDate(last, dateKey) {
+  if (!last || !last.at || !last.questionId) return false;
+  const at = last.at.toDate ? last.at.toDate() : new Date(last.at);
+  return getJstDateKey(at) === dateKey;
+}
+
 function isJudgmentMulti(q) {
   return q.category === "judgment" && Array.isArray(q.statements) && q.statements.length > 0;
 }
 
-function buildTcodePayload(q, pool) {
+function buildTcodePayload(q, pool, shuf = shuffle) {
   const answer = String(q.code || "").trim();
   const sameMod = pool.filter(
     (x) => x.category === "tcode" && x.module === q.module && x.id !== q.id && x.code
   );
-  const distractors = shuffle(sameMod)
+  const distractors = shuf(sameMod)
     .map((x) => String(x.code).trim())
     .filter((c) => c && c !== answer);
-  const choices = shuffle([answer, ...distractors.slice(0, 3)]);
+  const choices = shuf([answer, ...distractors.slice(0, 3)]);
   while (choices.length < 4) {
     const extra = pool.find(
       (x) => x.category === "tcode" && x.code && !choices.includes(String(x.code).trim())
@@ -143,16 +242,16 @@ function buildTcodePayload(q, pool) {
   };
 }
 
-function buildTermPayload(q, pool) {
+function buildTermPayload(q, pool, shuf = shuffle) {
   // 用語 → 意味（4択）
   const answer = String(q.name || "").trim();
   const sameMod = pool.filter(
     (x) => x.category === "term" && x.module === q.module && x.id !== q.id && x.name
   );
-  const distractors = shuffle(sameMod)
+  const distractors = shuf(sameMod)
     .map((x) => String(x.name).trim())
     .filter((n) => n && n !== answer);
-  const choices = shuffle([answer, ...distractors.slice(0, 3)]);
+  const choices = shuf([answer, ...distractors.slice(0, 3)]);
   return {
     id: q.id,
     category: q.category,
@@ -164,7 +263,7 @@ function buildTermPayload(q, pool) {
   };
 }
 
-function buildScenarioPayload(q) {
+function buildScenarioPayload(q, shuf = shuffle) {
   const choices = Array.isArray(q.choices) ? q.choices.map(String) : [];
   if (choices.length < 2) return null;
   const answer = choices[0];
@@ -173,56 +272,226 @@ function buildScenarioPayload(q) {
     category: q.category,
     module: q.module,
     question: String(q.name || q.code || "").trim(),
-    choices: shuffle(choices).slice(0, 4),
+    choices: shuf(choices).slice(0, 4),
     answer,
     explanation: String(q.explanation || "").replace(/\s+/g, " ").trim(),
   };
 }
 
-function buildJudgmentPayload(q) {
+function buildJudgmentPayload(q, shuf = shuffle) {
   if (isJudgmentMulti(q)) {
     const pickIncorrect = q.pick === "incorrect";
-    const targets = q.statements.filter((s) => (pickIncorrect ? !s.correct : !!s.correct));
-    const distractors = q.statements.filter((s) => (pickIncorrect ? !!s.correct : !s.correct));
-    if (!targets.length || !distractors.length) return null;
-    const answer = String(targets[0].text || "").trim();
-    if (!answer) return null;
-    const wrongs = shuffle(
-      distractors
-        .map((s) => String(s.text || "").trim())
-        .filter((t) => t && t !== answer)
-    );
-    const choices = shuffle([answer, ...wrongs.slice(0, 3)]);
-    if (choices.length < 2) return null;
+    const instruction = pickIncorrect
+      ? "誤っているものをすべて選んでください。"
+      : "正しいものをすべて選んでください。";
+    const shuffled = shuf(
+      q.statements.map((s) => ({
+        text: String(s.text || "").trim(),
+        correct: !!s.correct,
+      }))
+    ).filter((s) => s.text);
+    if (shuffled.length < 3) return null;
+    const letterLabels = ["A", "B", "C", "D", "E", "F"];
+    const choices = shuffled.map((s) => s.text).slice(0, 6);
+    const answerLabels = shuffled
+      .slice(0, 6)
+      .map((s, i) => {
+        const isTarget = pickIncorrect ? !s.correct : s.correct;
+        return isTarget ? letterLabels[i] : null;
+      })
+      .filter(Boolean);
+    if (!answerLabels.length) return null;
     return {
       id: q.id,
       category: q.category,
       module: q.module,
-      question: String(q.name || "").trim(),
-      choices: choices.slice(0, 4),
-      answer,
+      visualType: "judgmentMulti",
+      question: `${String(q.name || "").trim()}\n\n${instruction}`,
+      choices,
+      answerLabels,
+      answer: answerLabels.join(", "),
       explanation: String(q.explanation || "").replace(/\s+/g, " ").trim(),
     };
   }
   const choices = Array.isArray(q.choices) && q.choices.length >= 2 ? q.choices.map(String) : ["正", "誤"];
-  const answer = choices[0];
+  let answer = String(q.answer || "").trim();
+  if (answer !== "正" && answer !== "誤") {
+    answer = choices[0];
+  }
   return {
     id: q.id,
     category: q.category,
     module: q.module,
+    visualType: "standard",
     question: String(q.name || "").trim() + "\n\nこの記述は正しい？",
-    choices: shuffle(choices.slice(0, 2)),
+    choices: ["正", "誤"],
     answer,
     explanation: String(q.explanation || "").replace(/\s+/g, " ").trim(),
   };
 }
 
-function buildPayload(q, pool) {
-  if (q.category === "tcode") return buildTcodePayload(q, pool);
-  if (q.category === "term") return buildTermPayload(q, pool);
-  if (q.category === "scenario") return buildScenarioPayload(q);
-  if (q.category === "judgment") return buildJudgmentPayload(q);
+function buildShortcutPayload(q, pool, shuf = shuffle) {
+  const answer = String(q.code || "").trim();
+  const peers = pool.filter(
+    (x) => x.category === "shortcut" && x.id !== q.id && x.code
+  );
+  const distractors = shuf(peers)
+    .map((x) => String(x.code).trim())
+    .filter((c) => c && c !== answer);
+  const choices = shuf([answer, ...distractors.slice(0, 3)]);
+  return {
+    id: q.id,
+    category: q.category,
+    module: q.module,
+    visualType: "standard",
+    question: `「${q.name}」\nのコマンド／キー操作は？`,
+    choices: choices.slice(0, 4),
+    answer,
+    explanation: String(q.explanation || "").replace(/\s+/g, " ").trim(),
+  };
+}
+
+const ABBR_CONNECTORS = new Set([
+  "of",
+  "and",
+  "in",
+  "or",
+  "to",
+  "for",
+  "at",
+  "by",
+  "on",
+  "the",
+  "with",
+  "via",
+  "from",
+  "as",
+]);
+
+function isAbbrConnector(word) {
+  return ABBR_CONNECTORS.has(String(word || "").trim().toLowerCase());
+}
+
+function abbrLettersFromCode(code) {
+  return String(code || "")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase()
+    .split("");
+}
+
+function buildAbbrPartsMeta(code, parts) {
+  const letters = abbrLettersFromCode(code);
+  let letterIdx = 0;
+  return parts.map((part, i) => {
+    const answer = String(part.answer || "").trim();
+    const connector = isAbbrConnector(answer);
+    let badge = null;
+    if (!connector) {
+      badge = letters[letterIdx] || answer.charAt(0).toUpperCase() || String(i + 1);
+      letterIdx += 1;
+    }
+    return { connector, badge };
+  });
+}
+
+function buildAbbrPayload(q, shuf = shuffle) {
+  if (!Array.isArray(q.parts) || !q.parts.length) return null;
+  const code = String(q.code || "").trim();
+  if (!code) return null;
+  const meta = buildAbbrPartsMeta(code, q.parts);
+  const abbrParts = [];
+  for (let i = 0; i < q.parts.length; i++) {
+    const part = q.parts[i];
+    const answer = String(part.answer || "").trim();
+    if (!answer) return null;
+    const wrongs = (part.wrongs || []).map(String).filter((w) => w && w !== answer);
+    const distractors = shuf(wrongs).slice(0, 3);
+    const choices = shuf([answer, ...distractors]);
+    if (choices.length < 4) return null;
+    abbrParts.push({
+      wordIndex: i + 1,
+      badge: meta[i].badge,
+      isConnector: meta[i].connector,
+      choices,
+      answer,
+    });
+  }
+  return {
+    id: q.id,
+    category: q.category,
+    module: q.module,
+    visualType: "abbr",
+    abbrCode: code,
+    abbrParts,
+    question: `「${code}」の正式名称は？（各語を選択）`,
+    answer: abbrParts.map((p) => p.answer).join(" "),
+    explanation: String(q.explanation || "").replace(/\s+/g, " ").trim(),
+  };
+}
+
+function simplifyClozePrompt(text) {
+  return String(text || "")
+    .replace(/\[\[(\d+)\]\]/g, "______")
+    .replace(/```[\w]*\n?/g, "")
+    .replace(/```/g, "")
+    .replace(/\r/g, "")
+    .trim();
+}
+
+function extractClozeSnippet(prompt) {
+  const simplified = simplifyClozePrompt(prompt);
+  const lines = simplified.split("\n").map((l) => l.trimEnd()).filter(Boolean);
+  const idx = lines.findIndex((l) => l.includes("______"));
+  if (idx >= 0) {
+    const blankLine = lines[idx].trim();
+    const prev = idx > 0 ? lines[idx - 1].trim() : "";
+    if (prev && /^[A-Za-z_`]/.test(prev)) {
+      return `${prev}\n${blankLine}`.slice(0, 120);
+    }
+    return blankLine.slice(0, 100);
+  }
+  return simplified.slice(0, 100);
+}
+
+function buildClozePayload(q, shuf = shuffle) {
+  const blank = Array.isArray(q.blanks) && q.blanks[0];
+  if (!blank) return null;
+  const answer = String(blank.answer || "").trim();
+  const wrongs = (blank.wrongs || []).map(String).filter((w) => w && w !== answer);
+  const choices = shuf([answer, ...wrongs]).slice(0, 4);
+  if (choices.length < 2) return null;
+  const snippet = extractClozeSnippet(q.prompt || "");
+  const title = String(q.name || "次の空欄に入る語句は？").trim();
+  return {
+    id: q.id,
+    category: q.category,
+    module: q.module,
+    visualType: "cloze",
+    clozeSnippet: snippet,
+    question: title,
+    choices,
+    answer,
+    explanation: String(q.explanation || "").replace(/\s+/g, " ").trim(),
+  };
+}
+
+function buildPayload(q, pool, shuf = shuffle) {
+  if (q.category === "tcode") return buildTcodePayload(q, pool, shuf);
+  if (q.category === "term") return buildTermPayload(q, pool, shuf);
+  if (q.category === "scenario") return buildScenarioPayload(q, shuf);
+  if (q.category === "judgment") return buildJudgmentPayload(q, shuf);
+  if (q.category === "shortcut") return buildShortcutPayload(q, pool, shuf);
+  if (q.category === "abbr") return buildAbbrPayload(q, shuf);
+  if (q.category === "cloze") return buildClozePayload(q, shuf);
   return null;
+}
+
+function getVisualType(payload) {
+  if (payload && payload.visualType) return payload.visualType;
+  const cat = payload && payload.category;
+  if (cat === "cloze") return "cloze";
+  if (cat === "abbr" && Array.isArray(payload.abbrParts)) return "abbr";
+  return "standard";
 }
 
 function wrapText(ctx, text, maxWidth) {
@@ -248,65 +517,6 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-function renderQuestionImage(payload, seq) {
-  const W = 1200;
-  const H = 675;
-  const canvas = createCanvas(W, H);
-  const ctx = canvas.getContext("2d");
-
-  // 背景
-  const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, "#0b5fff");
-  grad.addColorStop(0.55, "#0854a0");
-  grad.addColorStop(1, "#0a3d73");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-
-  // カード
-  const pad = 36;
-  roundRect(ctx, pad, pad, W - pad * 2, H - pad * 2, 24, "#ffffff");
-
-  ctx.fillStyle = "#0a6ed1";
-  ctx.font = "bold 28px sans-serif";
-  ctx.fillText("ビジネス道場 ｜ SAPクイズ", pad + 36, pad + 52);
-
-  ctx.fillStyle = "#6b7a8c";
-  ctx.font = "22px sans-serif";
-  const mod = MODULE_LABEL[payload.module] || payload.module || "";
-  ctx.fillText(`#${seq}  ${mod}`, pad + 36, pad + 90);
-
-  ctx.fillStyle = "#22303f";
-  ctx.font = "bold 36px sans-serif";
-  const qLines = wrapText(ctx, payload.question, W - pad * 2 - 80).slice(0, 5);
-  let y = pad + 150;
-  for (const line of qLines) {
-    ctx.fillText(line, pad + 36, y);
-    y += 48;
-  }
-
-  y += 12;
-  const labels = ["A", "B", "C", "D"];
-  ctx.font = "28px sans-serif";
-  (payload.choices || []).slice(0, 4).forEach((c, i) => {
-    ctx.fillStyle = "#e8f2fc";
-    roundRect(ctx, pad + 36, y - 32, W - pad * 2 - 72, 52, 12, "#e8f2fc");
-    ctx.fillStyle = "#0854a0";
-    ctx.font = "bold 26px sans-serif";
-    ctx.fillText(labels[i], pad + 52, y);
-    ctx.fillStyle = "#22303f";
-    ctx.font = "26px sans-serif";
-    const clipped = wrapText(ctx, `${c}`, W - pad * 2 - 160)[0] || "";
-    ctx.fillText(clipped, pad + 96, y);
-    y += 66;
-  });
-
-  ctx.fillStyle = "#6b7a8c";
-  ctx.font = "22px sans-serif";
-  ctx.fillText("答えは返信へ ↓　非公式の学習用クイズです", pad + 36, H - pad - 28);
-
-  return canvas.toBuffer("image/png");
-}
-
 function roundRect(ctx, x, y, w, h, r, fill) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -317,6 +527,343 @@ function roundRect(ctx, x, y, w, h, r, fill) {
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();
+}
+
+const IMG_W = 1200;
+const IMG_PAD = 36;
+const HEADER_BOTTOM = IMG_PAD + 108;
+const FOOTER_RESERVE = 52;
+
+function clipText(ctx, text, maxWidth) {
+  const s = String(text || "");
+  if (ctx.measureText(s).width <= maxWidth) return s;
+  let out = s;
+  while (out.length > 1 && ctx.measureText(out + "…").width > maxWidth) {
+    out = out.slice(0, -1);
+  }
+  return out + "…";
+}
+
+const ABBR_ROW_H = 58;
+const ABBR_ROW_GAP = 10;
+const ABBR_CHOICE_FONT = 18;
+const ABBR_LABEL_FONT = 18;
+
+function abbrRowCount(partCount) {
+  return partCount;
+}
+
+function fontMetrics(ctx, font) {
+  ctx.font = font;
+  const m = ctx.measureText("Mg");
+  return {
+    ascent: m.actualBoundingBoxAscent || 12,
+    descent: m.actualBoundingBoxDescent || 4,
+  };
+}
+
+function textBaselineInBox(ctx, boxTop, boxH, font) {
+  const { ascent, descent } = fontMetrics(ctx, font);
+  const textH = ascent + descent;
+  return boxTop + (boxH - textH) / 2 + ascent;
+}
+
+function computeImageSize(payload) {
+  const vt = getVisualType(payload);
+  if (vt === "abbr" && Array.isArray(payload.abbrParts)) {
+    const n = payload.abbrParts.length;
+    return { w: IMG_W, h: Math.min(1100, 400 + n * (ABBR_ROW_H + ABBR_ROW_GAP)) };
+  }
+  if (vt === "judgmentMulti") {
+    const n = Math.min((payload.choices || []).length, 6);
+    return { w: IMG_W, h: Math.min(1050, 460 + n * 68) };
+  }
+  if (vt === "cloze") return { w: IMG_W, h: 760 };
+  return { w: IMG_W, h: 675 };
+}
+
+function paintBackground(ctx, w, h) {
+  const grad = ctx.createLinearGradient(0, 0, w, h);
+  grad.addColorStop(0, BG_BLUE[0]);
+  grad.addColorStop(0.55, BG_BLUE[1]);
+  grad.addColorStop(1, BG_BLUE[2]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function drawImageHeader(ctx, payload, seq, imgH) {
+  const pad = IMG_PAD;
+  roundRect(ctx, pad, pad, IMG_W - pad * 2, imgH - pad * 2, 24, "#ffffff");
+  ctx.fillStyle = "#0a6ed1";
+  ctx.font = "bold 28px sans-serif";
+  ctx.fillText("ビジネス道場 ｜ SAPクイズ", pad + 36, pad + 52);
+  ctx.fillStyle = "#6b7a8c";
+  ctx.font = "22px sans-serif";
+  const mod = MODULE_LABEL[payload.module] || payload.module || "";
+  const cat = CATEGORY_LABEL[payload.category] || payload.category || "";
+  ctx.fillText(`#${seq}  ${mod} ・ ${cat}`, pad + 36, pad + 90);
+}
+
+function drawImageFooter(ctx, imgH) {
+  ctx.fillStyle = "#6b7a8c";
+  ctx.font = "22px sans-serif";
+  ctx.fillText("答えは返信へ ↓　非公式の学習用クイズです", IMG_PAD + 36, imgH - IMG_PAD - 28);
+}
+
+function drawQuestionBlock(ctx, text, startY, maxLines, fontSize) {
+  ctx.fillStyle = "#22303f";
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  const lines = wrapText(ctx, text, IMG_W - IMG_PAD * 2 - 80).slice(0, maxLines);
+  let y = startY;
+  for (const line of lines) {
+    ctx.fillText(line, IMG_PAD + 36, y);
+    y += fontSize + 18;
+  }
+  return y;
+}
+
+function choiceRowHeight(ctx, text, compact) {
+  const maxW = IMG_W - IMG_PAD * 2 - (compact ? 150 : 160);
+  const lines = wrapText(ctx, String(text), maxW).slice(0, compact ? 1 : 2);
+  return Math.max(compact ? 44 : 52, 20 + lines.length * (compact ? 24 : 28));
+}
+
+function choiceAreaHeight(ctx, payload, compact) {
+  const choices = (payload.choices || []).slice(0, compact ? 6 : 4);
+  if (!choices.length) return 0;
+  let h = 12;
+  choices.forEach((c) => {
+    h += choiceRowHeight(ctx, c, compact) + (compact ? 6 : 10);
+  });
+  return h;
+}
+
+function abbrAreaHeight(payload) {
+  if (!Array.isArray(payload.abbrParts)) return 0;
+  return abbrRowCount(payload.abbrParts.length) * (ABBR_ROW_H + ABBR_ROW_GAP);
+}
+
+function estimateContentHeight(ctx, payload) {
+  const vt = getVisualType(payload);
+  const fontSize = 28;
+  const maxQLines = vt === "cloze" ? 3 : vt === "judgmentMulti" ? 4 : 5;
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  const qLines = wrapText(ctx, getDisplayQuestion(payload), IMG_W - IMG_PAD * 2 - 80).slice(0, maxQLines);
+  let h = qLines.length * (fontSize + 18) + 18;
+  if (vt === "cloze") {
+    const snippet = String(payload.clozeSnippet || "").trim();
+    const panelW = IMG_W - IMG_PAD * 2 - 72;
+    const contentLines = snippet.split("\n").flatMap((part) => wrapText(ctx, part, panelW - 32)).slice(0, 3);
+    h += 36 + contentLines.length * 30 + 16 + 18;
+  }
+  if (vt === "abbr") {
+    h += abbrAreaHeight(payload);
+  } else {
+    h += choiceAreaHeight(ctx, payload, vt === "judgmentMulti") + 8;
+  }
+  return h;
+}
+
+function layoutContentStart(ctx, payload, imgH) {
+  const footerTop = imgH - IMG_PAD - FOOTER_RESERVE;
+  const contentHeight = estimateContentHeight(ctx, payload);
+  const free = footerTop - HEADER_BOTTOM - contentHeight;
+  const offset = free > 24 ? free / 2 : 12;
+  return HEADER_BOTTOM + offset;
+}
+
+function drawChoiceList(ctx, payload, startY, contentBottom, compact) {
+  const labels = ["A", "B", "C", "D", "E", "F"];
+  const maxChoices = compact ? 6 : 4;
+  const choices = (payload.choices || []).slice(0, maxChoices);
+  const areaH = choiceAreaHeight(ctx, payload, compact);
+  let y = Math.min(startY, contentBottom - areaH);
+  const rowGap = compact ? 6 : 10;
+  const boxLeft = IMG_PAD + 36;
+  const boxW = IMG_W - IMG_PAD * 2 - 72;
+  const labelX = IMG_PAD + 52;
+  const textX = IMG_PAD + 92;
+  const maxTextW = IMG_W - IMG_PAD * 2 - (compact ? 150 : 160);
+
+  choices.forEach((c, i) => {
+    const rowH = choiceRowHeight(ctx, c, compact);
+    const top = y;
+    roundRect(ctx, boxLeft, top, boxW, rowH, compact ? 10 : 12, "#e8f2fc");
+
+    const labelFont = `bold ${compact ? 20 : 24}px sans-serif`;
+    const textFont = `${compact ? 20 : 22}px sans-serif`;
+    const lineH = compact ? 24 : 28;
+    const lines = wrapText(ctx, String(c), maxTextW).slice(0, compact ? 1 : 2);
+    const lm = fontMetrics(ctx, labelFont);
+    const tm = fontMetrics(ctx, textFont);
+
+    if (lines.length === 1) {
+      const baseline = textBaselineInBox(ctx, top, rowH, textFont);
+      ctx.fillStyle = "#0854a0";
+      ctx.font = labelFont;
+      ctx.fillText(labels[i], labelX, baseline);
+      ctx.fillStyle = "#22303f";
+      ctx.font = textFont;
+      ctx.fillText(lines[0], textX, baseline);
+    } else {
+      const blockH = lines.length * lineH;
+      const blockTop = top + (rowH - blockH) / 2;
+      const labelH = lm.ascent + lm.descent;
+      const labelBaseline = blockTop + (blockH - labelH) / 2 + lm.ascent;
+      ctx.fillStyle = "#0854a0";
+      ctx.font = labelFont;
+      ctx.fillText(labels[i], labelX, labelBaseline);
+      ctx.fillStyle = "#22303f";
+      ctx.font = textFont;
+      let baseline = blockTop + tm.ascent;
+      for (const line of lines) {
+        ctx.fillText(line, textX, baseline);
+        baseline += lineH;
+      }
+    }
+
+    y = top + rowH + rowGap;
+  });
+  return y;
+}
+
+function drawAbbrStrip(ctx, part, x, y, w) {
+  const labels = ["A", "B", "C", "D"];
+  const isConn = !!part.isConnector;
+  roundRect(ctx, x, y, w, ABBR_ROW_H, 10, isConn ? "#f8fafc" : "#f4f8fc");
+  ctx.fillStyle = isConn ? "#94a3b8" : "#0a6ed1";
+  roundRect(ctx, x + 10, y + 10, 3, ABBR_ROW_H - 20, 2, isConn ? "#94a3b8" : "#0a6ed1");
+
+  const pillText = isConn ? "·" : String(part.badge || "").trim();
+  ctx.font = `bold ${ABBR_CHOICE_FONT}px sans-serif`;
+  const pillSize = 34;
+  const pillX = x + 18;
+  const pillY = y + (ABBR_ROW_H - pillSize) / 2;
+  const pillFill = isConn ? "#94a3b8" : "#0a6ed1";
+  roundRect(ctx, pillX, pillY, pillSize, pillSize, 8, pillFill);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(
+    pillText,
+    pillX + (pillSize - ctx.measureText(pillText).width) / 2,
+    textBaselineInBox(ctx, pillY, pillSize, `bold ${ABBR_CHOICE_FONT}px sans-serif`)
+  );
+
+  const colStart = pillX + pillSize + 14;
+  const colW = (x + w - colStart - 8) / 4;
+  const labelFont = `bold ${ABBR_LABEL_FONT}px sans-serif`;
+  const textFont = `${ABBR_CHOICE_FONT}px sans-serif`;
+  part.choices.slice(0, 4).forEach((choice, ci) => {
+    const cx = colStart + ci * colW;
+    const baseline = textBaselineInBox(ctx, y, ABBR_ROW_H, textFont);
+    ctx.fillStyle = "#0854a0";
+    ctx.font = labelFont;
+    ctx.fillText(labels[ci], cx + 4, baseline);
+    ctx.fillStyle = "#22303f";
+    ctx.font = textFont;
+    ctx.fillText(clipText(ctx, choice, colW - 28), cx + 28, baseline);
+    if (ci < 3) {
+      ctx.strokeStyle = "#d8e6f5";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + colW - 2, y + 12);
+      ctx.lineTo(cx + colW - 2, y + ABBR_ROW_H - 12);
+      ctx.stroke();
+    }
+  });
+}
+
+function drawAbbrParts(ctx, payload, startY) {
+  const parts = payload.abbrParts;
+  const panelX = IMG_PAD + 36;
+  const panelW = IMG_W - IMG_PAD * 2 - 72;
+  let y = startY;
+
+  for (const part of parts) {
+    drawAbbrStrip(ctx, part, panelX, y, panelW);
+    y += ABBR_ROW_H + ABBR_ROW_GAP;
+  }
+  return y;
+}
+
+function getDisplayQuestion(payload) {
+  return String(payload.question || "").trim();
+}
+
+function drawClozePanel(ctx, payload, startY) {
+  const snippet = String(payload.clozeSnippet || "").trim();
+  const panelX = IMG_PAD + 36;
+  const panelW = IMG_W - IMG_PAD * 2 - 72;
+  const contentLines = snippet.split("\n").flatMap((part) =>
+    wrapText(ctx, part, panelW - 32)
+  ).slice(0, 3);
+  const panelH = 36 + contentLines.length * 30 + 16;
+  roundRect(ctx, panelX, startY, panelW, panelH, 10, "#f0f6ff");
+  ctx.fillStyle = "#0854a0";
+  ctx.font = "bold 18px sans-serif";
+  ctx.fillText("▼ 空欄（＿＿＿＿）に入る語句", panelX + 16, startY + 24);
+  ctx.fillStyle = "#22303f";
+  ctx.font = "22px sans-serif";
+  let ty = startY + 52;
+  for (const line of contentLines) {
+    const parts = line.split("______");
+    let lx = panelX + 16;
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i]) {
+        ctx.fillStyle = "#22303f";
+        ctx.fillText(parts[i], lx, ty);
+        lx += ctx.measureText(parts[i]).width;
+      }
+      if (i < parts.length - 1) {
+        const blankW = 72;
+        roundRect(ctx, lx, ty - 20, blankW, 26, 4, "#d6ebff");
+        ctx.strokeStyle = "#0854a0";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(lx + 0.5, ty - 19.5, blankW - 1, 25);
+        lx += blankW + 4;
+      }
+    }
+    ty += 30;
+  }
+  return startY + panelH + 8;
+}
+
+function renderQuestionImage(payload, seq) {
+  const imgSize = computeImageSize(payload);
+  const canvas = createCanvas(imgSize.w, imgSize.h);
+  const ctx = canvas.getContext("2d");
+  const imgH = imgSize.h;
+  const contentBottom = imgH - IMG_PAD - FOOTER_RESERVE;
+  const visualType = getVisualType(payload);
+
+  paintBackground(ctx, imgSize.w, imgH);
+  drawImageHeader(ctx, payload, seq, imgH);
+
+  const maxQLines = visualType === "cloze" ? 3 : visualType === "judgmentMulti" ? 4 : 5;
+  const fontSize = 28;
+  let y = layoutContentStart(ctx, payload, imgH);
+  y = drawQuestionBlock(ctx, getDisplayQuestion(payload), y, maxQLines, fontSize);
+  y += 18;
+  if (visualType === "cloze") {
+    y = drawClozePanel(ctx, payload, y);
+    y += 18;
+  }
+  if (visualType === "abbr") {
+    drawAbbrParts(ctx, payload, y + 8);
+  } else {
+    drawChoiceList(ctx, payload, y + 8, contentBottom, visualType === "judgmentMulti");
+  }
+  drawImageFooter(ctx, imgH);
+  return canvas.toBuffer("image/png");
+}
+
+function payloadToImageBase64(payload, seq) {
+  if (!payload) return null;
+  try {
+    return renderQuestionImage(payload, seq).toString("base64");
+  } catch (err) {
+    console.warn("renderQuestionImage failed", err.message || err);
+    return null;
+  }
 }
 
 const MODULE_HASHTAG = {
@@ -480,7 +1027,18 @@ function composeReplyFooterOnly(fromText) {
 }
 
 function choiceLabel(payload) {
-  const labels = ["A", "B", "C", "D"];
+  const labels = ["A", "B", "C", "D", "E", "F"];
+  if (Array.isArray(payload.answerLabels) && payload.answerLabels.length) {
+    return payload.answerLabels.join(", ");
+  }
+  if (Array.isArray(payload.abbrParts) && payload.abbrParts.length) {
+    return payload.abbrParts
+      .map((p) => {
+        const idx = p.choices.findIndex((c) => String(c) === String(p.answer));
+        return `${p.wordIndex}語目${labels[idx >= 0 ? idx : 0]}`;
+      })
+      .join(" ");
+  }
   const answer = String(payload.answer || "");
   const idx = (payload.choices || []).findIndex((c) => String(c) === answer);
   return idx >= 0 ? labels[idx] : null;
@@ -538,6 +1096,46 @@ function composeReplyText(payload) {
   return text;
 }
 
+const REPLY_MAX_WEIGHT = 270;
+
+function buildReplyPreview(payload) {
+  const text = composeReplyText(payload);
+  const weight = tweetWeight(text);
+  const fullExplanation = String(payload.explanation || "").replace(/\s+/g, " ").trim();
+  const hasExplanation = text.includes("\n解説：");
+  const explanationTruncated =
+    !!fullExplanation && hasExplanation && !text.includes(fullExplanation);
+  const explanationOmitted = !!fullExplanation && !hasExplanation;
+  return {
+    text,
+    weight,
+    maxWeight: REPLY_MAX_WEIGHT,
+    explanationTruncated,
+    explanationOmitted,
+  };
+}
+
+function layoutLabelForPayload(payload) {
+  const vt = getVisualType(payload);
+  if (vt === "judgmentMulti") return "複数正誤";
+  if (vt === "abbr") return "略称";
+  if (vt === "cloze") return "穴埋め";
+  if (payload.category === "judgment") return "正誤";
+  return CATEGORY_LABEL[payload.category] || "4択";
+}
+
+function serializeAbbrParts(payload) {
+  if (!Array.isArray(payload.abbrParts)) return null;
+  return payload.abbrParts.map((p) => ({
+    wordIndex: p.wordIndex,
+    badge: p.badge,
+    letter: p.badge,
+    isConnector: !!p.isConnector,
+    choices: p.choices,
+    answer: p.answer,
+  }));
+}
+
 function formatXError(step, err) {
   const data = err && err.data ? err.data : null;
   const detail =
@@ -548,7 +1146,7 @@ function formatXError(step, err) {
   return `X API error at ${step}: [${code}] ${detail}`;
 }
 
-async function pickQuestion(pool, postedIds, preferCategory, opts = {}) {
+function pickQuestionSeeded(pool, postedIds, preferCategory, seed, opts = {}) {
   const posted = new Set(postedIds || []);
   const preferred = pool.filter((q) => q.category === preferCategory && !posted.has(q.id));
   const fallback = pool.filter((q) => !posted.has(q.id));
@@ -556,17 +1154,306 @@ async function pickQuestion(pool, postedIds, preferCategory, opts = {}) {
   const candidates = preferred.length ? preferred : strict ? [] : fallback;
   if (!candidates.length) return null;
 
-  // priority 1 を優先しつつランダム。明示カテゴリ指定時は候補を広めに試す
+  const shuf = makeSeededShuffle(seed);
   const p1 = candidates.filter((q) => Number(q.priority) === 1);
-  const base = p1.length ? p1 : candidates;
+  let base = p1.length ? p1 : candidates;
+  if (opts.preferJudgmentMulti && preferCategory === "judgment") {
+    const multi = base.filter(isJudgmentMulti);
+    if (multi.length) base = multi;
+  }
   const tryN = strict ? Math.min(base.length, 200) : 40;
-  for (const q of shuffle(base).slice(0, tryN)) {
-    const payload = buildPayload(q, pool);
-    if (payload && payload.question && payload.choices && payload.choices.length >= 2) {
+  for (const q of shuf(base).slice(0, tryN)) {
+    const payload = buildPayload(q, pool, shuf);
+    if (payload && payload.question && (
+      (payload.choices && payload.choices.length >= 2) ||
+      (payload.abbrParts && payload.abbrParts.length)
+    )) {
       return payload;
     }
   }
   return null;
+}
+
+async function pickQuestion(pool, postedIds, preferCategory, opts = {}) {
+  const dateKey = opts.dateKey || getJstDateKey();
+  const seq = Number(opts.seq || 0);
+  const seed = hashSeed(`${dateKey}:${preferCategory}:${seq}`);
+  return pickQuestionSeeded(pool, postedIds, preferCategory, seed, opts);
+}
+
+function findRawQuestion(pool, questionId) {
+  return pool.find((q) => q && q.id === questionId) || null;
+}
+
+function payloadFromQuestionId(pool, questionId, dateKey, seq) {
+  const q = findRawQuestion(pool, questionId);
+  if (!q) return null;
+  const shuf = makeSeededShuffle(hashSeed(`${dateKey}:${questionId}:${seq}`));
+  return buildPayload(q, pool, shuf);
+}
+
+async function pickForScheduleDay(pool, postedIds, dateKey, seq, overrides = {}, opts = {}) {
+  const override = overrides[dateKey];
+  if (override && override.questionId) {
+    const forced = payloadFromQuestionId(pool, override.questionId, dateKey, seq);
+    if (forced) {
+      return { payload: forced, source: "override" };
+    }
+  }
+  const date = new Date(dateKey + "T12:00:00+09:00");
+  const prefer =
+    opts.preferCategory && POSTABLE.has(String(opts.preferCategory))
+      ? String(opts.preferCategory)
+      : weekdayCategory(date);
+  const seed = hashSeed(`${dateKey}:${prefer}:${seq}`);
+  const payload = pickQuestionSeeded(pool, postedIds, prefer, seed, {
+    strict: !!opts.strictPrefer,
+    preferJudgmentMulti: prefer === "judgment" && date.getDay() === 4,
+  });
+  return { payload, source: "auto", preferCategory: prefer };
+}
+
+async function buildLayoutSamples(pool) {
+  const targets = [
+    { badge: "4択", cats: ["tcode"], match: () => true },
+    { badge: "正誤", cats: ["judgment"], match: (q) => !isJudgmentMulti(q) },
+    { badge: "複数正誤", cats: ["judgment"], match: isJudgmentMulti, expectVisual: "judgmentMulti" },
+    { badge: "ショートカット", cats: ["shortcut"], match: () => true },
+    { badge: "穴埋め", cats: ["cloze"], match: () => true },
+    { badge: "略称", cats: ["abbr"], match: () => true, expectVisual: "abbr" },
+  ];
+  const samples = [];
+  for (const t of targets) {
+    const candidates = pool.filter((q) => t.cats.includes(q.category) && t.match(q));
+    for (const q of candidates) {
+      const shuf = makeSeededShuffle(`sample:${t.badge}:${q.id}`);
+      const payload = buildPayload(q, pool, shuf);
+      if (!payload) continue;
+      if (t.expectVisual && getVisualType(payload) !== t.expectVisual) continue;
+      const imageBase64 = payloadToImageBase64(payload, 0);
+      if (!imageBase64) continue;
+      samples.push({
+        visualType: getVisualType(payload),
+        layoutLabel: t.badge,
+        questionId: payload.id,
+        category: payload.category,
+        categoryLabel: CATEGORY_LABEL[payload.category] || payload.category,
+        imageBase64,
+      });
+      break;
+    }
+  }
+  return samples;
+}
+
+function prunePastScheduleOverrides(overrides, todayKey) {
+  const out = {};
+  for (const [dateKey, entry] of Object.entries(overrides || {})) {
+    if (dateKey >= todayKey && entry && entry.questionId) out[dateKey] = entry;
+  }
+  return out;
+}
+
+async function buildSchedulePreview(days = 7, options = {}) {
+  const includeImages = options.includeImages !== false;
+  const includeSamples = options.includeSamples !== false;
+  const pool = await fetchQuizData();
+  const snap = await metaRef().get();
+  const meta = snap.exists ? snap.data() : {};
+  const postedIds = Array.isArray(meta.postedIds) ? meta.postedIds.slice() : [];
+  const baseSeq = Number(meta.seq || 0);
+  const last = meta.last || {};
+  const todayKey = getJstDateKey();
+  const todayPosted = isPostedOnDate(last, todayKey);
+  const rawOverrides =
+    meta.scheduleOverrides && typeof meta.scheduleOverrides === "object"
+      ? meta.scheduleOverrides
+      : {};
+  const overrides = prunePastScheduleOverrides(rawOverrides, todayKey);
+  const workingOverrides = { ...overrides };
+  let overridesChanged =
+    Object.keys(overrides).length !== Object.keys(rawOverrides).length;
+  const result = [];
+  const simulatedPosted = postedIds.slice();
+
+  for (let i = 0; i < days; i++) {
+    const dateKey = addJstDays(todayKey, i);
+    const postedThisDay = i === 0 && todayPosted;
+    const daySeq = todayPosted ? baseSeq + i : baseSeq + i + 1;
+
+    let payload = null;
+    let source = "auto";
+    let preferCategory = weekdayCategory(new Date(dateKey + "T12:00:00+09:00"));
+
+    if (postedThisDay && last.questionId) {
+      payload = payloadFromQuestionId(pool, last.questionId, dateKey, daySeq);
+      source = "posted";
+    } else {
+      const picked = await pickForScheduleDay(pool, simulatedPosted, dateKey, daySeq, workingOverrides);
+      payload = picked.payload;
+      source = picked.source || "auto";
+      preferCategory = picked.preferCategory || preferCategory;
+      if (payload && payload.id && !workingOverrides[dateKey]) {
+        workingOverrides[dateKey] = {
+          questionId: payload.id,
+          note: "表示時に自動固定",
+          setBy: "auto",
+        };
+        overridesChanged = true;
+        source = "pinned";
+      } else if (workingOverrides[dateKey]) {
+        source = "pinned";
+      }
+    }
+
+    if (payload && payload.id && !simulatedPosted.includes(payload.id)) {
+      simulatedPosted.push(payload.id);
+    }
+
+    const override = workingOverrides[dateKey] || null;
+    const dayItem = {
+      date: dateKey,
+      dateLabel: formatJstDateLabel(dateKey),
+      postAt: "7:45 JST",
+      seq: daySeq,
+      category: payload ? payload.category : preferCategory,
+      categoryLabel: CATEGORY_LABEL[payload ? payload.category : preferCategory] || preferCategory,
+      status: postedThisDay ? "posted" : source === "pinned" ? "pinned" : "scheduled",
+      questionId: payload ? payload.id : null,
+      module: payload ? payload.module : null,
+      moduleLabel: payload ? MODULE_LABEL[payload.module] || payload.module : null,
+      question: payload ? payload.question : null,
+      choices: payload ? payload.choices : [],
+      answer: payload ? payload.answer : null,
+      answerLabel: payload ? choiceLabel(payload) : null,
+      explanation: payload ? payload.explanation : null,
+      abbrParts: payload ? serializeAbbrParts(payload) : null,
+      answerLabels: payload && payload.answerLabels ? payload.answerLabels.slice() : null,
+      replyText: null,
+      replyWeight: null,
+      replyMaxWeight: REPLY_MAX_WEIGHT,
+      replyExplanationTruncated: false,
+      replyExplanationOmitted: false,
+      override: override
+        ? {
+            questionId: override.questionId || null,
+            note: override.note || "",
+            setBy: override.setBy || "",
+          }
+        : null,
+      tweetUrl:
+        postedThisDay && last.tweetId
+          ? `https://x.com/i/web/status/${last.tweetId}`
+          : null,
+    };
+    if (payload && includeImages) {
+      const vt = getVisualType(payload);
+      dayItem.visualType = vt;
+      dayItem.layoutLabel = layoutLabelForPayload(payload);
+      dayItem.imageBase64 = payloadToImageBase64(payload, daySeq);
+    }
+    if (payload) {
+      const reply = buildReplyPreview(payload);
+      dayItem.replyText = reply.text;
+      dayItem.replyWeight = reply.weight;
+      dayItem.replyMaxWeight = reply.maxWeight;
+      dayItem.replyExplanationTruncated = reply.explanationTruncated;
+      dayItem.replyExplanationOmitted = reply.explanationOmitted;
+    }
+    result.push(dayItem);
+  }
+
+  if (overridesChanged) {
+    await metaRef().set(
+      {
+        scheduleOverrides: workingOverrides,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  const response = {
+    ok: true,
+    seq: baseSeq,
+    todayKey,
+    todayPosted,
+    days: result,
+    poolSize: pool.length,
+  };
+  if (includeSamples) {
+    response.layoutSamples = await buildLayoutSamples(pool);
+  }
+  return response;
+}
+
+async function setScheduleOverride({ dateKey, questionId, action, note, setBy }) {
+  const key = String(dateKey || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) {
+    throw new Error("dateKey は YYYY-MM-DD 形式で指定してください");
+  }
+  const snap = await metaRef().get();
+  const meta = snap.exists ? snap.data() : {};
+  const todayKey = getJstDateKey();
+  const overrides = prunePastScheduleOverrides(
+    { ...(meta.scheduleOverrides || {}) },
+    todayKey
+  );
+  const pool = await fetchQuizData();
+  const postedIds = Array.isArray(meta.postedIds) ? meta.postedIds.slice() : [];
+  const baseSeq = Number(meta.seq || 0);
+  const todayPosted = isPostedOnDate(meta.last, todayKey);
+  const dayOffset = Math.max(
+    0,
+    Math.round(
+      (new Date(key + "T12:00:00+09:00").getTime() -
+        new Date(todayKey + "T12:00:00+09:00").getTime()) /
+        86400000
+    )
+  );
+  const seq = todayPosted ? baseSeq + dayOffset : baseSeq + dayOffset + 1;
+
+  if (action === "clear") {
+    delete overrides[key];
+  } else if (action === "repick") {
+    const current = overrides[key] && overrides[key].questionId;
+    const prefer = weekdayCategory(new Date(key + "T12:00:00+09:00"));
+    let picked = null;
+    for (let salt = 0; salt < 30; salt++) {
+      const seed = hashSeed(`${key}:${prefer}:${seq}:repick:${salt}`);
+      const p = pickQuestionSeeded(pool, postedIds, prefer, seed);
+      if (p && p.id !== current) {
+        picked = p;
+        break;
+      }
+    }
+    if (!picked) throw new Error("差し替え候補が見つかりませんでした");
+    overrides[key] = {
+      questionId: picked.id,
+      note: note || "自動差し替え",
+      setBy: setBy || "",
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    };
+  } else {
+    const qid = String(questionId || "").trim();
+    if (!qid) throw new Error("questionId が必要です");
+    if (!findRawQuestion(pool, qid)) throw new Error("問題IDが見つかりません: " + qid);
+    overrides[key] = {
+      questionId: qid,
+      note: note || "",
+      setBy: setBy || "",
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    };
+  }
+
+  await metaRef().set(
+    {
+      scheduleOverrides: overrides,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  return { ok: true, dateKey: key, overrides: overrides[key] || null };
 }
 
 function twitterClientFromSecrets() {
@@ -586,12 +1473,29 @@ async function runDailyPost(options = {}) {
   const meta = snap.exists ? snap.data() : {};
   const postedIds = Array.isArray(meta.postedIds) ? meta.postedIds.slice(-4000) : [];
   const seq = Number(meta.seq || 0) + 1;
-  const prefer =
+  const todayKey = getJstDateKey();
+  const overrides = prunePastScheduleOverrides(
+    meta.scheduleOverrides && typeof meta.scheduleOverrides === "object"
+      ? meta.scheduleOverrides
+      : {},
+    todayKey
+  );
+  let payload = null;
+  let prefer =
     options.preferCategory && POSTABLE.has(String(options.preferCategory))
       ? String(options.preferCategory)
       : weekdayCategory();
-  const strictPrefer = !!(options.preferCategory && POSTABLE.has(String(options.preferCategory)));
-  const payload = await pickQuestion(pool, postedIds, prefer, { strict: strictPrefer });
+  if (options.preferCategory && POSTABLE.has(String(options.preferCategory))) {
+    payload = await pickQuestion(pool, postedIds, prefer, {
+      strict: true,
+      dateKey: todayKey,
+      seq,
+    });
+  } else {
+    const picked = await pickForScheduleDay(pool, postedIds, todayKey, seq, overrides);
+    payload = picked.payload;
+    prefer = picked.preferCategory || prefer;
+  }
   if (!payload) {
     return { ok: false, reason: "no_question", prefer };
   }
@@ -680,10 +1584,13 @@ async function runDailyPost(options = {}) {
   }
 
   const nextPosted = postedIds.concat([payload.id]);
+  const nextOverrides = { ...overrides };
+  delete nextOverrides[todayKey];
   await metaRef().set(
     {
       seq,
       postedIds: nextPosted.slice(-4000),
+      scheduleOverrides: nextOverrides,
       last: {
         questionId: payload.id,
         category: payload.category,
@@ -785,7 +1692,15 @@ function createXDailySapQuizScheduleExport() {
 }
 
 /** 曜日ローテと同じ4カテゴリ（重複曜日はまとめ） */
-const WEEKDAY_CATEGORIES = ["tcode", "term", "judgment", "scenario"];
+const WEEKDAY_CATEGORIES = [
+  "tcode",
+  "term",
+  "judgment",
+  "scenario",
+  "shortcut",
+  "abbr",
+  "cloze",
+];
 
 async function runAllCategoryPosts(options = {}) {
   const results = [];
@@ -856,10 +1771,68 @@ function createPostXDailySapQuizNowExport() {
   );
 }
 
+/** 管理者用: X投稿予定（1週間）の取得 */
+function createGetXDailySapScheduleExport() {
+  return onCall(
+    {
+      region: REGION,
+      cors: true,
+      serviceAccount: SERVICE_ACCOUNT,
+      timeoutSeconds: 180,
+      memory: "1GiB",
+    },
+    async (request) => {
+      assertAdmin(request);
+      const days = Math.min(14, Math.max(1, Number(request.data && request.data.days) || 7));
+      const includeImages = !(request.data && request.data.includeImages === false);
+      const includeSamples = !(request.data && request.data.includeSamples === false);
+      try {
+        return await buildSchedulePreview(days, { includeImages, includeSamples });
+      } catch (err) {
+        console.error("getXDailySapSchedule", err);
+        throw new HttpsError("internal", err.message || String(err));
+      }
+    }
+  );
+}
+
+/** 管理者用: 特定日の投稿問題を差し替え・固定解除 */
+function createSetXDailySapScheduleOverrideExport() {
+  return onCall(
+    {
+      region: REGION,
+      cors: true,
+      serviceAccount: SERVICE_ACCOUNT,
+      timeoutSeconds: 120,
+      memory: "512MiB",
+    },
+    async (request) => {
+      assertAdmin(request);
+      const data = request.data || {};
+      const email = (request.auth.token && request.auth.token.email) || "";
+      try {
+        return await setScheduleOverride({
+          dateKey: data.dateKey,
+          questionId: data.questionId,
+          action: data.action || "set",
+          note: data.note || "",
+          setBy: email,
+        });
+      } catch (err) {
+        console.error("setXDailySapScheduleOverride", err);
+        throw new HttpsError("internal", err.message || String(err));
+      }
+    }
+  );
+}
+
 module.exports = {
   createXDailySapQuizScheduleExport,
   createPostXDailySapQuizNowExport,
+  createGetXDailySapScheduleExport,
+  createSetXDailySapScheduleOverrideExport,
   runDailyPost,
   runAllCategoryPosts,
+  buildSchedulePreview,
   WEEKDAY_CATEGORIES,
 };

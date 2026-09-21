@@ -46,6 +46,19 @@ function wireAppChromeOnce() {
       alert("出題モジュールを読み込み中です。少し待ってから再度お試しください。");
       return;
     }
+    // 教科書: 詳細オプション経由のモジュール全選択を開始時に封じる
+    if (
+      typeof ChapterProgress !== "undefined" &&
+      typeof CURRENT_SUBJECT !== "undefined" &&
+      CURRENT_SUBJECT &&
+      ChapterProgress.hasTextbook(CURRENT_SUBJECT)
+    ) {
+      ChapterProgress.applyTextbookModuleFilter(
+        CURRENT_SUBJECT,
+        typeof homeChapterSelectedId !== "undefined" ? homeChapterSelectedId : null
+      );
+      if (typeof renderModuleChips === "function") renderModuleChips();
+    }
     startQuiz(getSettings());
   });
   $("next-btn").addEventListener("click", () => {
@@ -61,6 +74,23 @@ function wireAppChromeOnce() {
     const avoidIds = quiz.questions.map((q) => q.entry.id);
     startQuiz(quiz.settings, { avoidIds });
   });
+  const resultHardestReviewBtn = $("result-hardest-review-btn");
+  if (resultHardestReviewBtn) {
+    resultHardestReviewBtn.addEventListener("click", () => {
+      Promise.all([
+        typeof ensureQuizModules === "function" ? ensureQuizModules() : Promise.resolve(),
+        typeof ensureStatsModules === "function" ? ensureStatsModules() : Promise.resolve(),
+      ])
+        .then(() => {
+          if (typeof startSessionHardestReview === "function") startSessionHardestReview();
+          else alert("復習クイズの準備に失敗しました。誤答一覧から内容を確認してください。");
+        })
+        .catch((e) => {
+          console.warn(e);
+          alert("復習クイズの準備に失敗しました。少し待ってから再度お試しください。");
+        });
+    });
+  }
   $("result-home-btn").addEventListener("click", goHome);
   $("stats-review-quiz-btn").addEventListener("click", () => {
     ensureStatsScreen()
@@ -69,6 +99,42 @@ function wireAppChromeOnce() {
       })
       .catch((e) => console.warn(e));
   });
+  const homeReviewBtn = $("home-review-btn");
+  if (homeReviewBtn) {
+    homeReviewBtn.addEventListener("click", () => {
+      Promise.all([
+        typeof ensureQuizModules === "function" ? ensureQuizModules() : Promise.resolve(),
+        typeof ensureStatsScreen === "function" ? ensureStatsScreen() : Promise.resolve(),
+      ])
+        .then(() => {
+          if (typeof startReviewQuiz === "function") startReviewQuiz();
+          else alert("復習クイズの準備に失敗しました。成績画面からお試しください。");
+        })
+        .catch((e) => {
+          console.warn(e);
+          alert("復習クイズの準備に失敗しました。少し待ってから再度お試しください。");
+        });
+    });
+  }
+  const homeNextStartBtn = $("home-next-start-btn");
+  if (homeNextStartBtn) {
+    homeNextStartBtn.addEventListener("click", () => {
+      if (typeof isFreeQuotaExhausted === "function" && isFreeQuotaExhausted()) {
+        if (typeof showFreeQuotaExhaustedAtStart === "function") {
+          showFreeQuotaExhaustedAtStart();
+        }
+        return;
+      }
+      const start = $("start-btn");
+      if (start && !start.disabled && typeof startQuiz === "function" && typeof getSettings === "function") {
+        startQuiz(getSettings());
+        return;
+      }
+      const settingsCard = document.querySelector(".settings-card");
+      if (settingsCard) settingsCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (start) start.focus();
+    });
+  }
 
   $("site-title").addEventListener("click", goHome);
   document.querySelectorAll("[data-nav]").forEach((btn) => {

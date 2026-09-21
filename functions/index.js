@@ -3,6 +3,7 @@ const { defineSecret } = require("firebase-functions/params");
 const Stripe = require("stripe");
 const admin = require("firebase-admin");
 const { getPlanLineItem, isKnownSubject } = require("./pricing");
+const { getPlanLineItemLive } = require("./subject-catalog");
 const {
   getEntitlements,
   setStripeCustomerId,
@@ -97,7 +98,11 @@ exports.createCheckoutSession = onCall(
 
     const planType = String(request.data?.planType || "");
     const subjectId = String(request.data?.subjectId || "");
-    const line = getPlanLineItem(planType, subjectId);
+    const pricing = require("./pricing");
+    const line =
+      planType === "subject"
+        ? await getPlanLineItemLive(planType, subjectId, pricing)
+        : getPlanLineItem(planType, subjectId);
     if (!line) {
       throw new HttpsError(
         "invalid-argument",
@@ -334,6 +339,22 @@ exports.repairQuestionStatsQuadruple = createRepairQuestionStatsQuadrupleExport(
 const {
   createXDailySapQuizScheduleExport,
   createPostXDailySapQuizNowExport,
+  createGetXDailySapScheduleExport,
+  createSetXDailySapScheduleOverrideExport,
 } = require("./x-daily-sap");
 exports.xDailySapQuiz = createXDailySapQuizScheduleExport();
 exports.postXDailySapQuizNow = createPostXDailySapQuizNowExport();
+exports.getXDailySapSchedule = createGetXDailySapScheduleExport();
+exports.setXDailySapScheduleOverride = createSetXDailySapScheduleOverrideExport();
+
+/** X 毎日 生産管理2級クイズ（8:15 JST・SAP Secrets とは分離） */
+const {
+  createXDailySeisanQuizScheduleExport,
+  createPostXDailySeisanQuizNowExport,
+  createGetXDailySeisanScheduleExport,
+  createSetXDailySeisanScheduleOverrideExport,
+} = require("./x-daily-seisan");
+exports.xDailySeisanQuiz = createXDailySeisanQuizScheduleExport();
+exports.postXDailySeisanQuizNow = createPostXDailySeisanQuizNowExport();
+exports.getXDailySeisanSchedule = createGetXDailySeisanScheduleExport();
+exports.setXDailySeisanScheduleOverride = createSetXDailySeisanScheduleOverrideExport();

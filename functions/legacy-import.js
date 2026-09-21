@@ -5,7 +5,9 @@ const {
   normalizeStats,
   mergeStats,
   statsChanged,
-  buildSubjectPayload,
+  buildSummaryPayload,
+  buildDetailPayload,
+  qSize,
 } = require("./stats-merge");
 
 const REGION = "asia-northeast1";
@@ -16,6 +18,7 @@ const GAKUSYU_DOJO_PROJECT = "gakusyu-dojo";
 
 /** 学習道場 → ビジネス道場で取り込む科目（ID が一致するもの） */
 const GAKUSYU_SUBJECT_IDS = ["biz-career", "windows-shortcuts"];
+const STATS_DETAIL_DOC_ID = "stats";
 
 const crossApps = {};
 
@@ -169,6 +172,34 @@ async function findGakusyuSubjectStats(email) {
   return out;
 }
 
+async function loadBuzSubjectStats(buzRef) {
+  const [mainSnap, detailSnap] = await Promise.all([
+    buzRef.get(),
+    buzRef.collection("detail").doc(STATS_DETAIL_DOC_ID).get(),
+  ]);
+  if (!mainSnap.exists && !detailSnap.exists) return emptyStats();
+  const main = mainSnap.exists ? mainSnap.data() || {} : {};
+  const detail = detailSnap.exists ? detailSnap.data() || {} : {};
+  const mainQ = qSize({ q: main.q });
+  const detailQ = qSize({ q: detail.q });
+  const q = detailQ >= mainQ ? detail.q || main.q || {} : main.q || detail.q || {};
+  const choiceLog =
+    (Array.isArray(detail.choiceLog) && detail.choiceLog.length) ||
+    (Array.isArray(main.choiceLog) && main.choiceLog.length)
+      ? (detail.choiceLog && detail.choiceLog.length >= (main.choiceLog || []).length
+          ? detail.choiceLog
+          : main.choiceLog)
+      : [];
+  const inputLog =
+    (Array.isArray(detail.inputLog) && detail.inputLog.length) ||
+    (Array.isArray(main.inputLog) && main.inputLog.length)
+      ? (detail.inputLog && detail.inputLog.length >= (main.inputLog || []).length
+          ? detail.inputLog
+          : main.inputLog)
+      : [];
+  return normalizeStats({ ...main, q, choiceLog, inputLog });
+}
+
 async function mergeSubjectFromSource(
   buzRef,
   email,
@@ -180,18 +211,32 @@ async function mergeSubjectFromSource(
   options = {}
 ) {
   const buzDoc = await buzRef.get();
-  const current = buzDoc.exists ? normalizeStats(buzDoc.data()) : emptyStats();
-  if (!options.force && buzDoc.exists && buzDoc.data()[flagField]) {
-    return { imported: false, reason: "already_imported", answered: current.answered, subjectId };
+  const current = await loadBuzSubjectStats(buzRef);
+  const incoming = normalizeStats(sourceStats);
+  const currentQ = qSize(current);
+  const incomingQ = qSize(incoming);
+  const detailThin =
+    (current.answered || 0) >= 50 &&
+    incomingQ > currentQ + 50 &&
+    currentQ < Math.max(50, Math.floor((current.answered || 0) * 0.05));
+
+  if (!options.force && !detailThin && buzDoc.exists && buzDoc.data()[flagField]) {
+    return {
+      imported: false,
+      reason: "already_imported",
+      answered: current.answered,
+      qSize: currentQ,
+      subjectId,
+    };
   }
 
-  const incoming = normalizeStats(sourceStats);
-  if (incoming.answered === 0) {
+  if (incoming.answered === 0 && incomingQ === 0) {
     return { imported: false, reason: "no_data", answered: current.answered, subjectId };
   }
 
   const merged = mergeStats(current, incoming);
-  if (!statsChanged(current, merged)) {
+  const mergedQ = qSize(merged);
+  if (!statsChanged(current, merged) && mergedQ <= currentQ) {
     await buzRef.set(
       {
         [flagField]: admin.firestore.FieldValue.serverTimestamp(),
@@ -199,12 +244,24 @@ async function mergeSubjectFromSource(
       },
       { merge: true }
     );
-    return { imported: false, reason: "already_up_to_date", answered: current.answered, subjectId };
+    return {
+      imported: false,
+      reason: "already_up_to_date",
+      answered: current.answered,
+      qSize: currentQ,
+      subjectId,
+    };
   }
 
+  const summary = buildSummaryPayload(merged, subjectId, email);
+  const detail = buildDetailPayload(merged, subjectId);
   await buzRef.set(
     {
-      ...buildSubjectPayload(merged, subjectId, email),
+      ...summary,
+      // 本体から巨大フィールドを除去（detail へ分離）
+      q: admin.firestore.FieldValue.delete(),
+      choiceLog: admin.firestore.FieldValue.delete(),
+      inputLog: admin.firestore.FieldValue.delete(),
       [flagField]: admin.firestore.FieldValue.serverTimestamp(),
       legacySource: sourceName,
       legacyFromUid: sourceUid || null,
@@ -212,17 +269,22 @@ async function mergeSubjectFromSource(
     },
     { merge: true }
   );
+  await buzRef.collection("detail").doc(STATS_DETAIL_DOC_ID).set(detail, { merge: true });
 
   return {
     imported: true,
     answered: merged.answered,
     previous: current.answered,
     sourceAnswered: incoming.answered,
+    qSize: mergedQ,
+    previousQ: currentQ,
+    sourceQ: incomingQ,
     subjectId,
+    detailThin,
   };
 }
 
-async function importFromSapDojo(buzDb, uid, email) {
+async function importFromSapDojo(buzDb, uid, email, options = {}) {
   const buzRef = buzDb.collection("users").doc(uid).collection("subjects").doc("sap");
   try {
     const sapFound = await findSapDojoStats(email);
@@ -236,7 +298,8 @@ async function importFromSapDojo(buzDb, uid, email) {
       sapFound.data,
       sapFound.uid,
       "sapLegacyImportedAt",
-      "sap-dojo"
+      "sap-dojo",
+      options
     );
   } catch (err) {
     if (isPermissionError(err)) {
@@ -314,7 +377,7 @@ function createImportLegacyDojoStatsExport() {
 
       try {
         const [sap, gakusyu] = await Promise.all([
-          importFromSapDojo(buzDb, uid, email),
+          importFromSapDojo(buzDb, uid, email, { force }),
           importFromGakusyuDojo(buzDb, uid, email, { force }),
         ]);
 
@@ -349,7 +412,8 @@ function createImportSapDojoStatsExport() {
       const email = request.auth.token.email;
       if (!email) return { imported: false, reason: "no_email" };
       try {
-        return await importFromSapDojo(admin.firestore(), request.auth.uid, email);
+        const force = !!(request.data && request.data.force);
+        return await importFromSapDojo(admin.firestore(), request.auth.uid, email, { force });
       } catch (err) {
         console.error("importSapDojoStats failed:", err);
         if (isPermissionError(err)) {

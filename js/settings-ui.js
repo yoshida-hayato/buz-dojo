@@ -69,10 +69,29 @@ function updateCategoryChipCounts() {
   });
 }
 
+/** 教科書科目は章プール固定（モジュール全選択でロック迂回させない） */
+function isTextbookSettingsMode() {
+  return (
+    typeof ChapterProgress !== "undefined" &&
+    typeof CURRENT_SUBJECT !== "undefined" &&
+    CURRENT_SUBJECT &&
+    ChapterProgress.hasTextbook(CURRENT_SUBJECT)
+  );
+}
+
+/** 教科書時は選択中章（なければ現在章）の module のみに戻す */
+function enforceTextbookModuleSelection() {
+  if (!isTextbookSettingsMode()) return null;
+  const chapterId =
+    typeof homeChapterSelectedId !== "undefined" ? homeChapterSelectedId : null;
+  return ChapterProgress.applyTextbookModuleFilter(CURRENT_SUBJECT, chapterId);
+}
+
 /**
  * モジュール・分野のチップを、絞り込み対象カテゴリ横断で1行表示する。
  * 件数はホームの出題設定（未習得のみ・誤答のみ・優先度・解答方式）に合わせる。
  * ショートカット・略称のみ選択時は絞り込み不可の旨を表示する。
+ * 教科書科目では「いま第N章のみ」固定・全選択／解除を出さない。
  */
 function renderModuleChips() {
   const selectedCats = getCheckedValues("category");
@@ -80,10 +99,16 @@ function renderModuleChips() {
   const hasExcludedOnly =
     selectedCats.length > 0 && filterableCats.length === 0;
   const hasExcludedMixed = selectedCats.some((c) => isModuleFilterExcluded(c));
+  const textbook = isTextbookSettingsMode();
+  const textbookChapter = textbook ? enforceTextbookModuleSelection() : null;
 
   const modBox = $("module-chips");
   modBox.innerHTML = "";
-  $("module-actions").classList.toggle("hidden", filterableCats.length === 0);
+  // 教科書は全選択で章ロックを迂回できるため、操作自体を隠す
+  $("module-actions").classList.toggle(
+    "hidden",
+    filterableCats.length === 0 || textbook
+  );
 
   if (filterableCats.length === 0) {
     if (hasExcludedOnly) {
@@ -100,9 +125,23 @@ function renderModuleChips() {
   Object.entries(MODULES).forEach(([key, modLabel]) => {
     if (!counts[key]) return;
     const chip = makeChip("module", key, modLabel, counts[key], !uncheckedModules.has(key), (e) => {
+      if (textbook) {
+        // ロック迂回防止: 変更を取り消して章のみに戻す
+        e.preventDefault();
+        enforceTextbookModuleSelection();
+        renderModuleChips();
+        updatePoolCount();
+        return;
+      }
       if (e.target.checked) uncheckedModules.delete(key);
       else uncheckedModules.add(key);
     });
+    if (textbook) {
+      const input = chip.querySelector("input");
+      if (input) input.disabled = true;
+      chip.classList.add("is-textbook-fixed");
+      chip.title = "章の範囲は上の「学習の章」で選びます";
+    }
     chipRow.appendChild(chip);
   });
   if (!chipRow.childElementCount) {
@@ -112,6 +151,13 @@ function renderModuleChips() {
     modBox.appendChild(empty);
   } else {
     modBox.appendChild(chipRow);
+  }
+
+  if (textbook && textbookChapter) {
+    const note = document.createElement("p");
+    note.className = "setting-hint";
+    note.textContent = `いまは第${textbookChapter.order}章「${textbookChapter.module}」のみ出題します。章は上の「学習の章」で切り替えます。`;
+    modBox.appendChild(note);
   }
 
   if (hasExcludedMixed) {
@@ -130,19 +176,33 @@ function renderModuleChips() {
 function updateSettingRelevance() {
   const cats = getCheckedValues("category");
   const answerModeGroup = $("answer-mode-group");
+  const directionGroup = $("direction-group");
+  const usesDirection =
+    typeof subjectUsesDirection === "function" ? subjectUsesDirection() : true;
+  const usesInput =
+    typeof subjectUsesInput === "function" ? subjectUsesInput() : true;
 
-  const dirRelevant = cats.includes("tcode") || cats.includes("shortcut");
+  // 科目非対応は常に hidden（生管・ショートカットで Tコード／記述式 UI を出さない）
+  if (typeof applySubjectSettingVisibility === "function") {
+    applySubjectSettingVisibility();
+  } else {
+    if (directionGroup) directionGroup.classList.toggle("hidden", !usesDirection);
+    if (answerModeGroup) answerModeGroup.classList.toggle("hidden", !usesInput);
+    const dirAnsRow = $("direction-answer-row");
+    if (dirAnsRow) dirAnsRow.classList.toggle("hidden", !usesDirection && !usesInput);
+  }
+
+  const dirRelevant = usesDirection && cats.includes("tcode");
   $("direction-select").disabled = !dirRelevant;
-  $("direction-group").classList.toggle("irrelevant", !dirRelevant);
+  if (directionGroup) directionGroup.classList.toggle("irrelevant", !dirRelevant);
   $("direction-hint").textContent = dirRelevant
-    ? "Tコード・ショートカット問題に適用されます（用語・シナリオ・正誤・略称・並べ替え・穴埋めは形式が固定です）"
-    : "選択中のカテゴリでは使われません（Tコード・ショートカット問題用の設定です）";
+    ? "Tコード問題に適用されます（用語・シナリオ・正誤・略称・並べ替え・穴埋め・ショートカットは形式が固定です）"
+    : "選択中のカテゴリでは使われません（Tコード問題用の設定です）";
 
-  const inputRelevant = cats.some((c) => INPUT_CATEGORIES.has(c));
+  const inputRelevant = usesInput && cats.some((c) => INPUT_CATEGORIES.has(c));
   $("answer-mode-select").disabled = !inputRelevant;
   if (answerModeGroup) {
     answerModeGroup.classList.toggle("irrelevant", !inputRelevant);
-    if (!subjectUsesInput()) answerModeGroup.classList.add("hidden");
   }
   $("answer-mode-hint").textContent = inputRelevant
     ? "記述式・両方出題は入力対応カテゴリのみ。「両方」は選択式枠と記述式枠を別カウントし、各方式の未習得だけ出します"
@@ -154,7 +214,11 @@ function initSettingsUI() {
   const catBox = $("category-chips");
   catBox.innerHTML = "";
   Object.entries(CATEGORIES).forEach(([key, label]) => {
-    const chip = makeChip("category", key, label, 0, true);
+    const checked =
+      !DEFAULT_CATEGORIES || DEFAULT_CATEGORIES.length === 0
+        ? true
+        : DEFAULT_CATEGORIES.includes(key);
+    const chip = makeChip("category", key, label, 0, checked);
     // カテゴリが変わったらモジュールチップを作り直す（件数を再計算してからプール数を更新）
     chip.querySelector("input").addEventListener("change", () => {
       renderModuleChips();
@@ -176,13 +240,30 @@ function initSettingsUI() {
   renderModuleChips();
   updateSettingRelevance();
 
+  if (isTextbookSettingsMode()) {
+    enforceTextbookModuleSelection();
+    renderModuleChips();
+  }
+
   if (!settingsUiWired) {
     settingsUiWired = true;
     $("module-all").addEventListener("click", () => {
+      if (isTextbookSettingsMode()) {
+        enforceTextbookModuleSelection();
+        renderModuleChips();
+        updatePoolCount();
+        return;
+      }
       document.querySelectorAll('input[name="module"]').forEach((i) => uncheckedModules.delete(i.value));
       setAllChips("module", true);
     });
     $("module-none").addEventListener("click", () => {
+      if (isTextbookSettingsMode()) {
+        enforceTextbookModuleSelection();
+        renderModuleChips();
+        updatePoolCount();
+        return;
+      }
       document.querySelectorAll('input[name="module"]').forEach((i) => uncheckedModules.add(i.value));
       setAllChips("module", false);
     });
@@ -192,10 +273,34 @@ function initSettingsUI() {
       updatePoolCount();
     });
     $("answer-mode-select").addEventListener("change", () => {
+      $("answer-mode-select").dataset.userSet = "1";
       updateSettingRelevance();
       renderModuleChips();
       updatePoolCount();
     });
+    const rescueAll = $("pool-rescue-all");
+    if (rescueAll) {
+      rescueAll.addEventListener("click", () => {
+        $("pool-mode-select").value = "all";
+        // 詳細が閉じている場合でも値は効く
+        renderModuleChips();
+        updatePoolCount();
+        if (!$("start-btn").disabled && typeof startQuiz === "function") {
+          startQuiz(getSettings());
+        }
+      });
+    }
+    const rescueWrong = $("pool-rescue-wrong");
+    if (rescueWrong) {
+      rescueWrong.addEventListener("click", () => {
+        $("pool-mode-select").value = "wrong";
+        renderModuleChips();
+        updatePoolCount();
+        if (!$("start-btn").disabled && typeof startQuiz === "function") {
+          startQuiz(getSettings());
+        }
+      });
+    }
   }
   updatePoolCount();
 }
@@ -213,13 +318,32 @@ function getCheckedValues(groupName) {
 }
 
 function getSettings() {
+  const usesInput =
+    typeof subjectUsesInput === "function" ? subjectUsesInput() : true;
+  const usesDirection =
+    typeof subjectUsesDirection === "function" ? subjectUsesDirection() : true;
+  // 教科書は開始直前も章モジュールだけにする（詳細UI迂回の最終ガード）
+  if (isTextbookSettingsMode()) {
+    enforceTextbookModuleSelection();
+  }
+  let modules = getCheckedValues("module");
+  if (isTextbookSettingsMode() && CURRENT_SUBJECT) {
+    const progress = ChapterProgress.load(CURRENT_SUBJECT);
+    const ch =
+      (typeof homeChapterSelectedId !== "undefined" &&
+        homeChapterSelectedId &&
+        ChapterProgress.getChapter(CURRENT_SUBJECT, homeChapterSelectedId)) ||
+      ChapterProgress.currentChapter(CURRENT_SUBJECT, progress);
+    if (ch && ch.module) modules = [ch.module];
+  }
   return {
     categories: getCheckedValues("category"),
-    modules: getCheckedValues("module"),
+    modules,
     priorities: getCheckedValues("priority").map(Number),
-    direction: $("direction-select").value,
+    // 非対応科目では Tコード／記述式前提の値を使わない
+    direction: usesDirection ? $("direction-select").value : "name2code",
     count: $("count-select").value,
-    answerMode: $("answer-mode-select").value,
+    answerMode: usesInput ? $("answer-mode-select").value : "choice",
     poolMode: $("pool-mode-select").value,
   };
 }
@@ -242,16 +366,24 @@ function buildPool(settings) {
   const inputMastered = new Set(QuizStorage.inputMasteredIds());
   const mode = settings.answerMode || "choice";
 
-  if (settings.poolMode === "wrong") includeSet = new Set(QuizStorage.wrongIds());
+  const onlyIdsMode = Array.isArray(settings.onlyIds) && settings.onlyIds.length > 0;
+  if (onlyIdsMode) {
+    // 特定 ID だけ出す（結果画面の「一番つまずいた問題」復習など）
+    includeSet = new Set(settings.onlyIds);
+  } else if (settings.poolMode === "wrong") {
+    includeSet = new Set(QuizStorage.wrongIds());
+  }
 
   // モジュールチップが無い／未生成のときは絞らない（空配列で全問除外になるのを防ぐ）
   const moduleInputs = document.querySelectorAll('input[name="module"]');
   const hasModuleFilter =
+    !onlyIdsMode &&
     moduleInputs.length > 0 &&
     settings.categories.some((c) => MODULE_FILTERABLE.has(c));
 
   const base = QUIZ_DATA.filter((q) => {
     if (includeSet && !includeSet.has(q.id)) return false;
+    if (onlyIdsMode) return true;
     if (!settings.categories.includes(q.category)) return false;
     if (!settings.priorities.includes(q.priority)) return false;
     if (
@@ -295,20 +427,23 @@ function buildPool(settings) {
 function updatePoolCount() {
   const settings = getSettings();
   const pool = buildPool(settings);
+  const usesInput =
+    typeof subjectUsesInput === "function" ? subjectUsesInput() : true;
   let note = "";
   if (pool.length === 0 && settings.poolMode === "unmastered") {
-    if (settings.answerMode === "input") {
+    if (usesInput && settings.answerMode === "input") {
       note =
         "（入力対応カテゴリは記述式習得済み、その他は選択式習得済みを除外中です。出題対象を「すべての問題」にすると出題できます）";
-    } else if (settings.answerMode === "both") {
+    } else if (usesInput && settings.answerMode === "both") {
       note =
         "（選択式枠・記述式枠それぞれで習得済みを除外した結果、出題できる枠がありません）";
     } else {
-      note = "（選択式で習得済みの問題を除外中です。出題対象を「すべての問題」にすると出題できます）";
+      note = "（習得済みの問題を除外中です。下のボタンですぐ再開できます）";
     }
   } else if (pool.length === 0 && settings.poolMode === "wrong") {
     note = "（間違えたことのある問題がありません）";
   } else if (
+    usesInput &&
     settings.answerMode === "both" &&
     settings.categories.some((c) => INPUT_CATEGORIES.has(c))
   ) {
@@ -318,7 +453,32 @@ function updatePoolCount() {
   }
   $("pool-count").innerHTML = `該当する問題: <strong>${pool.length}</strong> 問${escapeHtml(note)}`;
   // 誤答の選択肢は全問題データから作るので、プールは1問あれば出題できる
-  $("start-btn").disabled = pool.length < 1;
+  $("start-btn").disabled = pool.length < 1 || isFreeQuotaExhausted();
+
+  const rescue = $("pool-rescue");
+  if (rescue) {
+    const showRescue = pool.length < 1;
+    rescue.classList.toggle("hidden", !showRescue);
+    const hint = rescue.querySelector(".pool-rescue-hint");
+    if (hint && showRescue) {
+      if (settings.poolMode === "wrong") {
+        hint.textContent =
+          "間違えた問題がありません。すべての問題で始めるか、出題条件を見直してください。";
+      } else if (settings.poolMode === "unmastered") {
+        hint.textContent =
+          "未習得の問題がありません。すべての問題で再開するか、間違えた問題に切り替えられます。";
+      } else {
+        hint.textContent = "この条件では出題できる問題がありません。";
+      }
+    }
+    const wrongBtn = $("pool-rescue-wrong");
+    if (wrongBtn) {
+      const hasWrongs =
+        typeof QuizStorage !== "undefined" && QuizStorage.wrongIds().length > 0;
+      // すでに wrong、または間違えた問題が無いときは出さない
+      wrongBtn.classList.toggle("hidden", settings.poolMode === "wrong" || !hasWrongs);
+    }
+  }
   updateCategoryChipCounts();
 }
 

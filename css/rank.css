@@ -51,6 +51,10 @@
   color: var(--text-sub);
 }
 .rank-banner-compact { padding: 16px 20px; }
+.rank-banner.is-textbook-focus #home-rank-progress,
+.rank-banner.is-textbook-focus .progress-bar {
+  display: none;
+}
 .home-rank-hint {
   margin-top: 8px;
   font-size: 11px;

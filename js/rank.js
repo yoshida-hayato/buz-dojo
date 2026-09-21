@@ -19,17 +19,24 @@ function resolveRanksForSubject(subject) {
 }
 
 function masteredCountForIds(stats, validIds) {
-  if (!stats || !stats.q) return 0;
+  if (!stats) return 0;
+  if (typeof stats.masteredChoice === "number") {
+    return stats.masteredChoice;
+  }
+  if (!stats.q) return 0;
   let n = 0;
   for (const [id, s] of Object.entries(stats.q)) {
-    // validIds が null のとき（科目一覧の軽量サマリ）は全キーを対象
     if ((!validIds || validIds.has(id)) && QuizStorage.isChoiceMastered(s)) n += 1;
   }
   return n;
 }
 
 function inputMasteredCountForIds(stats, validIds) {
-  if (!stats || !stats.q || !validIds || validIds.size === 0) return 0;
+  if (!stats) return 0;
+  if (typeof stats.masteredInput === "number") {
+    return stats.masteredInput;
+  }
+  if (!stats.q || !validIds || validIds.size === 0) return 0;
   let n = 0;
   for (const [id, s] of Object.entries(stats.q)) {
     if (validIds.has(id) && (s.ik || 0) >= 2) n += 1;
@@ -96,6 +103,48 @@ function createRankContextFromLoaded() {
     },
     inputMasteredCount(stats) {
       return inputMasteredCountForIds(stats, inputIds);
+    },
+  };
+}
+
+/**
+ * 科目ピッカー用。catalog 件数＋サマリ（answered/correct/mastered）から段位を再計算する。
+ * 保存済み rankName に依存しない（修復後の空／古いスナップショットズレを防ぐ）。
+ * 入力問題集合は持たないため入力条件は外す（選択式の累計・習得・正答率のみ）。
+ */
+function createPickerRankContext(catalogTotal, subjectId) {
+  const total = Math.max(0, Number(catalogTotal) || 0);
+  const baseRanks =
+    subjectId === "sap" && typeof DEFAULT_SAP_RANKS !== "undefined"
+      ? DEFAULT_SAP_RANKS
+      : typeof DEFAULT_RANKS !== "undefined"
+        ? DEFAULT_RANKS
+        : [];
+  const ranks = resolveRanksForSubject({
+    ranks: baseRanks,
+    inputCategories: [],
+  });
+  const cap = total * (typeof RANK_CORRECT_CAP_MULT === "number" ? RANK_CORRECT_CAP_MULT : 3);
+  return {
+    total,
+    ranks,
+    masteredNeeded(pct) {
+      return Math.ceil(((pct || 0) / 100) * total);
+    },
+    rankMinCorrect(r) {
+      return Math.floor(cap * (r.correctRatio || 0));
+    },
+    rankMinInputCorrect() {
+      return 0;
+    },
+    inputMasteredNeeded() {
+      return 0;
+    },
+    masteredCount(stats) {
+      return Number(stats && stats.masteredChoice) || 0;
+    },
+    inputMasteredCount(stats) {
+      return Number(stats && stats.masteredInput) || 0;
     },
   };
 }
@@ -203,36 +252,67 @@ function rankInputAccuracyPct(stats) {
 /** 現存問題のうち、選択式で1回以上挑戦した問題数 */
 function choiceAttemptedCount(stats) {
   const valid = new Set(QUIZ_DATA.map((q) => q.id));
-  let n = 0;
+  let matched = 0;
+  let any = 0;
   for (const [id, s] of Object.entries(stats.q || {})) {
-    if (!valid.has(id)) continue;
     const choiceA = Math.max(0, (s.a || 0) - (s.ia || 0));
-    if (choiceA > 0) n += 1;
+    if (choiceA <= 0) continue;
+    any += 1;
+    if (valid.has(id)) matched += 1;
   }
-  return n;
+  // 現行マスタと ID が一致しない旧詳細だけのときは件数を落とさない
+  return matched > 0 ? matched : any;
 }
 
 /** 現存問題のうち、記述式で1回以上挑戦した問題数 */
 function inputAttemptedCount(stats) {
   const valid = new Set(QUIZ_DATA.map((q) => q.id));
-  let n = 0;
+  let matched = 0;
+  let any = 0;
   for (const [id, s] of Object.entries(stats.q || {})) {
-    if (!valid.has(id)) continue;
-    if ((s.ia || 0) > 0) n += 1;
+    if ((s.ia || 0) <= 0) continue;
+    any += 1;
+    if (valid.has(id)) matched += 1;
   }
-  return n;
+  return matched > 0 ? matched : any;
 }
 
 // ===== 段位 =====
 /**
- * 選択式習得済み（2回連続正解中）の問題数。現存する問題だけを数える
- * （削除された問題のIDが成績に残っていても分母・分子に入れない）。
- * 段位判定・結果画面の習得ゲージに使用。
- * ※ stats.mastered（スナップショット用のキャッシュ数値）は使わない。
- *   q とずれると結果画面で習得数がマイナス表示になるため。
+ * 選択式習得済み（2回連続正解中）の問題数。
+ * 現存問題の q 集計を優先し、q が空のときだけ保存値を使う。
  */
 function masteredCount(stats) {
-  return masteredIdSet(stats).size;
+  const fromQ = masteredIdSet(stats).size;
+  const stored = typeof stats.masteredChoice === "number" ? stats.masteredChoice : 0;
+  const qSize = stats.q ? Object.keys(stats.q).length : 0;
+  if (qSize > 0) return fromQ;
+  return stored || fromQ;
+}
+
+function choiceMasteredCount(stats) {
+  return masteredCount(stats);
+}
+
+/** 累計正解。現存問題の q があればそれを優先（削除済み問題は含めない） */
+function effectiveCorrectCount(stats) {
+  const stored = Number(stats.correct) || 0;
+  if (!stats.q || !Object.keys(stats.q).length) return stored;
+  if (typeof QUIZ_DATA === "undefined" || !QUIZ_DATA.length) return stored;
+  const valid = new Set(QUIZ_DATA.map((q) => q.id));
+  let correct = 0;
+  let hasSubjectRow = false;
+  for (const [id, row] of Object.entries(stats.q)) {
+    if (!valid.has(id)) continue;
+    hasSubjectRow = true;
+    correct += Number(row.c) || 0;
+  }
+  return hasSubjectRow ? correct : stored;
+}
+
+/** 累計回答（reconcile 済みのサマリを表示） */
+function effectiveAnsweredCount(stats) {
+  return Math.max(0, Number(stats.answered) || 0);
 }
 
 /** 選択式習得済み問題IDの集合（現存する問題のみ） */
@@ -291,12 +371,16 @@ function rankMinCorrect(rankDef) {
 function getRank(stats) {
   const acc = rankChoiceAccuracyPct(stats);
   const accInput = rankInputAccuracyPct(stats);
+  const correct = effectiveCorrectCount(stats);
   const mastered = masteredCount(stats);
-  const inputMastered = inputMasteredIdSet(stats).size;
+  const inputMastered =
+    typeof stats.masteredInput === "number" && (!stats.q || !Object.keys(stats.q).length)
+      ? stats.masteredInput
+      : inputMasteredIdSet(stats).size;
   let current = RANKS[0];
   for (const r of RANKS) {
     if (
-      stats.correct >= rankMinCorrect(r) &&
+      correct >= rankMinCorrect(r) &&
       acc >= r.minAcc &&
       mastered >= masteredNeeded(r.minMasteredPct) &&
       inputMastered >= inputMasteredNeeded(r.minInputMasteredPct) &&
@@ -320,6 +404,7 @@ function rankProgress(stats) {
   const recentInput = inputAccuracyRecent(stats);
   const acc = recent.pct;
   const accInput = recentInput.pct;
+  const correct = effectiveCorrectCount(stats);
   const mastered = masteredCount(stats);
 
   if (!next) {
@@ -336,15 +421,15 @@ function rankProgress(stats) {
   // 表示順: 累計正解 → 選択式習得 → 選択式直近正答率 → 記述式習得 → 記述式直近正答率
   if (nextMin > rankMin) {
     const span = nextMin - rankMin;
-    const done = Math.min(span, Math.max(0, stats.correct - rankMin));
+    const done = Math.min(span, Math.max(0, correct - rankMin));
     pcts.push(span === 0 ? 100 : Math.round((done / span) * 100));
   }
   if (nextMin > 0) {
-    const remain = Math.max(0, nextMin - stats.correct);
-    const met = stats.correct >= nextMin;
+    const remain = Math.max(0, nextMin - correct);
+    const met = correct >= nextMin;
     conditions.push({
       label: "累計正解",
-      detail: met ? `${stats.correct}/${nextMin}問` : `あと${remain}問`,
+      detail: met ? `${correct}/${nextMin}問` : `あと${remain}問`,
       met,
     });
   }
@@ -450,18 +535,11 @@ function renderRankBanner(prefix) {
   return stats;
 }
 
-
-function choiceMasteredCount(stats) {
-  const valid = new Set(QUIZ_DATA.map((q) => q.id));
-  let n = 0;
-  for (const [id, s] of Object.entries(stats.q || {})) {
-    if (valid.has(id) && QuizStorage.isChoiceMastered(s)) n++;
-  }
-  return n;
-}
-
 function inputMasteredCount(stats) {
-  return inputMasteredIdSet(stats).size;
+  const fromQ = inputMasteredIdSet(stats).size;
+  const stored = typeof stats.masteredInput === "number" ? stats.masteredInput : 0;
+  if (stored > 0 && fromQ === 0) return stored;
+  return Math.max(fromQ, stored);
 }
 
 function tcodeQuestionCount() {

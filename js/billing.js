@@ -6,6 +6,8 @@ const Billing = (function () {
   const REGION = "asia-northeast1";
   let functions = null;
   let busy = false;
+  /** @type {{ kind: "checkout"|"portal", planType?: string, subjectId?: string } | null} */
+  let pendingAction = null;
 
   function ready() {
     return (
@@ -32,16 +34,40 @@ const Billing = (function () {
     return firebase.auth && firebase.auth().currentUser;
   }
 
-  function openLogin() {
+  function openLoginModal() {
+    if (typeof AuthUI !== "undefined" && typeof AuthUI.openModal === "function") {
+      AuthUI.openModal({ reason: "checkout" });
+      return;
+    }
     const btn = document.getElementById("login-btn");
     if (btn) btn.click();
-    else alert("購入にはログインが必要です。");
+  }
+
+  function clearPendingCheckout() {
+    pendingAction = null;
+  }
+
+  /** ログイン成功後に保留中の Checkout / Portal を再開 */
+  function resumePendingCheckout() {
+    if (!pendingAction || !currentUser()) return;
+    const action = pendingAction;
+    pendingAction = null;
+    if (action.kind === "portal") {
+      void openPortal();
+      return;
+    }
+    void startCheckout(action.planType, action.subjectId);
   }
 
   async function startCheckout(planType, subjectId) {
     if (busy) return;
     if (!currentUser()) {
-      openLogin();
+      pendingAction = {
+        kind: "checkout",
+        planType,
+        subjectId: subjectId || undefined,
+      };
+      openLoginModal();
       return;
     }
     busy = true;
@@ -74,7 +100,8 @@ const Billing = (function () {
   async function openPortal() {
     if (busy) return;
     if (!currentUser()) {
-      openLogin();
+      pendingAction = { kind: "portal" };
+      openLoginModal();
       return;
     }
     busy = true;
@@ -130,5 +157,7 @@ const Billing = (function () {
     startCheckout,
     openPortal,
     ready,
+    resumePendingCheckout,
+    clearPendingCheckout,
   };
 })();

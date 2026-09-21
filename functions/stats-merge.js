@@ -107,16 +107,15 @@ function mergeStats(a, b) {
   merged.inputAnswered = Math.max(left.inputAnswered, right.inputAnswered);
   merged.inputCorrect = Math.max(left.inputCorrect, right.inputCorrect);
 
-  const primary = left.answered >= right.answered ? left : right;
-  const secondary = primary === left ? right : left;
+  // 正誤ログは常に長い方（推移グラフ用）。短い方を answered 整合だけで優先しない
   merged.choiceLog =
-    (primary.choiceLog || []).length >= (secondary.choiceLog || []).length
-      ? (primary.choiceLog || []).slice()
-      : (secondary.choiceLog || []).slice();
+    (left.choiceLog || []).length >= (right.choiceLog || []).length
+      ? (left.choiceLog || []).slice()
+      : (right.choiceLog || []).slice();
   merged.inputLog =
-    (primary.inputLog || []).length >= (secondary.inputLog || []).length
-      ? (primary.inputLog || []).slice()
-      : (secondary.inputLog || []).slice();
+    (left.inputLog || []).length >= (right.inputLog || []).length
+      ? (left.inputLog || []).slice()
+      : (right.inputLog || []).slice();
 
   return merged;
 }
@@ -124,8 +123,15 @@ function mergeStats(a, b) {
 function statsChanged(before, after) {
   if ((after.answered || 0) > (before.answered || 0)) return true;
   if ((after.correct || 0) > (before.correct || 0)) return true;
+  const beforeChoice = Array.isArray(before.choiceLog) ? before.choiceLog.length : 0;
+  const afterChoice = Array.isArray(after.choiceLog) ? after.choiceLog.length : 0;
+  if (afterChoice > beforeChoice) return true;
+  const beforeInput = Array.isArray(before.inputLog) ? before.inputLog.length : 0;
+  const afterInput = Array.isArray(after.inputLog) ? after.inputLog.length : 0;
+  if (afterInput > beforeInput) return true;
   const beforeQ = before.q || {};
   const afterQ = after.q || {};
+  if (Object.keys(afterQ).length > Object.keys(beforeQ).length) return true;
   for (const id of Object.keys(afterQ)) {
     if (!beforeQ[id]) return true;
     const b = beforeQ[id];
@@ -137,18 +143,60 @@ function statsChanged(before, after) {
   return false;
 }
 
-function buildSubjectPayload(stats, subjectId, email) {
+function qSize(stats) {
+  return stats && stats.q && typeof stats.q === "object" ? Object.keys(stats.q).length : 0;
+}
+
+function countChoiceMastered(q) {
+  let n = 0;
+  for (const s of Object.values(q || {})) {
+    if (!s) continue;
+    if (typeof s.ck === "number") {
+      if (s.ck >= 2) n += 1;
+    } else if ((s.k || 0) >= 2 && !(s.ia > 0)) {
+      n += 1;
+    }
+  }
+  return n;
+}
+
+function countInputMastered(q) {
+  let n = 0;
+  for (const s of Object.values(q || {})) {
+    if ((s && s.ik) >= 2) n += 1;
+  }
+  return n;
+}
+
+function buildSummaryPayload(stats, subjectId, email) {
   return {
-    answered: stats.answered,
-    correct: stats.correct,
+    answered: stats.answered || 0,
+    correct: stats.correct || 0,
     inputAnswered: stats.inputAnswered || 0,
     inputCorrect: stats.inputCorrect || 0,
-    choiceLog: stats.choiceLog || [],
-    inputLog: stats.inputLog || [],
-    q: stats.q || {},
+    masteredChoice: Math.max(Number(stats.masteredChoice) || 0, countChoiceMastered(stats.q)),
+    masteredInput: Math.max(Number(stats.masteredInput) || 0, countInputMastered(stats.q)),
     daily: stats.daily || {},
     subjectId,
     email: email || null,
+    schemaVersion: 2,
+  };
+}
+
+function buildDetailPayload(stats, subjectId) {
+  return {
+    q: stats.q || {},
+    choiceLog: Array.isArray(stats.choiceLog) ? stats.choiceLog : [],
+    inputLog: Array.isArray(stats.inputLog) ? stats.inputLog : [],
+    subjectId,
+  };
+}
+
+function buildSubjectPayload(stats, subjectId, email) {
+  // 後方互換（旧呼び出し）: サマリ＋詳細を1ドキュメントに
+  return {
+    ...buildSummaryPayload(stats, subjectId, email),
+    ...buildDetailPayload(stats, subjectId),
   };
 }
 
@@ -158,4 +206,7 @@ module.exports = {
   mergeStats,
   statsChanged,
   buildSubjectPayload,
+  buildSummaryPayload,
+  buildDetailPayload,
+  qSize,
 };

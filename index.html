@@ -17,7 +17,12 @@
         var known = {
           sap: 1,
           "windows-shortcuts": 1,
-          "biz-career": 1
+          "biz-career": 1,
+          "excel-functions": 1,
+          "outlook-mail": 1,
+          "teams-collab": 1,
+          "ai-ontology-intro": 1,
+          "ai-ontology-core": 1
         };
         var seg = (location.pathname || "/").split("/").filter(Boolean)[0];
         var fromPath = seg && known[seg];
@@ -105,10 +110,11 @@
         </button>
       </div>
     </div>
+    <div class="sync-pending-status hidden" id="sync-pending-status" role="status" aria-live="polite"></div>
     <div class="bell-panel hidden" id="bell-panel">
       <div class="bell-panel-title">問題の更新履歴</div>
       <div id="changelog-list"></div>
-      <p class="bell-panel-note">問題が追加されると昇段条件の基準（累計正解数・習得率など）が変わるため、段位が一時的に下がることがあります。成績データは保持されます。</p>
+      <p class="bell-panel-note">問題が追加されると昇段条件の基準（累計正解数・習得率など）が変わるため、段位が一時的に下がることがあります。成績データは保持されます。表示が古いときはページ再読み込みも試してください（常に最新保証ではありません）。</p>
     </div>
   </header>
 
@@ -118,7 +124,7 @@
     <section id="screen-subjects" class="screen">
       <div class="card subject-pick-card">
         <h2 class="card-title">科目を選ぶ</h2>
-        <p class="setting-hint" id="subjects-pick-hint">同じ形のクイズで、さまざまなビジネス学習ができます。科目ごとの成績は分かれます。各問題集は<strong>1日20問まで無料</strong>です。</p>
+        <p class="setting-hint" id="subjects-pick-hint">操作だけなら下の「すぐ使える（操作）」帯からで大丈夫です。オントロジーは知識の置き方を学ぶ科目で、操作の代わりではありません。科目ごとの成績は分かれます。100問以下は<strong>全問無料</strong>、それ以外は<strong>1日20問まで無料</strong>です。</p>
         <p class="site-notice site-notice-quality">
           問題は AI を活用して作成しているため、<strong>誤りや不自然な表現が残ることがあります</strong>。
           おかしいと思ったときは回答後の指摘やお問い合わせで教えてください。フィードバックが多いほど、問題の精度を上げやすくなります。
@@ -126,10 +132,10 @@
         <div class="subject-list" id="subject-list"></div>
         <div class="billing-footer">
           <p class="site-notice site-notice-support" id="subjects-support-notice">
-            問題作成の AI 費用とサーバ運用費をまかなうため、<strong>購読でのご協力</strong>をお願いしています。プレミアムパック（全問題集＋要望提出）もご検討ください。
+            問題作成の AI 費用とサーバ運用費をまかなうため、<strong>購読でのご協力</strong>をお願いしています。プレミアムパック（全科目＋要望提出）もご検討ください。
           </p>
           <p class="site-notice site-notice-thanks hidden" id="subjects-thanks-notice">
-            プレミアムパックをご利用いただきありがとうございます。全問題集が無制限です。ご要望はメニューの「問題追加要望（プレミアムパック限定）」から送れます。
+            プレミアムパックをご利用いただきありがとうございます。全科目が無制限です。ご要望はメニューの「問題追加要望（プレミアムパック限定）」から送れます。
           </p>
           <button type="button" class="link-btn hidden" id="billing-manage-btn">契約・お支払いの管理</button>
         </div>
@@ -152,7 +158,19 @@
         </div>
       </div>
       <div class="save-mode-note" id="save-mode-note"></div>
-      <div class="home-note">科目を選ぶと説明が表示されます。</div>
+      <div class="home-note">出題数などを選んでから、クイズを開始できます。</div>
+
+      <!-- 章順教科書（SUBJECT.chapters + defaultStudyMode:"textbook" の科目のみ表示） -->
+      <div class="card home-chapter-card hidden" id="home-chapter-card">
+        <h2 class="card-title">学習の章</h2>
+        <ul class="home-chapter-list" id="home-chapter-list" role="list"></ul>
+        <p class="home-chapter-hint" id="home-chapter-hint"></p>
+        <p class="home-chapter-preview-bridge hidden" id="home-chapter-preview-why"></p>
+        <div class="home-chapter-actions">
+          <button type="button" class="primary-btn" id="home-chapter-continue-btn">この章を続ける</button>
+          <button type="button" class="secondary-btn hidden" id="home-chapter-bridge-btn">オントロジー基礎へ進む</button>
+        </div>
+      </div>
 
       <div class="card settings-card">
         <h2 class="card-title">出題設定</h2>
@@ -175,7 +193,7 @@
           <div class="setting-group">
             <div class="setting-label">出題カテゴリ</div>
             <div class="chip-group" id="category-chips"></div>
-            <div class="setting-hint">件数は、モジュール・優先度・出題対象・解答方式に合う問題数です。</div>
+            <div class="setting-hint" id="category-count-hint">件数は、モジュール・優先度・出題対象・解答方式に合う問題数です。</div>
           </div>
 
           <div class="setting-group" id="module-group">
@@ -185,11 +203,11 @@
               <button class="link-btn" id="module-all">すべて選択</button>
               <button class="link-btn" id="module-none">すべて解除</button>
             </div>
-            <div class="setting-hint">件数は、カテゴリ・優先度・出題対象・解答方式に合う問題数です。</div>
+            <div class="setting-hint" id="module-count-hint">件数は、カテゴリ・優先度・出題対象・解答方式に合う問題数です。</div>
           </div>
 
           <div class="setting-group">
-            <div class="setting-label">暗記優先度</div>
+            <div class="setting-label">出題優先度</div>
             <div class="chip-group" id="priority-chips"></div>
             <div class="setting-hint">※ 優先度は実務での出現頻度・つまずきやすさに基づく目安です。</div>
           </div>
@@ -201,10 +219,10 @@
               <option value="wrong">間違えたことのある問題のみ</option>
               <option value="all">すべての問題</option>
             </select>
-            <div class="setting-hint">※ 選択式の習得と記述式の習得は別です。「両方出題」ではTコードを選択式枠・記述式枠で二重に数え、各枠で未習得のものだけ出します。</div>
+            <div class="setting-hint" id="pool-mode-hint">※ 選択式の習得と記述式の習得は別です。「両方出題」ではTコードを選択式枠・記述式枠で二重に数え、各枠で未習得のものだけ出します。</div>
           </div>
 
-          <div class="setting-row">
+          <div class="setting-row" id="direction-answer-row">
             <div class="setting-group half" id="direction-group">
               <div class="setting-label">出題形式</div>
               <select id="direction-select" class="select">
@@ -217,9 +235,9 @@
             <div class="setting-group half" id="answer-mode-group">
               <div class="setting-label">解答方式</div>
               <select id="answer-mode-select" class="select">
-                <option value="choice">選択式（6択）</option>
+                <option value="choice" selected>選択式（6択）</option>
                 <option value="input">記述式（Tコードを入力）</option>
-                <option value="both" selected>両方出題（選択式＋記述式）</option>
+                <option value="both">両方出題（選択式＋記述式）</option>
               </select>
               <div class="setting-hint" id="answer-mode-hint"></div>
             </div>
@@ -227,8 +245,35 @@
         </details>
 
         <div class="start-area">
+          <p class="start-expect-note hidden" id="start-expect-note"></p>
+          <div class="start-quota-summary hidden" id="start-quota-summary" role="status"></div>
           <div class="pool-count" id="pool-count"></div>
+          <div class="pool-rescue hidden" id="pool-rescue">
+            <p class="pool-rescue-hint">この条件では出題できる問題がありません。</p>
+            <div class="pool-rescue-actions">
+              <button type="button" class="secondary-btn" id="pool-rescue-all">すべての問題で開始</button>
+              <button type="button" class="secondary-btn" id="pool-rescue-wrong">間違えた問題に切替</button>
+            </div>
+          </div>
+          <div class="start-quota-gate hidden" id="start-quota-gate" role="status">
+            <p class="start-quota-gate-text" id="start-quota-gate-text">本日の無料枠を使い切りました。問題集の購入、または翌朝のリセットまでお待ちください。</p>
+            <div class="start-quota-gate-actions">
+              <button type="button" class="primary-btn" id="start-quota-buy-subject-btn">この問題集を購入</button>
+              <button type="button" class="secondary-btn" id="start-quota-buy-pack-btn">プレミアムパック</button>
+            </div>
+            <p class="start-quota-gate-reset" id="start-quota-gate-reset">翌朝（日本時間0時）になると無料枠がリセットされます。</p>
+          </div>
           <button class="primary-btn" id="start-btn">クイズを開始する</button>
+        </div>
+      </div>
+
+      <!-- 主CTA（通常開始）の下に置く。復習は副次導線。読込文言禁止・local/空でもブロック即表示 -->
+      <div class="card home-next-move is-clear" id="home-next-move">
+        <h2 class="card-title">つまずきの復習</h2>
+        <p class="home-next-move-body" id="home-next-move-body">いまつまずいている問題はありません。上の「クイズを開始する」から学習できます。</p>
+        <div class="home-next-move-actions">
+          <button type="button" class="secondary-btn hidden" id="home-review-btn">つまずきを復習する</button>
+          <button type="button" class="secondary-btn hidden" id="home-next-start-btn">クイズを開始する</button>
         </div>
       </div>
 
@@ -246,6 +291,22 @@
       </div>
     </section>
 
+    <!-- ===== 読み物レッスン（Phase3 パイロット） ===== -->
+    <section id="screen-lesson" class="screen hidden">
+      <div class="subject-bar">
+        <span class="subject-bar-label">科目: <strong id="lesson-subject-label">—</strong></span>
+      </div>
+      <div class="card lesson-card">
+        <div class="lesson-header">
+          <button type="button" class="link-btn" id="lesson-back-btn">ホームに戻る</button>
+          <p class="lesson-progress-label" id="lesson-progress-label"></p>
+        </div>
+        <h2 class="card-title" id="lesson-title">—</h2>
+        <div class="lesson-body" id="lesson-body"></div>
+        <div class="lesson-actions" id="lesson-actions"></div>
+      </div>
+    </section>
+
     <!-- ===== クイズ画面 ===== -->
     <section id="screen-quiz" class="screen hidden">
       <div class="quiz-header">
@@ -257,6 +318,17 @@
       <div class="card question-card">
         <div class="question-meta" id="question-meta"></div>
         <div class="question-text" id="question-text"></div>
+        <div class="contrast-pair hidden" id="contrast-pair" aria-label="対比する概念">
+          <div class="contrast-side">
+            <span class="contrast-tag">A</span>
+            <span class="contrast-label" id="contrast-left-label"></span>
+          </div>
+          <div class="contrast-vs">対</div>
+          <div class="contrast-side">
+            <span class="contrast-tag">B</span>
+            <span class="contrast-label" id="contrast-right-label"></span>
+          </div>
+        </div>
         <div class="cloze-prompt hidden" id="cloze-prompt"></div>
         <div class="reorder-board hidden" id="reorder-board"></div>
         <div class="abbr-progress hidden" id="abbr-progress"></div>
@@ -273,6 +345,7 @@
 
       <div class="card feedback-card hidden" id="feedback-card">
         <div class="feedback-result" id="feedback-result"></div>
+        <div class="chapter-clear-banner hidden" id="chapter-clear-banner" role="status"></div>
         <div class="feedback-answer" id="feedback-answer"></div>
         <div class="feedback-explanation" id="feedback-explanation"></div>
         <div class="question-global-rate hidden" id="question-global-rate"></div>
@@ -335,6 +408,7 @@
           </div>
         </div>
         <div class="result-actions">
+          <button type="button" class="primary-btn hidden" id="result-hardest-review-btn">このセットで一番つまずいた問題を復習</button>
           <button class="primary-btn" id="retry-btn">同じ設定でもう一度</button>
           <button class="secondary-btn" id="result-home-btn">ホームへ戻る</button>
         </div>
@@ -380,6 +454,7 @@
       <div class="card">
         <h2 class="card-title">全科目の成績</h2>
         <p class="setting-hint">各問題集の段位・正答率・習得状況の一覧です。詳細分析は科目を開いて「成績・段位」から確認できます。</p>
+        <p class="setting-hint" id="mypage-stats-trust-line">数値がおかしく見えるときは、再読み込み（端末キャッシュ）→この画面の再表示（再同期）の順で確認してください。常に最新とは限りません。</p>
         <div id="mypage-stats" class="mypage-stats">
           <p class="subject-list-loading">読み込み中…</p>
         </div>
@@ -472,6 +547,16 @@
         </div>
       </div>
       <p class="rank-update-note">段位は全問題数に連動しています。問題追加後は昇段条件の基準が変わり、一時的に下がることがあります。</p>
+      <p class="rank-update-note" id="stats-trust-line">成績がずれたときは、まずページ再読み込み（端末キャッシュの更新）→ログイン中はマイページを開き直して再同期、の順で切り分けてください。端末とクラウドで一時的に差が出ることがあり、常に最新表示とは限りません。</p>
+
+      <div class="card stats-review-card">
+        <h2 class="card-title">次にやること · 復習の優先順位</h2>
+        <p class="setting-hint stats-chart-hint">不正解の多さ・正答率の低さ・★優先度・未習得を総合して並べています。迷ったらここから始めてください。</p>
+        <div id="stats-review-top"></div>
+        <div class="stats-review-actions">
+          <button class="primary-btn hidden" id="stats-review-quiz-btn">優先問題で復習クイズ</button>
+        </div>
+      </div>
 
       <div class="card">
         <h2 class="card-title">累計成績</h2>
@@ -513,15 +598,6 @@
         <h2 class="card-title">モジュール別の習得率・正答率</h2>
         <p class="setting-hint stats-chart-hint">習得率＝選択式で2回連続正解の割合（未挑戦も分母に含む）。正答率が全体平均より低い分野は棒を赤系で表示します。</p>
         <div id="stats-by-module" class="dual-stat-grid is-modules"></div>
-      </div>
-
-      <div class="card stats-review-card">
-        <h2 class="card-title">復習の優先順位</h2>
-        <p class="setting-hint stats-chart-hint">不正解の多さ・正答率の低さ・★優先度・未習得を総合して並べています。</p>
-        <div id="stats-review-top"></div>
-        <div class="stats-review-actions">
-          <button class="primary-btn hidden" id="stats-review-quiz-btn">優先問題で復習クイズ</button>
-        </div>
       </div>
     </section>
 
@@ -632,7 +708,7 @@
       <button type="button" class="link-btn update-skip-btn" id="update-skip-btn">あとで更新する（このまま使う）</button>
       <p class="update-modal-hint">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        成績データは消えません
+        成績データは消えません。ずれたときは再読み込み→再同期で切り分けてください
       </p>
       <p class="update-modal-error hidden" id="update-modal-error"></p>
     </div>
@@ -684,13 +760,16 @@
         "config/firebase-config.js",
         "js/script-loader.js",
         "js/app-bridge.js",
+        "js/subject-catalog.js",
+        "js/rank.js",
+        "js/subject-summary.js",
+        "js/mastery-display.js",
         "js/storage.js",
         "js/entitlement.js",
         "js/billing.js",
         "js/subject-loader.js",
         "js/app-state.js",
         "js/dom-util.js",
-        "js/rank.js",
         "js/subject-config.js",
         "js/screens-nav.js",
         "js/billing-ui.js",

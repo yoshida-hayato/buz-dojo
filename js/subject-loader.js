@@ -157,16 +157,19 @@ const SubjectLoader = (function () {
     window.SUBJECT = undefined;
     window.QUIZ_DATA = undefined;
     window.JUDGMENT_DATA = undefined;
+    window.ORDER_DATA = undefined;
+    window.CONTRAST_DATA = undefined;
     window.CHANGELOG = undefined;
     window.LEARNING_BACKLOG = undefined;
+    window.LESSON_DATA = undefined;
     window.TCODE_REF = undefined;
     window.ABAP_SYNTAX = undefined;
   }
 
   /**
-   * judgment-questions.js → questions.js の順で取得し、QUIZ_DATA を確定する。
+   * judgment / order / contrast → questions.js の順で取得し、QUIZ_DATA を確定する。
    * マスタは const 宣言のため script タグ再注入だと再宣言エラー／科目切替失敗になる。
-   * また questions.js 末尾が JUDGMENT_DATA を連結するため、並列読込だと正誤が欠落する。
+   * また questions.js 末尾が各追加データを連結するため、先にグローバルを用意する。
    * fetch + Function で同一スコープ評価し、window に載せる。
    */
   async function loadQuizBundle(contentBase, bust) {
@@ -180,19 +183,34 @@ const SubjectLoader = (function () {
       return res.text();
     }
 
+    async function fetchOptional(src, fallback) {
+      try {
+        return await fetchText(src);
+      } catch (e) {
+        return fallback;
+      }
+    }
+
     // 評価は直列必須だが、ネットワーク取得は並列で短縮
-    const [jSettled, qSrc] = await Promise.all([
-      fetchText(contentBase + "/judgment-questions.js").catch(() => "var JUDGMENT_DATA = [];"),
+    const [jSrc, oSrc, cSrc, qSrc] = await Promise.all([
+      fetchOptional(contentBase + "/judgment-questions.js", "var JUDGMENT_DATA = [];"),
+      fetchOptional(contentBase + "/order-questions.js", "var ORDER_DATA = [];"),
+      fetchOptional(contentBase + "/contrast-questions.js", "var CONTRAST_DATA = [];"),
       fetchText(contentBase + "/questions.js"),
     ]);
-    const jSrc = jSettled || "var JUDGMENT_DATA = [];";
     const bundle = new Function(
       jSrc +
+        "\n" +
+        oSrc +
+        "\n" +
+        cSrc +
         "\n" +
         qSrc +
         "\n;return{" +
         "quiz:typeof QUIZ_DATA!=='undefined'?QUIZ_DATA:[]," +
-        "judgment:typeof JUDGMENT_DATA!=='undefined'?JUDGMENT_DATA:[]" +
+        "judgment:typeof JUDGMENT_DATA!=='undefined'?JUDGMENT_DATA:[]," +
+        "order:typeof ORDER_DATA!=='undefined'?ORDER_DATA:[]," +
+        "contrast:typeof CONTRAST_DATA!=='undefined'?CONTRAST_DATA:[]" +
         "};"
     )();
 
@@ -202,6 +220,8 @@ const SubjectLoader = (function () {
     }
     window.QUIZ_DATA = quiz;
     window.JUDGMENT_DATA = Array.isArray(bundle.judgment) ? bundle.judgment : [];
+    window.ORDER_DATA = Array.isArray(bundle.order) ? bundle.order : [];
+    window.CONTRAST_DATA = Array.isArray(bundle.contrast) ? bundle.contrast : [];
   }
 
   /** Tコード／構文など科目追加データ（ホーム表示後に呼ぶ） */
@@ -235,6 +255,7 @@ const SubjectLoader = (function () {
 
     // changelog は小さいので待つ（ベル表示用）。学習バックログは未使用のため読まない
     await loadOptionalScript(contentBase + "/changelog.js", bust);
+    await loadOptionalScript(contentBase + "/lesson.js", bust);
 
     if (typeof SUBJECT === "undefined") throw new Error("SUBJECT が定義されていません");
     if (typeof QUIZ_DATA === "undefined") throw new Error("QUIZ_DATA が定義されていません");
@@ -274,9 +295,11 @@ const SubjectLoader = (function () {
     if (!subject) throw new Error("SUBJECT が定義されていません");
 
     const catalog =
-      typeof PricingConfig !== "undefined" && PricingConfig.SUBJECT_CATALOG
-        ? PricingConfig.SUBJECT_CATALOG[id]
-        : null;
+      typeof SubjectCatalog !== "undefined"
+        ? { questionCount: SubjectCatalog.getQuestionCountSync(id) }
+        : typeof PricingConfig !== "undefined" && PricingConfig.SUBJECT_CATALOG
+          ? PricingConfig.SUBJECT_CATALOG[id]
+          : null;
     const questionTotal =
       (catalog && Number(catalog.questionCount)) ||
       Number(meta.questionCount) ||

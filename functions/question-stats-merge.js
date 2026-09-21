@@ -1,5 +1,11 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const {
+  SUBJECT_IDS,
+  guessSubjectId,
+  isSubjectDocId,
+  docRef,
+} = require("./question-stats-paths");
 
 const REGION = "asia-northeast1";
 const SERVICE_ACCOUNT = "firebase-adminsdk-fbsvc@buz-dojo.iam.gserviceaccount.com";
@@ -87,6 +93,44 @@ async function listAllQuestionStats(db) {
   return out;
 }
 
+/** 科目別サブコレクション + レガシーフラットを統合して列挙 */
+async function listAllQuestionStatsBuz(buzDb) {
+  const out = [];
+  const seen = new Set();
+
+  for (const sid of SUBJECT_IDS) {
+    const snap = await buzDb
+      .collection("questionStats")
+      .doc(sid)
+      .collection("questions")
+      .get();
+    snap.forEach((doc) => {
+      seen.add(doc.id);
+      out.push({ id: doc.id, data: doc.data(), subjectId: sid });
+    });
+  }
+
+  const legacy = await listAllQuestionStats(buzDb);
+  for (const item of legacy) {
+    if (seen.has(item.id)) continue;
+    if (isSubjectDocId(item.id)) continue;
+    const data = item.data || {};
+    const hasStats =
+      Number(data.attempts) > 0 ||
+      Number(data.correct) > 0 ||
+      Number(data.inputAttempts) > 0 ||
+      Number(data.inputCorrect) > 0;
+    if (!hasStats) continue;
+    out.push({
+      id: item.id,
+      data,
+      subjectId: guessSubjectId(item.id, data.subjectId),
+    });
+  }
+
+  return out;
+}
+
 /**
  * ソースの集計を buz に加算（1回限り）。
  * attempts = 既存 + ソース（二重計上防止は meta.sources[key].mergedAt で担保）
@@ -99,7 +143,9 @@ async function addSourceIntoBuz(buzDb, source) {
 
   for (let i = 0; i < docs.length; i += PAGE_SIZE) {
     const chunk = docs.slice(i, i + PAGE_SIZE);
-    const refs = chunk.map((d) => buzDb.collection("questionStats").doc(d.id));
+    const refs = chunk.map((d) =>
+      docRef(buzDb, d.id, guessSubjectId(d.id, d.data && d.data.subjectId))
+    );
     const snaps = await buzDb.getAll(...refs);
 
     const batch = buzDb.batch();
@@ -140,7 +186,7 @@ async function addSourceIntoBuz(buzDb, source) {
  * 再合算バグで約4倍になった attempts 等を ÷4 で戻す（4で割り切れるドキュメントのみ）。
  */
 async function divideQuadrupledStats(buzDb) {
-  const docs = await listAllQuestionStats(buzDb);
+  const docs = await listAllQuestionStatsBuz(buzDb);
   let fixed = 0;
   let skipped = 0;
 
@@ -166,7 +212,7 @@ async function divideQuadrupledStats(buzDb) {
         continue;
       }
       batch.set(
-        buzDb.collection("questionStats").doc(item.id),
+        docRef(buzDb, item.id, item.subjectId),
         {
           attempts: s.attempts / 4,
           correct: s.correct / 4,

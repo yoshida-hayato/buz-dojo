@@ -10,6 +10,12 @@ service cloud.firestore {
         allow read: if request.auth != null
           && (request.auth.uid == uid || isReportAdmin());
         allow write: if request.auth != null && request.auth.uid == uid;
+
+        match /detail/{docId} {
+          allow read: if request.auth != null
+            && (request.auth.uid == uid || isReportAdmin());
+          allow write: if request.auth != null && request.auth.uid == uid;
+        }
       }
 
       match /private/{docId} {
@@ -112,6 +118,14 @@ service cloud.firestore {
           && request.resource.data.answered >= 0
           && request.resource.data.answered <= 1000000;
         allow delete: if false;
+
+        match /detail/{docId} {
+          allow read: if isReportAdmin();
+          allow create, update: if anonId.matches('a_[a-z0-9_]+')
+            && anonId.size() >= 16
+            && anonId.size() <= 64;
+          allow delete: if false;
+        }
       }
     }
 
@@ -210,10 +224,17 @@ service cloud.firestore {
         && (qStatChoiceBump() || qStatInputBump());
     }
 
-    match /questionStats/{questionId} {
+    match /questionStats/{subjectId}/questions/{questionId} {
       allow read: if true;
       allow create: if qStatCreate();
       allow update: if qStatUpdate();
+      allow delete: if false;
+    }
+
+    // レガシー（フラット）— 読み取りのみ。新規書き込みは科目別パスへ
+    match /questionStats/{questionId} {
+      allow read: if true;
+      allow create, update: if false;
       allow delete: if false;
     }
   }

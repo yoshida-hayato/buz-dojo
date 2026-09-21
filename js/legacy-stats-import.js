@@ -91,28 +91,28 @@ const LegacyStatsImport = (function () {
       merged.q[id] = s1 ? mergeQuestionStat(s1, s2) : { ...s2 };
     }
 
-    merged.answered = Math.max(left.answered || 0, right.answered || 0);
-    merged.correct = Math.max(left.correct || 0, right.correct || 0);
-    merged.inputAnswered = Math.max(left.inputAnswered || 0, right.inputAnswered || 0);
-    merged.inputCorrect = Math.max(left.inputCorrect || 0, right.inputCorrect || 0);
+  merged.answered = Math.max(left.answered || 0, right.answered || 0);
+  merged.correct = Math.max(left.correct || 0, right.correct || 0);
+  merged.inputAnswered = Math.max(left.inputAnswered || 0, right.inputAnswered || 0);
+  merged.inputCorrect = Math.max(left.inputCorrect || 0, right.inputCorrect || 0);
 
-    const primary = (left.answered || 0) >= (right.answered || 0) ? left : right;
-    const secondary = primary === left ? right : left;
-    merged.choiceLog =
-      (primary.choiceLog || []).length >= (secondary.choiceLog || []).length
-        ? (primary.choiceLog || []).slice()
-        : (secondary.choiceLog || []).slice();
-    merged.inputLog =
-      (primary.inputLog || []).length >= (secondary.inputLog || []).length
-        ? (primary.inputLog || []).slice()
-        : (secondary.inputLog || []).slice();
+  merged.choiceLog =
+    (left.choiceLog || []).length >= (right.choiceLog || []).length
+      ? (left.choiceLog || []).slice()
+      : (right.choiceLog || []).slice();
+  merged.inputLog =
+    (left.inputLog || []).length >= (right.inputLog || []).length
+      ? (left.inputLog || []).slice()
+      : (right.inputLog || []).slice();
 
-    return merged;
-  }
+  return merged;
+}
 
   function statsChanged(before, after) {
     if ((after.answered || 0) > (before.answered || 0)) return true;
     if ((after.correct || 0) > (before.correct || 0)) return true;
+    if ((after.choiceLog || []).length > (before.choiceLog || []).length) return true;
+    if ((after.inputLog || []).length > (before.inputLog || []).length) return true;
     const beforeQ = before.q || {};
     const afterQ = after.q || {};
     for (const id of Object.keys(afterQ)) {
@@ -225,7 +225,9 @@ const LegacyStatsImport = (function () {
 
   function cloudChangedSubjectIds(result) {
     const ids = [];
-    if (result && result.sap && result.sap.imported) ids.push("sap");
+    if (result && result.sap && (result.sap.imported || (result.sap.qSize || 0) > 0)) {
+      if (result.sap.imported) ids.push("sap");
+    }
     if (result && result.gakusyu && result.gakusyu.subjects) {
       for (const [sid, r] of Object.entries(result.gakusyu.subjects)) {
         if (r && r.imported) ids.push(sid);

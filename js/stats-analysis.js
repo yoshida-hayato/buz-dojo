@@ -51,15 +51,17 @@ const StatsAnalysis = (function () {
   }
 
   function getWrongEntries(stats) {
+    const q = (stats && stats.q) || {};
     return QUIZ_DATA
-      .map((entry) => ({ entry, s: stats.q[entry.id] }))
+      .map((entry) => ({ entry, s: q[entry.id] }))
       .filter((x) => x.s && x.s.a > x.s.c)
       .sort((a, b) => (b.s.a - b.s.c) - (a.s.a - a.s.c));
   }
 
   function getWeakEntries(stats) {
+    const q = (stats && stats.q) || {};
     return QUIZ_DATA
-      .map((entry) => ({ entry, s: stats.q[entry.id] }))
+      .map((entry) => ({ entry, s: q[entry.id] }))
       .filter((x) => x.s && x.s.a >= 2)
       .map((x) => ({ ...x, rate: acc(x.s.c, x.s.a) }))
       .filter((x) => x.rate < 80)
@@ -75,7 +77,7 @@ const StatsAnalysis = (function () {
       let answered = 0;
       let correct = 0;
       questions.forEach((entry) => {
-        const s = stats.q[entry.id];
+        const s = (stats.q || {})[entry.id];
         if (!s) return;
         if (QuizStorage.isChoiceMastered(s)) mastered += 1;
         answered += s.a;
@@ -115,7 +117,7 @@ const StatsAnalysis = (function () {
         `<div class="priority-metric-row">` +
           `<span class="priority-metric-label">習得率</span>` +
           `<div class="ms-bar"><div class="progress-bar small"><div class="progress-fill is-mastery" style="width:${r.masteryPct}%"></div></div></div>` +
-          `<span class="priority-metric-value">${r.masteryPct}%（${r.mastered}/${r.total}）</span>` +
+          `<span class="priority-metric-value">${r.mastered}/${r.total}（${r.masteryPct}%）</span>` +
         `</div>` +
         accBar;
       container.appendChild(block);
@@ -135,7 +137,7 @@ const StatsAnalysis = (function () {
     };
 
     QUIZ_DATA.forEach((entry) => {
-      const s = stats.q[entry.id];
+      const s = (stats.q || {})[entry.id];
       if (entry.category === "tcode") {
         buckets.tcode_choice.total += 1;
         buckets.tcode_input.total += 1;
@@ -217,7 +219,7 @@ const StatsAnalysis = (function () {
           `<span class="priority-stat-title">${esc(r.label)}</span>` +
           `<span class="priority-stat-count">${r.total}問</span>` +
         `</div>` +
-        metricRowHtml("習得率", r.masteryPct, `${r.masteryPct}%（${r.mastered}/${r.total}）`, "is-mastery") +
+        metricRowHtml("習得率", r.masteryPct, `${r.mastered}/${r.total}（${r.masteryPct}%）`, "is-mastery") +
         accRow;
       container.appendChild(block);
     });
@@ -230,7 +232,7 @@ const StatsAnalysis = (function () {
       const key = entry.module;
       if (!map[key]) map[key] = { key, total: 0, mastered: 0, a: 0, c: 0 };
       map[key].total += 1;
-      const s = stats.q[entry.id];
+      const s = (stats.q || {})[entry.id];
       if (!s) return;
       if (QuizStorage.isChoiceMastered(s)) map[key].mastered += 1;
       if (s.a > 0) {
@@ -271,7 +273,7 @@ const StatsAnalysis = (function () {
   function getReviewPriorities(stats, limit) {
     return QUIZ_DATA
       .map((entry) => {
-        const s = stats.q[entry.id];
+        const s = (stats.q || {})[entry.id];
         if (!s || s.a === 0 || s.c === s.a) return null;
         const rate = acc(s.c, s.a);
         return {
@@ -311,7 +313,7 @@ const StatsAnalysis = (function () {
           `<span class="priority-stat-title">${esc(labelForModule(r.key))}</span>` +
           `<span class="priority-stat-count">${r.total}問</span>` +
         `</div>` +
-        metricRowHtml("習得率", r.masteryPct, `${r.masteryPct}%（${r.mastered}/${r.total}）`, "is-mastery") +
+        metricRowHtml("習得率", r.masteryPct, `${r.mastered}/${r.total}（${r.masteryPct}%）`, "is-mastery") +
         accRow;
       container.appendChild(block);
     });
@@ -475,14 +477,27 @@ const StatsAnalysis = (function () {
    */
   function recentAccuracyTrend(stats, maxPoints) {
     const windowSize = typeof RECENT_ACCURACY_WINDOW === "number" ? RECENT_ACCURACY_WINDOW : 500;
-    return accuracyTrendFromLog(stats.choiceLog, windowSize, maxPoints, TREND_MIN_SAMPLE);
+    const trend = accuracyTrendFromLog(stats.choiceLog, windowSize, maxPoints, TREND_MIN_SAMPLE);
+    const choiceAttempts = Math.max(
+      0,
+      (Number(stats && stats.answered) || 0) - (Number(stats && stats.inputAnswered) || 0)
+    );
+    trend.totalAttempts = choiceAttempts;
+    trend.logCoverage =
+      choiceAttempts > 0 ? Math.min(100, Math.round((trend.sample / choiceAttempts) * 100)) : 100;
+    return trend;
   }
 
   /** inputLog から記述式の直近正答率推移を時系列化（窓＝RECENT_INPUT_ACCURACY_WINDOW） */
   function recentInputAccuracyTrend(stats, maxPoints) {
     const windowSize =
       typeof RECENT_INPUT_ACCURACY_WINDOW === "number" ? RECENT_INPUT_ACCURACY_WINDOW : 100;
-    return accuracyTrendFromLog(stats.inputLog, windowSize, maxPoints, INPUT_TREND_MIN_SAMPLE);
+    const trend = accuracyTrendFromLog(stats.inputLog, windowSize, maxPoints, INPUT_TREND_MIN_SAMPLE);
+    const attempts = Number(stats && stats.inputAnswered) || 0;
+    trend.totalAttempts = attempts;
+    trend.logCoverage =
+      attempts > 0 ? Math.min(100, Math.round((trend.sample / attempts) * 100)) : 100;
+    return trend;
   }
 
   function renderAccuracyTrendChart(container, trend, options) {
@@ -596,6 +611,10 @@ const StatsAnalysis = (function () {
         `<span class="acc-trend-current">${trend.currentPct}%</span>` +
         `<span class="acc-trend-meta">保存 ${trend.sample}問 · 直近 ${Math.min(trend.sample, trend.windowSize)}/${trend.windowSize}問 ${esc(deltaText)}</span>` +
       `</div>`;
+    const coverageNote =
+      trend.totalAttempts > 100 && trend.logCoverage < 60
+        ? `<p class="setting-hint" style="margin:6px 0 0">正誤ログは計測開始以降の ${trend.sample}問分です（累計選択式 約${trend.totalAttempts}問）。それより前の回答は推移に含まれません。</p>`
+        : "";
 
     const firstIdx = pts[0].index;
     const lastIdx = pts[pts.length - 1].index;
@@ -611,7 +630,7 @@ const StatsAnalysis = (function () {
         `</svg>` +
       `</div>`;
 
-    container.innerHTML = summary + svg;
+    container.innerHTML = summary + coverageNote + svg;
   }
 
   function renderRecentAccuracyTrend(container, stats) {
@@ -636,6 +655,7 @@ const StatsAnalysis = (function () {
   return {
     LIST_LIMIT,
     REVIEW_TOP,
+    reviewScore,
     getWrongEntries,
     getWeakEntries,
     categoryAccuracyRows,

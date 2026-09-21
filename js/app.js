@@ -12,7 +12,7 @@ async function ensureAppScripts(paths) {
 }
 
 async function ensureQuestionStats() {
-  await ensureAppScripts(["js/question-stats.js"]);
+  await ensureAppScripts(["js/question-stats-paths.js", "js/question-stats.js"]);
 }
 
 async function ensureStatsModules() {
@@ -31,6 +31,9 @@ async function ensureCss(paths) {
 async function ensureQuizModules() {
   await ensureCss(["css/rank.css", "css/quiz.css"]);
   await ensureAppScripts([
+    "js/chapter-progress.js",
+    "js/lesson-progress.js",
+    "js/screens-lesson.js",
     "js/settings-ui.js",
     "js/quiz-builder.js",
     "js/quiz-engine.js",
@@ -181,7 +184,7 @@ async function bootApp() {
       ? SUBJECT_REGISTRY.find((s) => s.id === selected)
       : null;
   if (typeof showSubjectLoading === "function") {
-    showSubjectLoading(meta ? meta.title || meta.shortTitle : "");
+    showSubjectLoading(meta ? meta.shortTitle || meta.title : "");
   }
 
   activateSubject(selected)

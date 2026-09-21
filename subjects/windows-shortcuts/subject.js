@@ -10,7 +10,7 @@ var SUBJECT = {
   brandAccentWord: "道場",
   storageKey: "biz_dojo_windows_shortcuts_stats_v1",
   homeNote:
-    "Windows・Excel・PowerPoint・Word・ブラウザ・Teamsのキー操作です。機能を見てキーを1つずつ選びます。ヘッダーの「ショートカット一覧」から検索もできます。",
+    "Windows・Excel・PowerPoint・Word・ブラウザ・Teamsのキー操作です（会議の進め方・事故防止はTeams科目）。機能を見てキーを1つずつ選びます。ヘッダーの「ショートカット一覧」から検索もできます。",
   categories: {
     shortcut: "ショートカット",
   },
@@ -20,7 +20,7 @@ var SUBJECT = {
     PowerPoint: "PowerPoint",
     Word: "Word",
     ブラウザ: "ブラウザ",
-    Teams: "Teams",
+    Teams: "Teamsのキー操作",
   },
   inputCategories: [],
   moduleFilterable: ["shortcut"],

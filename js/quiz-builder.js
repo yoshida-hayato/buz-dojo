@@ -236,6 +236,9 @@ function quizEntryWrongChoiceNote(q, givenText) {
     hit = QUIZ_DATA.find((e) => e && e.id !== q.entry.id && e.name === givenText);
   }
   if (!hit) return "";
+  if (q.entry.category === "shortcut" && hit.category === "shortcut" && hit.module !== q.entry.module) {
+    return "";
+  }
   const label = hit.code === givenText ? hit.code : `${hit.code}`;
   return `\n\n【あなたの回答について】${label}\n${firstSentence(hit.explanation)}`;
 }
@@ -375,7 +378,12 @@ function buildQuestion(entry, settings, forceInputMode) {
   }
 
   // 手順並べ替え: steps の正しい順を、タップで組み立てる
-  if (entry.category === "reorder" && Array.isArray(entry.steps) && entry.steps.length >= 2) {
+  // 学習道場マスタは category "order"、SAP は "reorder"
+  if (
+    (entry.category === "reorder" || entry.category === "order") &&
+    Array.isArray(entry.steps) &&
+    entry.steps.length >= 2
+  ) {
     const indices = entry.steps.map((_, i) => i);
     return {
       entry,
@@ -387,6 +395,21 @@ function buildQuestion(entry, settings, forceInputMode) {
       sequence: [],
       choices: [],
       answerIndex: -1,
+    };
+  }
+
+  // 隣接対比: 左右ラベルを固定表示し、choices[0] が正解の4択
+  if (entry.category === "contrast" && Array.isArray(entry.choices) && entry.choices.length >= 2) {
+    const choices = shuffle(entry.choices.slice());
+    return {
+      entry,
+      direction: "contrast",
+      isContrast: true,
+      inputMode: false,
+      pairLeft: entry.pairLeft || "",
+      pairRight: entry.pairRight || "",
+      choices,
+      answerIndex: choices.indexOf(entry.choices[0]),
     };
   }
 
@@ -434,12 +457,14 @@ function buildQuestion(entry, settings, forceInputMode) {
     };
   }
 
-  // シナリオ・正誤問題（単一）: 正誤は A=正・B=誤 固定、シナリオは従来どおりシャッフル
+  // シナリオ・正誤問題（単一）: 正誤も「正」「誤」の位置をシャッフル
   if (entry.choices) {
     const isJudgment = entry.category === "judgment";
-    const choices = isJudgment ? ["正", "誤"] : shuffle(entry.choices);
+    const choices = isJudgment
+      ? shuffle(["正", "誤"])
+      : shuffle(entry.choices);
     const answerIndex = isJudgment
-      ? judgmentSingleAnswerIndex(entry)
+      ? choices.indexOf(judgmentSingleAnswer(entry))
       : choices.indexOf(entry.choices[0]);
     const direction = isJudgment ? "judgment" : "scenario";
     return {
@@ -539,6 +564,9 @@ function questionText(q) {
     const title = e.name || e.code || "手順";
     return `${formatRichText(title)}<br><span class="judgment-multi-hint">下の候補を正しい順番にタップしてください</span>`;
   }
+  if (q.isContrast) {
+    return formatRichText(e.name || "次のうち当てはまるのはどれ？");
+  }
   if (q.isCloze) {
     const title = e.name ? `<span class="q-code">${escapeHtml(e.name)}</span><br>` : "";
     return `${title}<span class="judgment-multi-hint">空欄を順にタップで埋めてください</span>`;
@@ -588,6 +616,7 @@ function questionText(q) {
 function wrongItemQuestionLabel(q) {
   const e = q.entry;
   if (q.isReorder) return e.name || e.code || "手順の並べ替え";
+  if (q.isContrast) return e.name || e.code || "対比";
   if (q.isCloze) return e.name || e.code || "穴埋め";
   if (q.isShortcutParts) return `「${e.name}」のコマンド／キー操作`;
   if (q.isAbbr || e.parts) {
@@ -634,7 +663,12 @@ function buildWrongItemHtml(q, given, index) {
   const explanation = buildFeedbackExplanation(q, false, given);
   const codeLine = e.category === "tcode" && !q.isAbbr
     ? `<span class="wi-code">${escapeHtml(e.code)}</span>`
-    : e.category !== "scenario" && e.category !== "reorder" && e.category !== "cloze" && e.code
+    : e.category !== "scenario" &&
+        e.category !== "reorder" &&
+        e.category !== "order" &&
+        e.category !== "contrast" &&
+        e.category !== "cloze" &&
+        e.code
       ? `<span class="wi-code">${escapeHtml(e.code)}</span>`
       : "";
 

@@ -15,12 +15,20 @@ async function startQuizAsync(settings, options = {}) {
   if (CURRENT_SUBJECT && typeof Entitlement !== "undefined") {
     const gate = Entitlement.canStart(CURRENT_SUBJECT.id, settings.count);
     if (!gate.ok) {
-      alert(
-        `本日の無料枠（${Entitlement.FREE_DAILY}問）を使い切りました。問題集を購入すると続きを学習できます。`
-      );
+      if (typeof showFreeQuotaExhaustedAtStart === "function") {
+        showFreeQuotaExhaustedAtStart();
+      }
       return;
     }
     if (gate.cappedTo != null && Number.isFinite(gate.remaining)) {
+      const requested =
+        settings.count === "all" ? Infinity : Number(settings.count) || 0;
+      if (gate.cappedTo < requested) {
+        const go = confirm(
+          `無料枠の都合で${gate.cappedTo}問にします。このまま開始しますか？`
+        );
+        if (!go) return;
+      }
       settings = Object.assign({}, settings, { count: gate.cappedTo });
     }
   }
@@ -83,7 +91,14 @@ function renderQuestion() {
 
   const box = $("choices");
   box.innerHTML = "";
-  box.classList.remove("judgment-mode", "judgment-multi-mode", "abbr-mode", "reorder-mode", "cloze-mode");
+  box.classList.remove(
+    "judgment-mode",
+    "judgment-multi-mode",
+    "abbr-mode",
+    "reorder-mode",
+    "cloze-mode",
+    "contrast-mode"
+  );
   const inputArea = $("input-area");
   const input = $("answer-input");
   $("abbr-progress").classList.add("hidden");
@@ -92,6 +107,18 @@ function renderQuestion() {
   if (reorderBoard) {
     reorderBoard.classList.add("hidden");
     reorderBoard.innerHTML = "";
+  }
+  const contrastPair = $("contrast-pair");
+  if (contrastPair) {
+    if (q.isContrast && (q.pairLeft || q.pairRight)) {
+      contrastPair.classList.remove("hidden");
+      const left = $("contrast-left-label");
+      const right = $("contrast-right-label");
+      if (left) left.textContent = q.pairLeft || "";
+      if (right) right.textContent = q.pairRight || "";
+    } else {
+      contrastPair.classList.add("hidden");
+    }
   }
   const clozePrompt = $("cloze-prompt");
   if (clozePrompt) {
@@ -147,6 +174,7 @@ function renderQuestion() {
     inputArea.classList.add("hidden");
     box.classList.remove("hidden", "judgment-multi-mode");
     box.classList.toggle("judgment-mode", q.direction === "judgment");
+    box.classList.toggle("contrast-mode", !!q.isContrast);
     q.choices.forEach((choice, i) => {
       const btn = document.createElement("button");
       btn.className = "choice-btn";
@@ -171,6 +199,40 @@ function renderQuestion() {
 /** フィードバックカードを隠し、解説など前問のDOM残りを消す */
 let questionGlobalRateSeq = 0;
 
+function clearChapterClearBanner() {
+  const banner = $("chapter-clear-banner");
+  if (!banner) return;
+  banner.classList.add("hidden");
+  banner.textContent = "";
+}
+
+function paintChapterClearBanner(chapterResult) {
+  const banner = $("chapter-clear-banner");
+  if (!banner) return;
+  clearChapterClearBanner();
+  if (!chapterResult || !chapterResult.justCleared || !chapterResult.clearedChapter) {
+    return;
+  }
+  const ch = chapterResult.clearedChapter;
+  const next = chapterResult.nextChapter;
+  const title = `第${ch.order}章「${ch.module}」`;
+  if (chapterResult.allClearedNow) {
+    // FREE_ENTRY: 購入語なし。全クリア後だけ基礎を控えめに案内
+    banner.textContent =
+      `${title}を終えました。用語の入り口はここまでです。続きは「オントロジー基礎」で学べます。`;
+  } else if (ch.id === "intro" && next && next.module === "なぜ型で置くか") {
+    banner.textContent =
+      `${title}を終えました。次は「なぜ型で置くか」へ進み、型が必要な理由に入ります。`;
+  } else if (next) {
+    banner.textContent =
+      `${title}を終えました。次は第${next.order}章「${next.module}」へ進みます。`;
+  } else {
+    banner.textContent =
+      `${title}を終えました。ホームに戻ると次の章が開きます。`;
+  }
+  banner.classList.remove("hidden");
+}
+
 function clearFeedbackCard() {
   questionGlobalRateSeq += 1;
   const card = $("feedback-card");
@@ -188,6 +250,7 @@ function clearFeedbackCard() {
     // 複数選択の innerHTML 残りを確実に消す（次問で textContent だけだと稀に古い表示が残る）
     expEl.innerHTML = "";
   }
+  clearChapterClearBanner();
   const globalRateEl = $("question-global-rate");
   if (globalRateEl) {
     globalRateEl.classList.add("hidden");
@@ -498,6 +561,19 @@ function finishAnswer(isCorrect, givenText) {
   const wasInputMastered = !!q.inputMode && (qsBefore?.ik || 0) >= 2;
 
   QuizStorage.record(questionId, isCorrect, !!q.inputMode);
+  let chapterResult = null;
+  if (
+    isCorrect &&
+    CURRENT_SUBJECT &&
+    typeof ChapterProgress !== "undefined" &&
+    ChapterProgress.hasTextbook(CURRENT_SUBJECT)
+  ) {
+    chapterResult = ChapterProgress.recordCorrect(
+      CURRENT_SUBJECT,
+      questionId,
+      q.entry && q.entry.module
+    );
+  }
   if (CURRENT_SUBJECT && typeof Entitlement !== "undefined") {
     Entitlement.recordAnswer(CURRENT_SUBJECT.id);
   }
@@ -521,6 +597,7 @@ function finishAnswer(isCorrect, givenText) {
 
   // カードを出す前に中身を全部書き換える（前問の解説が一瞬・稀に残るのを防ぐ）
   $("feedback-result").textContent = isCorrect ? "正解！" : "不正解…";
+  paintChapterClearBanner(chapterResult);
 
   let answerHtml;
   if (q.isReorder) {

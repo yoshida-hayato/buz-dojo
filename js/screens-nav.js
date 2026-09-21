@@ -42,7 +42,7 @@ function updateNavDivider() {
 }
 
 function showScreen(name) {
-  ["subjects", "home", "quiz", "result", "stats", "mypage", "premium", "contact", "tcodes", "syntax", "shortcuts"].forEach((s) => {
+  ["subjects", "home", "lesson", "quiz", "result", "stats", "mypage", "premium", "contact", "tcodes", "syntax", "shortcuts"].forEach((s) => {
     const el = $("screen-" + s);
     if (el) el.classList.toggle("hidden", s !== name);
   });

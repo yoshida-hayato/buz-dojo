@@ -16,6 +16,7 @@ function getRegisteredAnswerText(q) {
   if (q.isShortcutParts) return `${q.entry.code} — ${q.entry.name}`;
   if (q.isAbbr) return `${q.entry.code} = ${q.entry.name}`;
   if (q.isJudgmentMulti) return judgmentMultiAnswerLabel(q, q.targetIndices);
+  if (q.isContrast || q.entry.category === "contrast") return q.entry.choices[0];
   if (q.direction === "scenario") return q.entry.choices[0];
   if (q.direction === "judgment" || (q.entry.category === "judgment" && q.entry.choices)) {
     return judgmentSingleAnswer(q.entry);

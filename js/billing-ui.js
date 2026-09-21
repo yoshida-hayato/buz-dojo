@@ -10,8 +10,15 @@ function initBillingUI() {
   const homeBuySubject = $("home-buy-subject-btn");
   const homeBuyPack = $("home-buy-pack-btn");
   const homeManage = $("home-billing-manage-btn");
+  const startBuySubject = $("start-quota-buy-subject-btn");
+  const startBuyPack = $("start-quota-buy-pack-btn");
   if (homeBuyPack) {
     homeBuyPack.onclick = () => {
+      if (typeof Billing !== "undefined") Billing.startCheckout("pack");
+    };
+  }
+  if (startBuyPack) {
+    startBuyPack.onclick = () => {
       if (typeof Billing !== "undefined") Billing.startCheckout("pack");
     };
   }
@@ -22,6 +29,12 @@ function initBillingUI() {
   }
   if (homeBuySubject) {
     homeBuySubject.onclick = () => {
+      if (!CURRENT_SUBJECT || typeof Billing === "undefined") return;
+      Billing.startCheckout("subject", CURRENT_SUBJECT.id);
+    };
+  }
+  if (startBuySubject) {
+    startBuySubject.onclick = () => {
       if (!CURRENT_SUBJECT || typeof Billing === "undefined") return;
       Billing.startCheckout("subject", CURRENT_SUBJECT.id);
     };

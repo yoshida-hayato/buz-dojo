@@ -1,5 +1,8 @@
 /**
- * 全ユーザ共通の問題別正答率（firestore questionStats/{questionId}）
+ * 全ユーザ共通の問題別正答率
+ * 新: questionStats/{subjectId}/questions/{questionId}
+ * 旧: questionStats/{questionId}（読み取りのみフォールバック）
+ *
  * attempts/correct … 選択式
  * inputAttempts/inputCorrect … 記述式（別集計）
  *
@@ -28,8 +31,16 @@ const QuestionStats = (function () {
     return !!getDb();
   }
 
-  function docRef(db, questionId) {
-    return db.collection("questionStats").doc(String(questionId));
+  function docRef(db, questionId, subjectId) {
+    return QuestionStatsPaths.docRef(db, questionId, subjectId);
+  }
+
+  async function readStat(db, questionId, subjectId) {
+    const snap = await docRef(db, questionId, subjectId).get();
+    if (snap.exists) return normalizeStat(snap.data());
+    const legacy = await QuestionStatsPaths.legacyDocRef(db, questionId).get();
+    if (legacy.exists) return normalizeStat(legacy.data());
+    return normalizeStat({});
   }
 
   function normalizeStat(data) {
@@ -48,7 +59,7 @@ const QuestionStats = (function () {
   }
 
   /** 集計を取得（キャッシュ優先） */
-  async function fetch(questionId) {
+  async function fetch(questionId, subjectId) {
     const db = getDb();
     if (!db || !questionId) return null;
 
@@ -60,10 +71,8 @@ const QuestionStats = (function () {
       return stat ? { ...stat } : null;
     }
 
-    const promise = docRef(db, questionId)
-      .get()
-      .then((snap) => {
-        const stat = snap.exists ? normalizeStat(snap.data()) : normalizeStat({});
+    const promise = readStat(db, questionId, subjectId)
+      .then((stat) => {
         CACHE.set(questionId, { ...stat });
         return { ...stat };
       })
@@ -113,7 +122,11 @@ const QuestionStats = (function () {
     CACHE.set(questionId, next);
 
     const promise = (async () => {
-      const ref = docRef(db, questionId);
+      const subjectId =
+        meta && meta.subjectId
+          ? meta.subjectId
+          : QuestionStatsPaths.guessSubjectId(questionId);
+      const ref = docRef(db, questionId, subjectId);
       const patch = isInput
         ? {
             inputAttempts: firebase.firestore.FieldValue.increment(1),

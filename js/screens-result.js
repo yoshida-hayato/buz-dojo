@@ -52,8 +52,10 @@ function renderResult() {
   const wrongBadge = $("wrong-count-badge");
   const list = $("wrong-list");
   list.innerHTML = "";
+  const hardestBtn = $("result-hardest-review-btn");
   if (quiz.wrongs.length === 0) {
     wrongCard.classList.add("hidden");
+    if (hardestBtn) hardestBtn.classList.add("hidden");
   } else {
     wrongCard.classList.remove("hidden");
     wrongBadge.textContent = `${quiz.wrongs.length}問`;
@@ -61,7 +63,65 @@ function renderResult() {
     quiz.wrongs.forEach(({ q, given }, i) => {
       list.insertAdjacentHTML("beforeend", buildWrongItemHtml(q, given, i + 1));
     });
+    if (hardestBtn) hardestBtn.classList.remove("hidden");
   }
+}
+
+/**
+ * 今回のセットの誤答から、復習優先スコアが最も高い1問を返す。
+ * StatsAnalysis.reviewScore と同じ式（未読込時は同式をローカル計算）。
+ */
+function pickHardestWrongFromSession() {
+  if (!quiz || !Array.isArray(quiz.wrongs) || quiz.wrongs.length === 0) return null;
+  const stats = QuizStorage.load();
+  let best = null;
+  let bestScore = -Infinity;
+  for (const { q } of quiz.wrongs) {
+    if (!q || !q.entry) continue;
+    const entry = q.entry;
+    const s = (stats.q || {})[entry.id] || { a: 1, c: 0 };
+    let score;
+    if (typeof StatsAnalysis !== "undefined" && typeof StatsAnalysis.reviewScore === "function") {
+      score = StatsAnalysis.reviewScore(entry, s);
+    } else {
+      const rate = s.a > 0 ? Math.round((100 * s.c) / s.a) : 0;
+      const wrong = s.a - s.c;
+      const pri = entry.priority || 3;
+      const notMastered = QuizStorage.isChoiceMastered(s) ? 0 : 1;
+      score = wrong * 12 + (100 - rate) * 0.4 + (4 - pri) * 8 + notMastered * 6;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = { entry, inputMode: !!q.inputMode };
+    }
+  }
+  return best;
+}
+
+/** 結果画面: 今回一番つまずいた1問だけ復習クイズを開始（startReviewQuiz / poolMode wrong 流用） */
+function startSessionHardestReview() {
+  const picked = pickHardestWrongFromSession();
+  if (!picked || typeof startQuiz !== "function") return;
+  const usesInput =
+    typeof subjectUsesInput === "function" ? subjectUsesInput() : true;
+  const usesDirection =
+    typeof subjectUsesDirection === "function" ? subjectUsesDirection() : true;
+  const prev = (quiz && quiz.settings) || {};
+  let answerMode = "choice";
+  if (usesInput) {
+    if (picked.inputMode) answerMode = "input";
+    else answerMode = prev.answerMode || "choice";
+  }
+  startQuiz({
+    categories: Object.keys(CATEGORIES),
+    modules: "all",
+    priorities: [1, 2, 3],
+    direction: usesDirection ? prev.direction || "mixed" : "name2code",
+    count: 1,
+    answerMode,
+    poolMode: "wrong",
+    onlyIds: [picked.entry.id],
+  });
 }
 
 // ===== 結果画面の経験値ゲージ =====
@@ -209,7 +269,7 @@ function animateMasteredGauge(statsBefore, statsAfter) {
   const afterSet = masteredIdSet(statsAfter);
 
   badge.textContent = before;
-  text.textContent = `${before} / ${total}問（${masteredPct(before)}%）`;
+  text.innerHTML = `${before} / ${total}問<span class="mastery-pct-secondary">（${masteredPct(before)}%）</span>`;
   newList.classList.add("hidden");
   newList.innerHTML = "";
 
@@ -226,7 +286,7 @@ function animateMasteredGauge(statsBefore, statsAfter) {
     let deltaNote = "";
     if (delta > 0) deltaNote = `　<span class="mastered-delta up">+${delta}</span>`;
     else if (delta < 0) deltaNote = `　<span class="mastered-delta down">${delta}</span>`;
-    text.innerHTML = `${before} → ${after} / ${total}問（${masteredPct(after)}%）${deltaNote}`;
+    text.innerHTML = `${before} → ${after} / ${total}問<span class="mastery-pct-secondary">（${masteredPct(after)}%）</span>${deltaNote}`;
 
     const entries = newlyMasteredEntries(
       quiz.sessionNewChoiceMastered,

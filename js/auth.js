@@ -4,6 +4,20 @@
  * FIREBASE_CONFIG が未設定の場合は何もしない（ログインUIを出さず、ブラウザ保存で動く）。
  * ログイン状態が変わると QuizStorage の保存先を切り替え、画面を更新する。
  */
+
+/** 他モジュールからログインモーダルを開く用 */
+const AuthUI = {
+  _open: null,
+  openModal(opts) {
+    if (typeof AuthUI._open === "function") {
+      AuthUI._open(opts);
+      return;
+    }
+    const btn = document.getElementById("login-btn");
+    if (btn) btn.click();
+  },
+};
+
 (function () {
   function firebaseConfigured() {
     return (
@@ -100,16 +114,20 @@
     }
 
     // --- モーダルの開閉とメッセージ表示 ---
-    function openModal() {
+    function openModal(opts) {
       showMessage(null);
       setAuthBusy(false);
       if (updateModal) updateModal.classList.add("hidden");
       modal.classList.remove("hidden");
       document.body.classList.add("login-modal-open");
+      if (opts && opts.reason === "checkout") {
+        showMessage("購入にはログインが必要です。ログイン後、決済画面へ進みます。");
+      }
       if (!isMobileLayout()) {
         window.setTimeout(() => emailInput.focus(), 50);
       }
     }
+    AuthUI._open = openModal;
     function closeModal() {
       modal.classList.add("hidden");
       document.body.classList.remove("login-modal-open");
@@ -246,9 +264,30 @@
       });
     }
 
-    logoutBtn.addEventListener("click", () => auth.signOut());
+    logoutBtn.addEventListener("click", async () => {
+      if (logoutBtn.disabled) return;
+      logoutBtn.disabled = true;
+      try {
+        if (
+          typeof QuizStorage !== "undefined" &&
+          typeof QuizStorage.prepareLogout === "function"
+        ) {
+          const ok = await QuizStorage.prepareLogout();
+          if (!ok) return;
+        }
+        await auth.signOut();
+      } catch (e) {
+        console.warn("ログアウトに失敗:", e);
+        alert("ログアウトに失敗しました。通信状況を確認して再度お試しください。");
+      } finally {
+        logoutBtn.disabled = false;
+      }
+    });
 
     auth.onAuthStateChanged(async (user) => {
+      if (typeof QuizStorage.invalidateStatsSummariesCache === "function") {
+        QuizStorage.invalidateStatsSummariesCache();
+      }
       if (user) {
         closeModal();
         await QuizStorage.switchToCloud(user.uid, db);
@@ -276,15 +315,27 @@
         if (typeof Entitlement !== "undefined" && Entitlement.startSync) {
           await Entitlement.startSync(user.uid);
         }
+        if (typeof QuizStorage !== "undefined" && QuizStorage.updateSyncStatusUi) {
+          QuizStorage.updateSyncStatusUi();
+        }
         userEl.textContent = "ログイン中のアカウント: " + (user.displayName || user.email || "（名前未設定）");
         userEl.classList.remove("hidden");
         loginBtn.classList.add("hidden");
         logoutBtn.classList.remove("hidden");
+        if (typeof Billing !== "undefined" && Billing.resumePendingCheckout) {
+          Billing.resumePendingCheckout();
+        }
       } else {
+        if (typeof Billing !== "undefined" && Billing.clearPendingCheckout) {
+          Billing.clearPendingCheckout();
+        }
         if (typeof Entitlement !== "undefined" && Entitlement.stopSync) {
           Entitlement.stopSync();
         }
         QuizStorage.switchToLocal();
+        if (typeof QuizStorage !== "undefined" && QuizStorage.updateSyncStatusUi) {
+          QuizStorage.updateSyncStatusUi();
+        }
         userEl.classList.add("hidden");
         loginBtn.classList.remove("hidden");
         logoutBtn.classList.add("hidden");

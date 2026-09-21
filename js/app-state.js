@@ -7,6 +7,8 @@ let CATEGORIES = {};
 let MODULES = {};
 let MODULE_FILTERABLE = new Set(["tcode", "term", "scenario", "judgment", "reorder", "cloze"]);
 let INPUT_CATEGORIES = new Set();
+/** 科目の defaultCategories。null なら全カテゴリ初期ON */
+let DEFAULT_CATEGORIES = null;
 let CURRENT_SUBJECT = null;
 
 const PRIORITIES = {

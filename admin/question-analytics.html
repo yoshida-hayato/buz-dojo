@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>正答率分析 | 管理者 | ビジネス道場</title>
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="icon" href="../assets/icon-48.png" type="image/png" sizes="48x48">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" sizes="180x180">
+  <script>
+    (function () {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "../config/version.js?_=" + Date.now(), false);
+        xhr.send(null);
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+          (0, eval)(xhr.responseText);
+        }
+      } catch (e) { /* fall through */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="../css/base.css" id="css-base">
+  <link rel="stylesheet" href="../css/header.css" id="css-header">
+  <link rel="stylesheet" href="../css/admin.css" id="css-admin">
+  <script>
+    (function () {
+      var v = typeof APP_VERSION !== "undefined" ? APP_VERSION : Date.now();
+      ["css-base", "css-header", "css-admin"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var base = el.getAttribute("href").split("?")[0];
+        el.href = base + "?v=" + encodeURIComponent(v);
+      });
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="site-title">ビジネス<span>道場</span> <small class="admin-subtitle">正答率分析</small></h1>
+      <nav class="site-nav">
+        <a class="nav-btn" href="reports.html">ダッシュボード</a>
+        <a class="nav-btn" href="../index.html">クイズへ戻る</a>
+        <button class="nav-btn auth-btn hidden" id="admin-logout-btn">ログアウト</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container admin-reports-page admin-qa-page">
+    <section id="qa-gate" class="card">
+      <h2 class="card-title">管理者ログイン</h2>
+      <p class="modal-note" id="gate-message">管理者としてログインしてください。</p>
+      <div class="login-form">
+        <input type="email" id="admin-email" class="text-input" placeholder="管理者メールアドレス" autocomplete="username">
+        <input type="password" id="admin-password" class="text-input" placeholder="パスワード" autocomplete="current-password">
+        <button type="button" class="primary-btn" id="admin-login-btn">ログイン</button>
+      </div>
+    </section>
+
+    <section id="qa-main" class="hidden">
+      <div class="card">
+        <div class="admin-head-row">
+          <h2 class="card-title">みんなの正答率分析</h2>
+          <p class="modal-note admin-user-line">ログイン中: <span id="admin-user"></span></p>
+        </div>
+        <p class="analytics-note">
+          questionStats（全ユーザ共通）から集計。ログイン有無は問いません。
+          分布は「最低回答数」以上の問題だけを対象にしています。
+        </p>
+        <div class="reports-filters">
+          <label class="reports-filter">
+            <span>科目</span>
+            <select id="qa-filter-subject" class="text-input">
+              <option value="all">すべて</option>
+            </select>
+          </label>
+          <label class="reports-filter">
+            <span>方式</span>
+            <select id="qa-filter-mode" class="text-input">
+              <option value="choice">選択式</option>
+              <option value="input">記述式</option>
+            </select>
+          </label>
+          <label class="reports-filter">
+            <span>最低回答数</span>
+            <select id="qa-filter-min" class="text-input">
+              <option value="1">1回以上</option>
+              <option value="3">3回以上</option>
+              <option value="5" selected>5回以上</option>
+              <option value="10">10回以上</option>
+              <option value="20">20回以上</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div id="qa-kpis" class="analytics-summary"></div>
+      <div id="qa-insight" class="qa-insight card"></div>
+
+      <div class="qa-charts-grid">
+        <div class="card">
+          <h3 class="card-subtitle">正答率の分布</h3>
+          <p class="analytics-note">円の大きさは分析対象の問題数。色は正答率帯を表します。</p>
+          <div id="qa-donut"></div>
+        </div>
+        <div class="card">
+          <h3 class="card-subtitle">科目別の平均正答率</h3>
+          <p class="analytics-note">平均が低い科目ほど上に表示。0%問題の内訳も併記します。</p>
+          <div id="qa-subject-bars"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-subtitle">問題別ランキング（正答率が低い順）</h3>
+        <p class="analytics-note">難問・誤解が多い問題の改善候補。フィルタ条件は上と同じです。</p>
+        <div id="qa-table-wrap" class="analytics-table-wrap"></div>
+        <button type="button" class="secondary-btn qa-load-more hidden" id="qa-load-more">さらに表示</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script>
+    (function () {
+      var CORE = [
+        "../config/firebase-config.js",
+        "../subjects/registry.js",
+        "../config/admin-config.js",
+        "../js/dom-util.js",
+        "../js/admin-question-stats-shared.js",
+        "../js/admin-question-analytics.js",
+      ];
+
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement("script");
+          s.src = src;
+          s.async = false;
+          s.onload = function () { resolve(); };
+          s.onerror = function () { reject(new Error("スクリプト読込失敗: " + src)); };
+          document.head.appendChild(s);
+        });
+      }
+
+      async function boot() {
+        var v = typeof APP_VERSION !== "undefined" ? APP_VERSION : String(Date.now());
+        for (var i = 0; i < CORE.length; i++) {
+          await loadScript(CORE[i] + "?v=" + encodeURIComponent(v));
+        }
+      }
+
+      boot().catch(function (err) {
+        console.error(err);
+      });
+    })();
+  </script>
+</body>
+</html>

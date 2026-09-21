@@ -13,10 +13,6 @@
   const inquiryStore = new Map();
   /** @type {Map<string, object>} */
   const premiumStore = new Map();
-  /** @type {object[]} */
-  let hardQuestionRows = [];
-  /** @type {Map<string, { subjectId: string, text: string, answer: string }>} */
-  let questionMetaById = new Map();
 
   const INQUIRY_CATEGORIES = [
     { id: "general", label: "全般・ご意見" },
@@ -98,9 +94,14 @@
     });
     $("panel-analytics").classList.toggle("hidden", tabId !== "analytics");
     $("panel-reports").classList.toggle("hidden", tabId !== "reports");
+    const xPanel = $("panel-x-schedule");
+    if (xPanel) xPanel.classList.toggle("hidden", tabId !== "x-schedule");
     $("panel-inquiries").classList.toggle("hidden", tabId !== "inquiries");
     const premiumPanel = $("panel-premium");
     if (premiumPanel) premiumPanel.classList.toggle("hidden", tabId !== "premium");
+    if (tabId === "x-schedule" && window.AdminXSchedule) {
+      window.AdminXSchedule.onTabShow();
+    }
   }
 
   function statCard(label, value, sub) {
@@ -140,140 +141,10 @@
     return head + body + "</tbody></table>";
   }
 
-  function renderQuestionsTable(rows) {
-    if (!rows.length) {
-      return '<p class="reports-empty">条件に合う問題（5回以上）はありません。</p>';
-    }
-    const head =
-      '<table class="analytics-table analytics-q-table">' +
-      "<thead><tr>" +
-      "<th>科目</th><th>方式</th><th>問題</th><th>正解</th><th>回答数</th><th>正答率</th>" +
-      "</tr></thead><tbody>";
-    const body = rows
-      .map(
-        (r) =>
-          "<tr>" +
-          `<td>${escapeHtml(r.subjectLabel || "—")}</td>` +
-          `<td>${escapeHtml(r.mode || "選択")}</td>` +
-          `<td><div class="aq-id"><code>${escapeHtml(r.id)}</code></div>` +
-          `<div class="aq-text">${escapeHtml(r.text || "—")}</div></td>` +
-          `<td class="aq-answer">${escapeHtml(r.answer || "—")}</td>` +
-          `<td>${r.attempts}</td>` +
-          `<td>${r.pct}%</td>` +
-          "</tr>"
-      )
-      .join("");
-    return head + body + "</tbody></table>";
-  }
-
-  function guessSubjectId(questionId, subjectIdFromStat) {
-    if (subjectIdFromStat) return subjectIdFromStat;
-    const id = String(questionId || "");
-    if (id.startsWith("ws-")) return "windows-shortcuts";
-    if (id.startsWith("bc-")) return "biz-career";
-    return "sap";
-  }
-
-  function entryQuestionText(e) {
-    if (!e) return "";
-    if (e.category === "judgment" && e.name) return e.name;
-    if (e.name) return e.name;
-    return e.code || e.id || "";
-  }
-
-  function entryAnswerText(e) {
-    if (!e) return "";
-    if (e.category === "judgment") {
-      if (Array.isArray(e.statements)) {
-        return e.statements
-          .map((s) => (s && s.correct ? "正" : "誤") + ":" + (s.text || ""))
-          .join(" / ");
-      }
-      if (Array.isArray(e.choices) && e.choices.length) return String(e.choices[0]);
-      return e.answer != null ? String(e.answer) : "—";
-    }
-    if (e.code && e.name) return e.code + " — " + e.name;
-    if (e.code) return String(e.code);
-    if (e.name) return String(e.name);
-    return "—";
-  }
-
-  async function buildQuestionMetaMap() {
-    const map = new Map();
-    const subjects =
-      typeof SUBJECT_REGISTRY !== "undefined"
-        ? SUBJECT_REGISTRY.filter((s) => s.enabled !== false)
-        : [];
-
-    await Promise.all(
-      subjects.map(async (s) => {
-        const base = (s.contentBase || "").replace(/\/$/, "");
-        if (!base) return;
-        async function fetchText(path) {
-          const res = await fetch(path + "?_=" + Date.now(), {
-            cache: "no-store",
-            mode: "cors",
-          });
-          if (!res.ok) throw new Error("fetch failed");
-          return res.text();
-        }
-        let jSrc = "var JUDGMENT_DATA = [];";
-        try {
-          jSrc = await fetchText(base + "/judgment-questions.js");
-        } catch (_) {
-          /* optional */
-        }
-        try {
-          const qSrc = await fetchText(base + "/questions.js");
-          const quiz = new Function(
-            jSrc +
-              "\n" +
-              qSrc +
-              "\n;return typeof QUIZ_DATA!=='undefined'?QUIZ_DATA:[];"
-          )();
-          (quiz || []).forEach((e) => {
-            if (!e || !e.id) return;
-            map.set(e.id, {
-              subjectId: s.id,
-              text: entryQuestionText(e),
-              answer: entryAnswerText(e),
-            });
-          });
-        } catch (err) {
-          console.warn("問題マスタ読込失敗:", s.id, err);
-        }
-      })
-    );
-    return map;
-  }
-
-  function fillAnalyticsSubjectFilter() {
-    const sel = $("analytics-q-subject");
-    if (!sel) return;
-    const keep = sel.value || "all";
-    sel.innerHTML = '<option value="all">すべて</option>';
-    if (typeof SUBJECT_REGISTRY !== "undefined") {
-      SUBJECT_REGISTRY.forEach((s) => {
-        if (s.enabled === false) return;
-        const opt = document.createElement("option");
-        opt.value = s.id;
-        opt.textContent = s.shortTitle || s.title || s.id;
-        sel.appendChild(opt);
-      });
-    }
-    sel.value = keep;
-  }
-
-  function applyHardQuestionFilters() {
-    const subjectSel = ($("analytics-q-subject") || {}).value || "all";
-    const modeSel = ($("analytics-q-mode") || {}).value || "all";
-    const filtered = hardQuestionRows.filter((r) => {
-      if (subjectSel !== "all" && r.subjectId !== subjectSel) return false;
-      if (modeSel === "choice" && r.modeKey !== "choice") return false;
-      if (modeSel === "input" && r.modeKey !== "input") return false;
-      return true;
-    });
-    $("analytics-questions").innerHTML = renderQuestionsTable(filtered.slice(0, 40));
+  function masteredFromSubject(s) {
+    const choice = Number(s.masteredChoice);
+    if (!Number.isNaN(choice) && choice >= 0) return choice;
+    return masteredCount(s.q);
   }
 
   function isOpenStatus(status) {
@@ -368,6 +239,194 @@
     return lines.join("\n").trim() + "\n";
   }
 
+  function formatOpenInquiriesForChat(items) {
+    const now = new Date().toLocaleString("ja-JP");
+    const lines = [
+      "【未対応のお問い合わせ】" + items.length + "件",
+      "コピー日時: " + now,
+      "依頼: 以下の未対応お問い合わせをすべて確認し、必要な対応・返信・修正を行ってください。",
+      "",
+    ];
+
+    items.forEach((r, i) => {
+      lines.push("========== " + (i + 1) + "/" + items.length + " ==========");
+      lines.push("status: open");
+      lines.push("日時: " + (r.createdAtText || "—"));
+      lines.push("種別: " + (r.categoryLabel || "—"));
+      lines.push("科目: " + (r.subjectTitle || subjectTitle(r.subjectId) || "—"));
+      lines.push("科目ID: " + (r.subjectId || "—"));
+      lines.push("ページ: " + (r.page || "—"));
+      lines.push("内容: " + (r.message || "—"));
+      lines.push("ユーザ: " + (r.userEmail || "匿名"));
+      lines.push("版: v" + (r.appVersion || "—"));
+      lines.push("");
+    });
+
+    return lines.join("\n").trim() + "\n";
+  }
+
+  function formatOpenPremiumForChat(items) {
+    const now = new Date().toLocaleString("ja-JP");
+    const lines = [
+      "【未対応のプレミアム要望】" + items.length + "件",
+      "コピー日時: " + now,
+      "依頼: 以下の未対応要望をすべて確認し、対応可否・実装方針を検討してください。",
+      "",
+    ];
+
+    items.forEach((r, i) => {
+      lines.push("========== " + (i + 1) + "/" + items.length + " ==========");
+      lines.push("status: open");
+      lines.push("日時: " + (r.createdAtText || "—"));
+      lines.push("種別: " + (r.typeLabel || "—"));
+      lines.push("科目: " + (r.subjectTitle || subjectTitle(r.subjectId) || "—"));
+      lines.push("科目ID: " + (r.subjectId || "—"));
+      lines.push("要望内容: " + (r.message || "—"));
+      lines.push("ユーザ: " + (r.userEmail || "—"));
+      lines.push("版: v" + (r.appVersion || "—"));
+      lines.push("");
+    });
+
+    return lines.join("\n").trim() + "\n";
+  }
+
+  async function bulkResolveItems({
+    opens,
+    collectionName,
+    listEl,
+    cardSelector,
+    store,
+    bulkBtn,
+    bulkStatusEl,
+    onDone,
+  }) {
+    if (!opens.length) return;
+    bulkBtn.disabled = true;
+    if (bulkStatusEl) {
+      bulkStatusEl.classList.remove("hidden");
+      bulkStatusEl.textContent = "更新中… 0/" + opens.length;
+    }
+    const CHUNK = 40;
+    let done = 0;
+    try {
+      const db = firebase.firestore();
+      for (let i = 0; i < opens.length; i += CHUNK) {
+        const slice = opens.slice(i, i + CHUNK);
+        const batch = db.batch();
+        slice.forEach((r) => {
+          batch.update(
+            db.collection(collectionName).doc(r.docId),
+            { status: "resolved" }
+          );
+        });
+        await batch.commit();
+        slice.forEach((r) => {
+          const card = listEl.querySelector(
+            cardSelector + '[data-id="' + r.docId + '"]'
+          );
+          if (card) {
+            card.dataset.status = "resolved";
+            const st = card.querySelector(".report-status");
+            if (st) {
+              st.textContent = "resolved";
+              st.className = "report-status status-resolved";
+            }
+          }
+          const stored = store.get(r.docId);
+          if (stored) stored.status = "resolved";
+        });
+        done += slice.length;
+        if (bulkStatusEl) {
+          bulkStatusEl.textContent = "更新中… " + done + "/" + opens.length;
+        }
+      }
+      if (bulkStatusEl) {
+        bulkStatusEl.textContent =
+          "完了: " + done + " 件を対応済にしました。";
+      }
+      if (onDone) await onDone();
+    } catch (e) {
+      if (bulkStatusEl) {
+        bulkStatusEl.textContent =
+          "エラー: " + (e && e.message ? e.message : String(e));
+      }
+      if (onDone) onDone();
+    }
+  }
+
+  function wireBulkActions({
+    copyBtn,
+    bulkBtn,
+    getOpens,
+    formatForChat,
+    copyStatusPrefix,
+    confirmLabel,
+    collectionName,
+    listEl,
+    cardSelector,
+    store,
+    onVisibilityRefresh,
+    onAnalyticsRefresh,
+  }) {
+    if (copyBtn) {
+      copyBtn.onclick = async () => {
+        const opens = getOpens();
+        if (!opens.length) return;
+        try {
+          await copyTextToClipboard(formatForChat(opens));
+          setTabStatus(
+            copyStatusPrefix,
+            "copy",
+            "コピーしました（" +
+              opens.length +
+              "件）。このチャットに貼り付けてください。"
+          );
+        } catch (e) {
+          setTabStatus(
+            copyStatusPrefix,
+            "copy",
+            "コピー失敗: " + (e && e.message ? e.message : String(e)),
+            true
+          );
+        }
+      };
+    }
+
+    if (bulkBtn) {
+      bulkBtn.onclick = async () => {
+        const opens = getOpens();
+        if (!opens.length) return;
+        if (
+          !window.confirm(
+            "表示中の未対応 " + opens.length + " 件をすべて「対応済」にします。よろしいですか？"
+          )
+        ) {
+          return;
+        }
+        const bulkStatusEl = $(copyStatusPrefix + "-bulk-status");
+        await bulkResolveItems({
+          opens,
+          collectionName,
+          listEl,
+          cardSelector,
+          store,
+          bulkBtn,
+          bulkStatusEl,
+          onDone: async () => {
+            if (onVisibilityRefresh) onVisibilityRefresh();
+            if (onAnalyticsRefresh) {
+              try {
+                await onAnalyticsRefresh();
+              } catch (_) {
+                /* ignore */
+              }
+            }
+          },
+        });
+      };
+    }
+  }
+
   async function copyTextToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(text);
@@ -391,6 +450,23 @@
     el.classList.remove("hidden");
     el.textContent = text;
     el.style.color = isError ? "var(--red)" : "var(--text-sub)";
+  }
+
+  function setTabStatus(prefix, kind, text, isError) {
+    const el = $(prefix + "-" + kind + "-status");
+    if (!el) return;
+    el.classList.remove("hidden");
+    el.textContent = text;
+    el.style.color = isError ? "var(--red)" : "var(--text-sub)";
+  }
+
+  function clearTabStatus(prefix) {
+    ["bulk", "copy"].forEach((kind) => {
+      const el = $(prefix + "-" + kind + "-status");
+      if (!el) return;
+      el.classList.add("hidden");
+      el.textContent = "";
+    });
   }
 
   function fillSubjectFilter() {
@@ -428,23 +504,59 @@
     sel.value = keep;
   }
 
+  async function fetchAllQuestionStats(db) {
+    const subjects =
+      typeof SUBJECT_REGISTRY !== "undefined"
+        ? SUBJECT_REGISTRY.filter((s) => s.enabled !== false).map((s) => s.id)
+        : ["sap", "windows-shortcuts", "biz-career"];
+    const docs = [];
+    const seen = new Set();
+
+    await Promise.all(
+      subjects.map(async (sid) => {
+        const snap = await db
+          .collection("questionStats")
+          .doc(sid)
+          .collection("questions")
+          .get();
+        snap.forEach((doc) => {
+          seen.add(doc.id);
+          docs.push({ id: doc.id, data: doc.data() || {} });
+        });
+      })
+    );
+
+    const legacySnap = await db.collection("questionStats").get();
+    legacySnap.forEach((doc) => {
+      if (seen.has(doc.id)) return;
+      if (subjects.includes(doc.id)) return;
+      const d = doc.data() || {};
+      if (
+        d.attempts !== undefined ||
+        d.correct !== undefined ||
+        d.inputAttempts !== undefined ||
+        d.inputCorrect !== undefined
+      ) {
+        docs.push({ id: doc.id, data: d });
+      }
+    });
+
+    return docs;
+  }
+
   async function loadAnalytics(db) {
     $("analytics-summary").innerHTML =
       '<p class="reports-loading">集計中…</p>';
     $("analytics-users").innerHTML = "";
-    $("analytics-questions").innerHTML = "";
-    fillAnalyticsSubjectFilter();
 
-    const [usersSnap, anonSnap, statsSnap, reportsSnap, inquiriesSnap, metaMap] =
+    const [usersSnap, anonSnap, statsDocs, reportsSnap, inquiriesSnap] =
       await Promise.all([
         db.collection("users").get(),
         db.collection("anonUsers").get().catch(() => ({ empty: true, forEach() {}, size: 0 })),
-        db.collection("questionStats").get(),
+        fetchAllQuestionStats(db),
         db.collection("questionReports").get(),
         db.collection("siteInquiries").get(),
-        buildQuestionMetaMap(),
       ]);
-    questionMetaById = metaMap;
 
     let totalAnswered = 0;
     let totalCorrect = 0;
@@ -469,7 +581,7 @@
             const s = sDoc.data() || {};
             answered += Number(s.answered) || 0;
             correct += Number(s.correct) || 0;
-            mastered += masteredCount(s.q);
+            mastered += masteredFromSubject(s);
             subjectNames.push(subjectTitle(sDoc.id));
             if (!email && s.email) email = s.email;
             if (s.lastActiveAt) {
@@ -556,10 +668,9 @@
     let globalInputCorrect = 0;
     let choiceQuestionCount = 0;
     let inputQuestionCount = 0;
-    hardQuestionRows = [];
 
-    statsSnap.forEach((doc) => {
-      const d = doc.data() || {};
+    statsDocs.forEach((item) => {
+      const d = item.data || {};
       const attempts = d.attempts || 0;
       const correct = d.correct || 0;
       const inputAttempts = d.inputAttempts || 0;
@@ -574,42 +685,7 @@
         globalInputCorrect += inputCorrect;
         inputQuestionCount += 1;
       }
-
-      const meta = questionMetaById.get(doc.id) || {};
-      const subjectId = guessSubjectId(doc.id, d.subjectId || meta.subjectId || "");
-      const subjectLabel = subjectTitle(subjectId);
-      const text = meta.text || "（マスタ未取得）";
-      const answer = meta.answer || "—";
-
-      if (attempts >= 5) {
-        hardQuestionRows.push({
-          id: doc.id,
-          mode: "選択",
-          modeKey: "choice",
-          attempts,
-          pct: Math.round((correct / attempts) * 100),
-          subjectId,
-          subjectLabel,
-          text,
-          answer,
-        });
-      }
-      if (inputAttempts >= 5) {
-        hardQuestionRows.push({
-          id: doc.id,
-          mode: "記述",
-          modeKey: "input",
-          attempts: inputAttempts,
-          pct: Math.round((inputCorrect / inputAttempts) * 100),
-          subjectId,
-          subjectLabel,
-          text,
-          answer,
-        });
-      }
     });
-
-    hardQuestionRows.sort((a, b) => a.pct - b.pct || b.attempts - a.attempts);
 
     let reportsOpen = 0;
     let reportsResolved = 0;
@@ -667,7 +743,6 @@
       `</div>`;
 
     $("analytics-users").innerHTML = renderUsersTable(userRows.slice(0, 50));
-    applyHardQuestionFilters();
   }
 
   function refreshOpenCount() {
@@ -936,13 +1011,35 @@
     return true;
   }
 
+  function getFilteredInquiries() {
+    return Array.from(inquiryStore.values()).filter(inquiryMatchesFilters);
+  }
+
+  function getOpenInquiriesFiltered() {
+    return getFilteredInquiries().filter((r) => isOpenStatus(r.status));
+  }
+
   function refreshInquiryOpenCount() {
-    const el = $("inquiries-open-count");
-    if (!el) return;
-    const all = Array.from(inquiryStore.values());
-    const filtered = all.filter(inquiryMatchesFilters);
-    const open = filtered.filter((r) => isOpenStatus(r.status)).length;
-    el.textContent = "表示 " + filtered.length + " / 未対応 " + open;
+    const openCountEl = $("inquiries-open-count");
+    const bulkBtn = $("inquiries-resolve-all-open");
+    const copyBtn = $("inquiries-copy-open");
+    const filtered = getFilteredInquiries();
+    const n = getOpenInquiriesFiltered().length;
+    if (openCountEl) {
+      openCountEl.textContent = "表示 " + filtered.length + " / 未対応 " + n;
+    }
+    if (bulkBtn) {
+      bulkBtn.disabled = n === 0;
+      bulkBtn.textContent =
+        n > 0
+          ? "表示中の未対応 " + n + " 件を対応済にする"
+          : "未対応を一括で対応済にする";
+    }
+    if (copyBtn) {
+      copyBtn.disabled = n === 0;
+      copyBtn.textContent =
+        n > 0 ? "表示中の未対応 " + n + " 件をコピー" : "未対応を一括コピー";
+    }
   }
 
   function applyInquiryVisibility() {
@@ -968,8 +1065,13 @@
 
   async function loadInquiries(db) {
     const list = $("inquiries-list");
+    const bulkBtn = $("inquiries-resolve-all-open");
+    const copyBtn = $("inquiries-copy-open");
     list.innerHTML = '<p class="reports-loading">読み込み中…</p>';
     inquiryStore.clear();
+    clearTabStatus("inquiries");
+    if (bulkBtn) bulkBtn.disabled = true;
+    if (copyBtn) copyBtn.disabled = true;
     fillInquiryCategoryFilter();
 
     const snap = await db
@@ -1055,6 +1157,51 @@
     });
 
     applyInquiryVisibility();
+
+    wireBulkActions({
+      copyBtn,
+      bulkBtn,
+      getOpens: getOpenInquiriesFiltered,
+      formatForChat: formatOpenInquiriesForChat,
+      copyStatusPrefix: "inquiries",
+      collectionName: "siteInquiries",
+      listEl: list,
+      cardSelector: ".inquiry-card",
+      store: inquiryStore,
+      onVisibilityRefresh: applyInquiryVisibility,
+      onAnalyticsRefresh: () => loadAnalytics(db),
+    });
+  }
+
+  function getFilteredPremium() {
+    return Array.from(premiumStore.values()).filter(premiumMatchesFilters);
+  }
+
+  function getOpenPremiumFiltered() {
+    return getFilteredPremium().filter((r) => isOpenStatus(r.status));
+  }
+
+  function refreshPremiumOpenCount() {
+    const openCountEl = $("premium-open-count");
+    const bulkBtn = $("premium-resolve-all-open");
+    const copyBtn = $("premium-copy-open");
+    const filtered = getFilteredPremium();
+    const n = getOpenPremiumFiltered().length;
+    if (openCountEl) {
+      openCountEl.textContent = "表示 " + filtered.length + " / 未対応 " + n;
+    }
+    if (bulkBtn) {
+      bulkBtn.disabled = n === 0;
+      bulkBtn.textContent =
+        n > 0
+          ? "表示中の未対応 " + n + " 件を対応済にする"
+          : "未対応を一括で対応済にする";
+    }
+    if (copyBtn) {
+      copyBtn.disabled = n === 0;
+      copyBtn.textContent =
+        n > 0 ? "表示中の未対応 " + n + " 件をコピー" : "未対応を一括コピー";
+    }
   }
 
   function premiumMatchesFilters(r) {
@@ -1064,15 +1211,6 @@
     if (statusSel !== "all" && st !== statusSel) return false;
     if (typeSel !== "all" && (r.type || "feature") !== typeSel) return false;
     return true;
-  }
-
-  function refreshPremiumOpenCount() {
-    const el = $("premium-open-count");
-    if (!el) return;
-    const all = Array.from(premiumStore.values());
-    const filtered = all.filter(premiumMatchesFilters);
-    const open = filtered.filter((r) => isOpenStatus(r.status)).length;
-    el.textContent = "表示 " + filtered.length + " / 未対応 " + open;
   }
 
   function applyPremiumVisibility() {
@@ -1110,8 +1248,13 @@
   async function loadPremiumRequests(db) {
     const list = $("premium-list");
     if (!list) return;
+    const bulkBtn = $("premium-resolve-all-open");
+    const copyBtn = $("premium-copy-open");
     list.innerHTML = '<p class="reports-loading">読み込み中…</p>';
     premiumStore.clear();
+    clearTabStatus("premium");
+    if (bulkBtn) bulkBtn.disabled = true;
+    if (copyBtn) copyBtn.disabled = true;
     fillPremiumTypeFilter();
 
     const snap = await db
@@ -1192,6 +1335,20 @@
     });
 
     applyPremiumVisibility();
+
+    wireBulkActions({
+      copyBtn,
+      bulkBtn,
+      getOpens: getOpenPremiumFiltered,
+      formatForChat: formatOpenPremiumForChat,
+      copyStatusPrefix: "premium",
+      collectionName: "premiumRequests",
+      listEl: list,
+      cardSelector: ".premium-card",
+      store: premiumStore,
+      onVisibilityRefresh: applyPremiumVisibility,
+      onAnalyticsRefresh: () => loadAnalytics(db),
+    });
   }
 
   function boot() {
@@ -1233,10 +1390,6 @@
       const el = $(id);
       if (el) el.addEventListener("change", applyPremiumVisibility);
     });
-    ["analytics-q-subject", "analytics-q-mode"].forEach((id) => {
-      const el = $(id);
-      if (el) el.addEventListener("change", applyHardQuestionFilters);
-    });
 
     $("admin-login-btn").addEventListener("click", () => {
       const email = $("admin-email").value.trim();
@@ -1264,6 +1417,7 @@
       }
       showMain(user);
       $("admin-logout-btn").classList.remove("hidden");
+      if (window.AdminXSchedule) window.AdminXSchedule.init(auth);
       try {
         // 再合算バグで4倍になった questionStats を ÷4（サーバ側で1回限り）
         try {
