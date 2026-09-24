@@ -3,7 +3,7 @@
   "description": "ビジネス道場 — Stripe / X投稿 Cloud Functions",
   "main": "index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "predeploy": "python3 ../_dev/sync-shared.py",
