@@ -1,0 +1,77 @@
+name: Deploy to Firebase
+
+# main が更新されたら、テストを通した上で本番へデプロイする。
+#
+# 必要な設定（初回のみ）:
+#   1. GCPでサービスアカウントを作成し、JSON鍵をダウンロード
+#      必要なロール: Firebase Hosting 管理者 / Cloud Functions 管理者 /
+#                    サービス アカウント ユーザー / API Keys 閲覧者
+#   2. その JSON の中身をまるごと GitHub Secrets に GCP_SA_KEY として登録
+#
+# テストが落ちた場合はデプロイしない（自動改善エージェントの変更が
+# main に入る運用のため、ここが最後の砦になる）。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: |
+          npm install --prefix functions
+          npm install
+      - name: Unit tests (pricing / entitlements)
+        run: npm test --prefix functions
+      - name: Firestore rules tests
+        run: npm run test:rules
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Python (predeploy の sync-shared.py 用)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools
+
+      - name: Write service account key
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          if [ -z "$GCP_SA_KEY" ]; then
+            echo "GCP_SA_KEY が未設定です。Settings → Secrets and variables → Actions で登録してください。"
+            exit 1
+          fi
+          printf '%s' "$GCP_SA_KEY" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Deploy hosting and functions
+        run: firebase deploy --only hosting,functions --project buz-dojo --non-interactive
+
+      - name: Clean up credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
