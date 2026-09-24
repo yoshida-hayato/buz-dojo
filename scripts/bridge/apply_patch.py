@@ -201,10 +201,16 @@ def resolve_target(rel_path: str) -> tuple[Path | None, str]:
     if target.suffix not in EDITABLE_SUFFIXES:
         return None, f"対象外の拡張子です: `{rel_path}`"
     parts = target.relative_to(REPO_ROOT).parts
-    if parts and parts[0] == ".github":
-        return None, "`.github/` 配下は自動適用の対象外です"
+    # ワークフロー(.github/)の変更は許可する。テストを通過した場合のみ
+    # コミットされるため、ここは通常の変更と同じ扱いでよい。
+    #
+    # 一方 scripts/bridge/ は、このスクリプト自身が住んでいる場所なので
+    # 書き換えを許さない。ここが自己改変できると、壊れたパッチを自分に
+    # 当てた時点でブリッジが動かなくなり、以後どんなパッチも適用できなく
+    # なる(復旧には人間の push が必要になる)。安全装置の問題ではなく、
+    # 自分の足場を自分で外せないようにするための制限。
     if len(parts) >= 2 and parts[0] == "scripts" and parts[1] == "bridge":
-        return None, "`scripts/bridge/` 配下は自動適用の対象外です"
+        return None, "`scripts/bridge/` 配下は、ブリッジ自身なので自動適用の対象外です"
     return target, ""
 
 
