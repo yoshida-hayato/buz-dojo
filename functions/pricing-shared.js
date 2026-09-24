@@ -47,7 +47,7 @@
     },
     "biz-pm-planning": {
       title: "ビジネスキャリア検定（生産管理プランニング専門知識）",
-      questionCount: 321,
+      questionCount: 694,
     },
     "biz-pm-operation": {
       title: "ビジネスキャリア検定（生産管理オペレーション2級・専門知識）",

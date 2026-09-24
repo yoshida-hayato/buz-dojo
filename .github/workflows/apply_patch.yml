@@ -49,6 +49,8 @@ jobs:
         run: |
           npm install --prefix functions
           npm install
+          rm -f package-lock.json
+          git checkout -- functions/package-lock.json
 
       - name: Configure git identity
         run: |
