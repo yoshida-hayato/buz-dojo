@@ -15,6 +15,9 @@ on:
 
 permissions:
   contents: write
+  # .github/workflows/ 配下を書き換えるパッチをpushするにはこの権限も必要
+  # (contents:write だけだとGitHubがワークフローファイルへのpushを拒否する)
+  workflows: write
 
 concurrency:
   group: apply-patch
