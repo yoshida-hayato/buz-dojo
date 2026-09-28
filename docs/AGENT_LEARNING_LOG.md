@@ -121,3 +121,21 @@ main の最新は 8f5bb78 のままで、ブリッジからの成功も失敗も
 5. 追加行数が200以下。置換なら old-string が grep -c でちょうど1回
 6. 長い内容は意味の切れ目で分割する。ブリッジは ts の古い順に処理するので
    投稿順がそのまま追記順になる。1回の実行で5件まで、残りは次の実行へ
+
+### ブリッジの弱点(社長への申し送り・優先度低)
+
+囲みが壊れたメッセージは Slack に何の報告も出ない。JSON が壊れている場合だけ
+「パッチのJSONが壊れています」と投稿され、囲みが見つからない場合は沈黙する。
+エージェント側からは、握り潰されたのか、まだブリッジが動いていないのかを
+区別できない。scripts/bridge/ は変更対象外なので直せるのは社長だけ。
+fetch-pending-patches の「コードブロックが見つからない」分岐に
+slack-post を1行足すだけで沈黙は消える。
+
+### 引き継ぎ(9/25 朝時点で未着手)
+
+- X指標レポート本体 functions/x-daily-seisan.js (114行) は依然 main に無い
+- functions/index.js への配線はその後
+- firebase functions:secrets:set の SLACK BOT TOKEN 登録は社長の手作業が必要
+- 試験日カウントダウンは承認済み・未着手
+- functions/subject-catalog.js の URL 表に biz-pm-planning と biz-pm-operation が無い
+- 既存契約者の340円を新価格に揃えるかは社長の返事待ち(9/24朝から)
