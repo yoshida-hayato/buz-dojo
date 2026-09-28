@@ -893,6 +893,8 @@ function composeParentText(payload, seq, options = {}) {
   } else {
     lines.push("正解はどれ？");
     lines.push("考えてから答え合わせ ↓");
+    lines.push("");
+    lines.push("1日20問まで無料 " + SITE_URL);
   }
   lines.push("");
   lines.push(composeHashtags(payload));
