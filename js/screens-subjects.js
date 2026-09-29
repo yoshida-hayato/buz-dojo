@@ -1305,7 +1305,11 @@ function updateHomeNote() {
     if (quotaEl) {
       quotaEl.innerHTML = freeSubject
         ? "この問題集は<strong>無料</strong>です（制限なし）"
-        : "この問題集は<strong>購読中</strong>です。ご利用ありがとうございます（制限なし）。";
+        : `この問題集は<strong>${
+            typeof Entitlement !== "undefined" && Entitlement.ownedLabel
+              ? Entitlement.ownedLabel()
+              : "購読中"
+          }</strong>です。ご利用ありがとうございます（制限なし）。`;
     }
     if (freeSubject) {
       setStartQuotaSummary(
