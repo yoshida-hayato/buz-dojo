@@ -93,7 +93,38 @@
       </nav>
     </article>
   </div>
+  <script src="config/pricing.js"></script>
   <script src="config/legal.js"></script>
+  <script>
+    // 買い切り移行: 表記の切替は config/pricing.js の CHECKOUT_MODE が唯一の宣言。
+    // 宣言が payment でないときは1文字も書き換えない（現状はこちら）。
+    // 切替が済んだら、この差し替えを静的HTMLへ焼き直して本ブロックを削除する。
+    (function () {
+      try {
+        var P = typeof PricingConfig !== "undefined" ? PricingConfig : null;
+        if (!P || P.CHECKOUT_MODE !== "payment") return;
+        var TEXT = {
+          "販売価格":
+            "各商品の購入画面およびサイト上に表示する価格（税込表示）。<br>" +
+            "科目単品は買い切りです（問題数100問以下は無料、101問以上は問題数に応じて ¥290〜¥1,980、3000問以上は ¥1,980）。" +
+            "プレミアムパックは ¥3,980 の買い切りで、購入後に追加される科目も追加料金なしでご利用いただけます。",
+          "支払時期":
+            "申込時（決済時）の一回払いです。継続課金・自動更新は行いません。",
+          "解約":
+            "継続課金がないため、解約のお手続きは不要です。<br>" +
+            "購入いただいた科目・パックは、本サービスの提供が継続する間ご利用いただけます。サービスの全部または一部を終了する場合は、可能な範囲で事前にお知らせします。"
+        };
+        var rows = document.querySelectorAll(".legal-table tr");
+        for (var i = 0; i < rows.length; i++) {
+          var th = rows[i].querySelector("th");
+          var td = rows[i].querySelector("td");
+          if (!th || !td) continue;
+          var key = (th.textContent || "").trim();
+          if (TEXT[key]) td.innerHTML = TEXT[key];
+        }
+      } catch (e) {}
+    })();
+  </script>
   <script>
     (function () {
       var nameEl = document.getElementById("operator-name");
