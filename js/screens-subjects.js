@@ -597,6 +597,9 @@ function paintSubjectPickerCards(box, rows, packOn) {
     card.innerHTML =
       eyebrow +
       `<div class="subject-card-title">${escapeHtml(displayTitle)}</div>` +
+      (typeof subjectExamCountdownHtml === "function"
+        ? subjectExamCountdownHtml(s.id)
+        : "") +
       (s.description
         ? `<div class="subject-card-desc">${escapeHtml(s.description)}</div>`
         : "") +
