@@ -149,13 +149,23 @@ function paintMyPageBilling(billingEl, rows) {
     `<div class="mypage-plan-title">${escapeHtml(packTitle)}</div>` +
     `<div class="mypage-plan-meta">${
       packOn
-        ? '<span class="mypage-badge is-on">購読中</span> ご利用ありがとうございます · 全科目が無制限 · メニューから要望提出可'
-        : `<span class="mypage-badge is-off">未購読</span> ${escapeHtml(packPrice)}`
+        ? `<span class="mypage-badge is-on">${
+            typeof Entitlement !== "undefined" && Entitlement.ownedLabel
+              ? Entitlement.ownedLabel()
+              : "購読中"
+          }</span> ご利用ありがとうございます · 全科目が無制限 · メニューから要望提出可`
+        : `<span class="mypage-badge is-off">${
+            typeof Entitlement !== "undefined" && Entitlement.unownedLabel
+              ? Entitlement.unownedLabel()
+              : "未購読"
+          }</span> ${escapeHtml(packPrice)}`
     }</div>` +
     `</div>` +
     `<div class="mypage-plan-actions">` +
     (packOn
-      ? `<button type="button" class="link-btn mypage-portal-inline">契約管理</button>`
+      ? typeof Entitlement !== "undefined" && Entitlement.isOneTime && Entitlement.isOneTime()
+        ? `<span class="mypage-plan-note">買い切り</span>`
+        : `<button type="button" class="link-btn mypage-portal-inline">契約管理</button>`
       : `<button type="button" class="primary-btn mypage-buy-pack">プレミアムパックを購入</button>`) +
     `</div></div>`;
 
