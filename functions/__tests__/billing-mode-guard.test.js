@@ -22,8 +22,17 @@ const entitlementsSrc = read("functions/entitlements.js");
 const client = require(path.join(ROOT, "config", "pricing.js"));
 const server = require("../pricing-shared.js");
 
-// 宣言されたモード。CHECKOUT-MODE が無い時代は subscription とみなす。
+// 宣言されたモード。判定は「実際に効いている値」を先に見る。
+//
+// 本番の分岐はすべて export された PricingConfig.CHECKOUT_MODE を読む
+// (functions/index.js / js/entitlement.js / legal の差し替え)。ここだけが
+// ソース文字列の一致で判定していると、宣言の書き方を変えただけで
+// ガードが subscription と誤認し、以下の配線・表記テストが黙って飛ぶ。
+// よって export された値を正とし、読めないときだけ文字列一致に落とす。
+// CHECKOUT_MODE が無い時代は subscription とみなす。
 function declaredMode() {
+  const exported = client && client.CHECKOUT_MODE;
+  if (exported === "payment" || exported === "subscription") return exported;
   if (pricingSrc.includes('CHECKOUT_MODE = "payment"')) return "payment";
   return "subscription";
 }
