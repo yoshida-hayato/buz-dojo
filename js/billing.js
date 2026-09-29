@@ -131,7 +131,13 @@ const Billing = (function () {
 
     if (checkout === "success") {
       window.setTimeout(() => {
-        alert("お支払いありがとうございます。購読が反映されるまで数十秒かかることがあります。");
+        const oneTime =
+          typeof Entitlement !== "undefined" && Entitlement.isOneTime && Entitlement.isOneTime();
+        alert(
+          oneTime
+            ? "お支払いありがとうございます。ご購入が反映されるまで数十秒かかることがあります。"
+            : "お支払いありがとうございます。購読が反映されるまで数十秒かかることがあります。"
+        );
       }, 300);
     } else if (checkout === "cancel") {
       console.info("checkout canceled");
