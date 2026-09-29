@@ -190,7 +190,11 @@ function paintMyPageBilling(billingEl, rows) {
     } else if (priceYen <= 0) {
       statusHtml = `<span class="mypage-badge is-on">無料問題集</span>`;
     } else if (subscribed) {
-      statusHtml = `<span class="mypage-badge is-on">単品購読中</span>`;
+      statusHtml = `<span class="mypage-badge is-on">単品${
+        typeof Entitlement !== "undefined" && Entitlement.ownedLabel
+          ? Entitlement.ownedLabel()
+          : "購読中"
+      }</span>`;
     } else {
       statusHtml =
         `<span class="mypage-badge is-off">無料枠</span>` +
