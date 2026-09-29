@@ -433,6 +433,35 @@ function buildPickerRows(subjects, catalogCounts, allSummaries, summariesLoaded)
   });
 }
 
+// ビジキャリ試験(生産管理系3科目)の試験日カウントダウン。JST基準、60日前から表示
+const BIZCAREER_EXAM_DATES = ['2026-10-04', '2027-02-14'];
+const BIZCAREER_EXAM_SUBJECTS = ['biz-career', 'biz-pm-planning', 'biz-pm-operation'];
+
+function subjectExamCountdownHtml(subjectId) {
+  try {
+    if (BIZCAREER_EXAM_SUBJECTS.indexOf(subjectId) < 0) return '';
+    const nowJst = new Date(Date.now() + 32400000);
+    const today = Date.UTC(
+      nowJst.getUTCFullYear(),
+      nowJst.getUTCMonth(),
+      nowJst.getUTCDate()
+    );
+    for (let i = 0; i < BIZCAREER_EXAM_DATES.length; i++) {
+      const parts = BIZCAREER_EXAM_DATES[i].split('-');
+      const exam = Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const days = Math.round((exam - today) / 86400000);
+      if (days < 0) continue;
+      if (days > 60) return '';
+      const label =
+        days === 0 ? '本日がビジキャリ試験日です' : 'ビジキャリ試験まであと' + days + '日';
+      return '<div class="subject-card-note">' + label + '</div>';
+    }
+    return '';
+  } catch (e) {
+    return '';
+  }
+}
+
 function paintSubjectPickerSkeleton(box, count) {
   const n = Math.max(1, Number(count) || 1);
   box.innerHTML = Array.from({ length: n }, () => {
