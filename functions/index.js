@@ -296,6 +296,14 @@ exports.stripeWebhook = onRequest(
             const subscription = await stripe.subscriptions.retrieve(session.subscription);
             await syncSubscriptionAndMaybeCancelSubjects(stripe, subscription, uid);
           }
+          // 買い切り(mode=payment)はサブスクを作らないので、ここで直接付与する
+          if (!session.subscription && session.mode === "payment") {
+            const { applyOneTimePurchase } = require("./entitlements");
+            const result = await applyOneTimePurchase(uid, session);
+            if (!result.ok) {
+              console.error("applyOneTimePurchase skipped:", uid, result.reason, session.id);
+            }
+          }
           break;
         }
         case "customer.subscription.created":
