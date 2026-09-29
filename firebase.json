@@ -96,6 +96,7 @@
     {
       "source": "functions",
       "codebase": "default",
+      "predeploy": ["python3 _dev/sync-shared.py"],
       "ignore": [
         "node_modules",
         ".git",
