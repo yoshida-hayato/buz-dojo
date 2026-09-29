@@ -92,16 +92,27 @@ describe("payment に切り替える前に必要な配線", () => {
 describe("payment に切り替える前に必要な表記", () => {
   const notYet = () => declaredMode() !== "payment";
 
-  test("特定商取引法の表記に月額サブスクリプションが残っていない", () => {
+  // 文字列の不在で判定すると、正しい買い切り文面まで落ちる。
+  // 「継続課金・自動更新はありません」は自動更新という語を含むし、
+  // 表記を実行時に切り替える設計では静的HTMLに月額の文面も残る。
+  // よって不在ではなく、宣言を読んでいることと買い切り文面の存在を見る。
+  test("特商法と規約が宣言を読んでいる", () => {
     if (notYet()) return;
-    expect(read("legal/commerce.html").includes("月額サブスクリプション")).toBe(false);
+    expect(read("legal/commerce.html")).toContain("CHECKOUT_MODE");
+    expect(read("legal/terms.html")).toContain("CHECKOUT_MODE");
   });
 
-  test("利用規約に月額の自動更新が残っていない", () => {
+  test("特商法と規約に買い切りの文面が入っている", () => {
     if (notYet()) return;
-    const terms = read("legal/terms.html");
-    expect(terms.includes("月額サブスクリプション")).toBe(false);
-    expect(terms.includes("自動更新")).toBe(false);
+    expect(read("legal/commerce.html")).toContain("買い切り");
+    expect(read("legal/terms.html")).toContain("買い切り");
+  });
+
+  test("特商法の買い切り文面に価格と継続課金の有無が書かれている", () => {
+    if (notYet()) return;
+    const commerce = read("legal/commerce.html");
+    expect(commerce).toContain("3,980");
+    expect(commerce).toContain("継続課金");
   });
 
   test("画面の価格表記が宣言を読んでいる", () => {
