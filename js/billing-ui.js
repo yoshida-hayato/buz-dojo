@@ -45,7 +45,13 @@ function initBillingUI() {
 function updateBillingManageVisibility() {
   const manageBtn = $("billing-manage-btn");
   const homeManage = $("home-billing-manage-btn");
+  // 買い切りには解約もカード更新も無いので、契約管理の導線そのものを出さない
+  const oneTime =
+    typeof Entitlement !== "undefined" &&
+    Entitlement.isOneTime &&
+    Entitlement.isOneTime();
   const show =
+    !oneTime &&
     typeof Entitlement !== "undefined" &&
     Entitlement.hasAnySubscription &&
     Entitlement.hasAnySubscription();
