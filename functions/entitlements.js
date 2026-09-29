@@ -139,12 +139,22 @@ async function cancelSubjectSubscriptions(stripe, customerId, keepSubscriptionId
   for (const status of statuses) {
     let startingAfter = undefined;
     for (;;) {
-      const page = await stripe.subscriptions.list({
-        customer: customerId,
-        status,
-        limit: 100,
-        ...(startingAfter ? { starting_after: startingAfter } : {}),
-      });
+      let page;
+      try {
+        page = await stripe.subscriptions.list({
+          customer: customerId,
+          status,
+          limit: 100,
+          ...(startingAfter ? { starting_after: startingAfter } : {}),
+        });
+      } catch (listErr) {
+        console.error("list subject subscriptions failed:", {
+          customerId,
+          status,
+          message: listErr && listErr.message,
+        });
+        break;
+      }
       for (const sub of page.data) {
         if (keepSubscriptionId && sub.id === keepSubscriptionId) continue;
         const planType = (sub.metadata && sub.metadata.planType) || "";
