@@ -14,6 +14,8 @@ on:
 
 permissions:
   contents: write
+  # ブリッジのpushでは deploy.yml が起動しないため、デプロイを明示的に起動する権限
+  actions: write
 
 
 concurrency:
@@ -67,10 +69,21 @@ jobs:
         run: python scripts/bridge/apply_patch.py
 
       - name: Push commit (if any)
+        id: push
         run: |
           if [ "$(git rev-parse HEAD)" = "${{ steps.base.outputs.sha }}" ]; then
             echo "新しいコミットはありません"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # GITHUB_TOKEN による push では on: push のワークフローが起動しない(GitHubの仕様)。
+      # workflow_dispatch は例外的に起動できるので、pushした回だけデプロイを呼ぶ。
+      - name: Trigger deploy
+        if: steps.push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref "${GITHUB_REF_NAME}"
