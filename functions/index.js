@@ -387,7 +387,20 @@ exports.stripeWebhook = onRequest(
       }
       res.json({ received: true });
     } catch (err) {
-      console.error("Webhook handler error:", err);
+      // どのイベントで何が落ちたかをログ1行で特定できるようにする。
+      // 種別・イベントID・イベントのAPIバージョンが無いと、ダッシュボードに
+      // 500 だけが残って原因に辿り着けない(9/27 の
+      // customer.subscription.updated がまさにそれだった)。
+      console.error("Webhook handler error:", {
+        eventType: event && event.type,
+        eventId: event && event.id,
+        eventApiVersion: event && event.api_version,
+        errName: err && err.name,
+        errType: err && err.type,
+        errCode: err && err.code,
+        message: err && err.message,
+        stack: err && err.stack,
+      });
       res.status(500).send("Webhook handler failed");
     }
   }
