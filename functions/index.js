@@ -309,6 +309,13 @@ exports.stripeWebhook = onRequest(
 
     try {
       switch (event.type) {
+        // 遅延通知の支払い方法(コンビニ・銀行振込など)では、決済画面を終えた時点の
+        // checkout.session.completed が payment_status=unpaid で届き、実際の入金は
+        // 後から checkout.session.async_payment_succeeded で通知される。
+        // applyOneTimePurchase は unpaid を弾くので、この節が無いと
+        // 「入金は済んでいるのに付与されない」が静かに起きる。
+        // サブスクでは session.subscription 側で解決するため挙動は変わらない。
+        case "checkout.session.async_payment_succeeded":
         case "checkout.session.completed": {
           const session = event.data.object;
           const uid = session.client_reference_id || session.metadata?.firebaseUid;
