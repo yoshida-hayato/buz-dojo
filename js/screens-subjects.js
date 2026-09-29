@@ -594,7 +594,7 @@ function paintSubjectPickerCards(box, rows, packOn) {
     const price =
       typeof Entitlement !== "undefined"
         ? Entitlement.formatPrice(PACK_PLAN.priceYen)
-        : `¥${Number(PACK_PLAN.priceYen).toLocaleString("ja-JP")}/月`;
+        : `¥${Number(PACK_PLAN.priceYen).toLocaleString("ja-JP")}`;
     const benefits = Array.isArray(PACK_PLAN.benefits) ? PACK_PLAN.benefits : [];
     const benefitsHtml = benefits.length
       ? `<ul class="pack-benefits">${benefits
