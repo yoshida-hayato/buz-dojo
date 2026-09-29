@@ -165,8 +165,56 @@ async function revokeSubscription(uid, subscription) {
   await saveEntitlements(uid, next);
 }
 
+// 買い切り(Stripe mode=payment)の決済完了を反映する。
+// サブスクと違い解約が無いので付与は永続。status に active を入れるのは、
+// 既存クライアントの isSubjectActive が status を読むため(互換のため)。
+async function applyOneTimePurchase(uid, session) {
+  if (!uid || !session) return { ok: false, reason: "no_uid_or_session" };
+  const meta = session.metadata || {};
+  const planType = meta.planType || "";
+  const subjectId = meta.subjectId || "";
+  if (session.payment_status && session.payment_status !== "paid") {
+    return { ok: false, reason: "not_paid" };
+  }
+  const payload = {
+    status: "active",
+    purchaseType: "one_time",
+    checkoutSessionId: session.id || null,
+    paymentIntentId:
+      typeof session.payment_intent === "string" ? session.payment_intent : null,
+    amountYen: Number(session.amount_total) || null,
+    purchasedAtMs: Date.now(),
+  };
+  const current = await getEntitlements(uid);
+  const next = {
+    stripeCustomerId:
+      typeof session.customer === "string"
+        ? session.customer
+        : current.stripeCustomerId || null,
+    pack: Boolean(current.pack),
+    subjects: { ...(current.subjects || {}) },
+  };
+  if (current.complimentary === true) {
+    next.complimentary = true;
+    if (current.complimentaryReason) next.complimentaryReason = current.complimentaryReason;
+    if (current.complimentaryEmail) next.complimentaryEmail = current.complimentaryEmail;
+  }
+  if (planType === "pack") {
+    // 買い切りパックは永続。単品の購入記録は消さない(支払った事実を残す)
+    next.pack = true;
+    next.packPurchase = payload;
+  } else if (planType === "subject" && subjectId) {
+    next.subjects[subjectId] = payload;
+  } else {
+    return { ok: false, reason: "unknown_plan" };
+  }
+  await saveEntitlements(uid, next);
+  return { ok: true, planType, subjectId };
+}
+
 module.exports = {
   entitlementsRef,
+  applyOneTimePurchase,
   getEntitlements,
   saveEntitlements,
   setStripeCustomerId,
