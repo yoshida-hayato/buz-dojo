@@ -10,7 +10,7 @@ name: Apply Patch from Slack
 on:
   schedule:
     # Cowork 側（UTC 0/6/12/18時）の1時間後に起動する
-    - cron: "0 1,7,13,19 * * *"
+    - cron: "0 */2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -29,6 +29,8 @@ jobs:
       SLACK_CHANNEL_ID: C0C34F5M1QV
       # このユーザーが投稿したパッチだけを受け付ける（他人による混入を防ぐ）
       ALLOWED_SLACK_USER_ID: U0C37AGEFKQ
+      # 1回の実行で処理するパッチの最大件数（apply_patch.py の既定値は5）
+      MAX_PATCHES_PER_RUN: "15"
 
     steps:
       - name: Checkout
