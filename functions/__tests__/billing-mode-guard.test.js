@@ -85,3 +85,27 @@ describe("payment に切り替える前に必要な配線", () => {
     expect(indexSrc).toContain("isOneTimeCheckout");
   });
 });
+
+// 配線が正しくても、表記が「月額」のままで買い切りで課金すれば
+// 表示と実際の課金が食い違う。宣言を payment に動かす前に、
+// 特商法・利用規約・画面の価格表記を先に直させる。
+describe("payment に切り替える前に必要な表記", () => {
+  const notYet = () => declaredMode() !== "payment";
+
+  test("特定商取引法の表記に月額サブスクリプションが残っていない", () => {
+    if (notYet()) return;
+    expect(read("legal/commerce.html").includes("月額サブスクリプション")).toBe(false);
+  });
+
+  test("利用規約に月額の自動更新が残っていない", () => {
+    if (notYet()) return;
+    const terms = read("legal/terms.html");
+    expect(terms.includes("月額サブスクリプション")).toBe(false);
+    expect(terms.includes("自動更新")).toBe(false);
+  });
+
+  test("画面の価格表記が宣言を読んでいる", () => {
+    if (notYet()) return;
+    expect(read("js/entitlement.js")).toContain("CHECKOUT_MODE");
+  });
+});
