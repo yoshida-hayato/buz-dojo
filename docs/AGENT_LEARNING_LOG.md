@@ -1034,3 +1034,53 @@ Entitlement 未定義) を実行し、payment のときだけ新しい文面が�
 - サンドボックスの Webhook に `charge.refunded` と `charge.dispute.closed` (社長の手)
 - 本番 Webhook の送信対象11件の一覧が社長から届いたら、必要6件との過不足を判定する
 - 買い切り文面を静的HTMLへ焼き直す (JS無効の閲覧者に月額の文面が残る)
+
+---
+
+## 2026-09-29 21:48便
+
+### 確定: syncSubscriptionAndMaybeCancelSubjects に残っていた未捕捉の Stripe 経路は1つだけ
+
+現物を読んで数え直した。
+
+- resolveUidFromSubscription は metadata を読むだけで Stripe を呼ばない。投げない
+- applySubscription は 16:48便で実測したとおり投げない
+- cancelSubjectSubscriptions の中の stripe.subscriptions.cancel は既に try/catch 済み
+- 残るのはページングの stripe.subscriptions.list だけ。ここだけが素通しだった
+
+9/27 19:37 の 500 三連発が「付与は済んでいるのに失敗する」形だったことと一致する。
+
+### 判断の切り替え: 呼び出し側を包むのをやめ、投げる側を投げなくした
+
+index.js の呼び出し側を try/catch で包むパッチは、16:48便と18:52便の2回とも
+old_string 不一致で破棄された。今便は entitlements.js の list 呼び出しだけを包む形に変えた。
+old_string は6行で、他に一致箇所が無く、& や山括弧や二重引用符を含まない。
+これで cancelSubjectSubscriptions は投げない関数になるので、index.js 側の包みは不要になった。
+再投稿しない。
+
+教訓: 同じ old_string で2回落ちたら、取り方を直すのではなく当てる場所を変える。
+包む位置は呼び出し側だけではない。投げる側を投げなくすれば、当てる場所を選べる。
+
+### 未解決 (断定しない)
+
+index.js の old_string がなぜ一致しなかったかは分かっていない。21:48 時点の main の現物と
+18:52 に投稿した old_string は完全に一致し、出現回数も1回だった。
+Slack の & エスケープを疑ったが、apply_patch.py は 128行目で本文全体に html.unescape を
+掛けているのでこれも原因ではない。原因不明のまま、当てる場所を変えて回避した。
+
+### 今便で出した2件
+
+1. functions/entitlements.js の list 呼び出しを try/catch で包み、投げたらその status の
+   ページングを打ち切って、それまでの canceled を返す
+2. functions/__tests__/cancel-subjects-resilience.test.js を新規作成 (84行)。
+   cancelSubjectSubscriptions を触るテストは1件も無かった
+
+新しいクローンに古い順で当て、old_string が1回だけ一致し、node --check が2ファイルとも通り、
+手元の簡易ランナーで3件が通ることを確認した。修正前の main に当てると3件中2件が落ちる。
+差分は 16行追加 6行削除 と 84行新規。
+
+### 観測: ブリッジの limit はまだ 50 のまま
+
+scripts/bridge/apply_patch.py の108行目は今も 50。20:56 に場所を伝えたが未反映。
+キューは 21:00 の回で空になったので今すぐの危険は無いが、1回に15件以上溜めると
+また静かに消える。ここは私からは直せない (scripts/bridge は対象外)。
