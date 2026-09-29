@@ -108,5 +108,47 @@
       </nav>
     </article>
   </div>
+  <script src="config/pricing.js"></script>
+  <script>
+    // 買い切り移行: 表記の切替は config/pricing.js の CHECKOUT_MODE が唯一の宣言。
+    // 宣言が payment でないときは1文字も書き換えない（現状はこちら）。
+    // 切替が済んだら、この差し替えを静的HTMLへ焼き直して本ブロックを削除する。
+    (function () {
+      try {
+        var P = typeof PricingConfig !== "undefined" ? PricingConfig : null;
+        if (!P || P.CHECKOUT_MODE !== "payment") return;
+        var swap = function (sel, needle, html) {
+          var list = document.querySelectorAll(sel);
+          for (var i = 0; i < list.length; i++) {
+            if ((list[i].textContent || "").indexOf(needle) >= 0) {
+              list[i].innerHTML = html;
+              return true;
+            }
+          }
+          return false;
+        };
+        swap(
+          "li",
+          "「有料プラン」とは",
+          "「有料プラン」とは、Stripe経由で購入する買い切りの商品（科目単品およびプレミアムパックを含みます）をいいます。"
+        );
+        swap(
+          "li",
+          "月額の自動更新サブスクリプション",
+          "有料プランは買い切りです。購入時の一回払いのみで、継続課金・自動更新はありません（表示・Stripe上の条件に従います）。"
+        );
+        swap(
+          "p",
+          "からの自己解約",
+          "有料プランは買い切りであり継続課金がないため、<strong>解約のお手続きは必要ありません</strong>。購入いただいた科目・パックは、本サービスの提供が継続する間ご利用いただけます。購入後の利用者都合による取消しは原則としてできません（返金は第7条に定める場合を除きます）。"
+        );
+        swap(
+          "li",
+          "直近1か月間に支払った利用料金",
+          "本サービスの利用または利用不能により生じた損害について、運営者に故意または重過失がある場合を除き、責任を負いません。なお、有料プランに関し運営者が責任を負う場合でも、その上限は当該利用者が当該有料プランについて支払った金額とします（法令により制限できない場合を除きます）。"
+        );
+      } catch (e) {}
+    })();
+  </script>
 </body>
 </html>
