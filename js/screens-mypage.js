@@ -139,6 +139,11 @@ function paintMyPageBilling(billingEl, rows) {
         : "単品またはプレミアムパックの状態です。購入・解約はここから進められます。プレミアムパックを購入すると、単品の購読は自動で解約されます。";
     }
   }
+  const billingCard = billingHint && billingHint.parentElement;
+  const billingTitle = billingCard && billingCard.querySelector(".card-title");
+  if (billingTitle) {
+    billingTitle.textContent = oneTime ? "購入状況" : "購読状況";
+  }
   if (supportNotice) supportNotice.classList.toggle("hidden", packOn);
   if (thanksNotice) thanksNotice.classList.toggle("hidden", !packOn);
 
