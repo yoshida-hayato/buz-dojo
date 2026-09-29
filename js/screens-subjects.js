@@ -517,7 +517,9 @@ function paintSubjectPickerCards(box, rows, packOn) {
           : hasAccess
             ? packOn
               ? "プレミアム"
-              : "購読中"
+              : Entitlement.ownedLabel
+                ? Entitlement.ownedLabel()
+                : "購読中"
             : `本日あと${rem}/${Entitlement.FREE_DAILY}`;
         if (!freeSubject && !hasAccess) {
           metaParts.push(
