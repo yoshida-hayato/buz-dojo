@@ -100,6 +100,13 @@ describe("payment に切り替える前に必要な配線", () => {
     if (notYet()) return;
     expect(indexSrc).toContain("isOneTimeCheckout");
   });
+
+  // コンビニ・銀行振込のような遅延通知では completed が unpaid で届き、
+  // 付与処理がそれを弾く。弾いたあとを拾う節が無いと「払ったのに使えない」。
+  test("後払いの入金通知(async-payment-succeeded)を Webhook が受け取る", () => {
+    if (notYet()) return;
+    expect(indexSrc).toContain('case "checkout.session.async_payment_succeeded"');
+  });
 });
 
 // 配線が正しくても、表記が「月額」のままで買い切りで課金すれば
