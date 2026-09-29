@@ -343,6 +343,45 @@ exports.stripeWebhook = onRequest(
           if (uid) await revokeSubscription(uid, subscription);
           break;
         }
+        // 買い切りの全額返金とチャージバック確定で付与を取り消す。
+        // 一部返金と、まだ争っている途中のチャージバックでは取り消さない。
+        case "charge.refunded":
+        case "charge.dispute.closed": {
+          const obj = event.data.object;
+          if (event.type === "charge.refunded") {
+            const amount = Number(obj.amount) || 0;
+            const refunded = Number(obj.amount_refunded) || 0;
+            if (!(amount > 0) || refunded < amount) break; // 一部返金は据え置き
+          } else if (obj.status !== "lost") {
+            break; // won / warning_closed では取り消さない
+          }
+          const paymentIntentId =
+            typeof obj.payment_intent === "string" ? obj.payment_intent : null;
+          if (!paymentIntentId) break;
+          const found = await stripe.checkout.sessions.list({
+            payment_intent: paymentIntentId,
+            limit: 1,
+          });
+          const paidSession = (found && found.data && found.data[0]) || null;
+          const refundUid =
+            paidSession &&
+            (paidSession.client_reference_id || paidSession.metadata?.firebaseUid);
+          if (!refundUid) {
+            console.error("refund: uid not resolved for", event.type, paymentIntentId);
+            break;
+          }
+          const { revokeOneTimePurchase } = require("./entitlements");
+          const revoked = await revokeOneTimePurchase(refundUid, {
+            paymentIntentId,
+            checkoutSessionId: paidSession.id || null,
+          });
+          if (!revoked.ok) {
+            console.error("revokeOneTimePurchase skipped:", refundUid, revoked.reason, paymentIntentId);
+          } else {
+            console.log("revokeOneTimePurchase:", refundUid, revoked.removed.join(","));
+          }
+          break;
+        }
         default:
           break;
       }
