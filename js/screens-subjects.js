@@ -331,9 +331,18 @@ function enabledSubjectsSorted() {
   if (typeof SUBJECT_REGISTRY === "undefined") return [];
   // じっくり学ぶ（応用・判断）を上、すぐ使える（操作）を下。同帯内は homeFeatured → レジストリ順
   const tierRank = (s) => (s.depthTier === "depth" ? 0 : 1);
+  // 試験が EXAM_LIFT_DAYS 日以内に迫っている科目は最上段へ。過ぎれば自動で元の並びに戻る
+  const EXAM_LIFT_DAYS = 14;
+  const examRank = (s) => {
+    if (typeof bizCareerExamDaysLeft !== "function") return 1;
+    const d = bizCareerExamDaysLeft(s.id);
+    return d !== null && d <= EXAM_LIFT_DAYS ? 0 : 1;
+  };
   return SUBJECT_REGISTRY.filter((s) => s.enabled)
     .slice()
     .sort((a, b) => {
+      const ed = examRank(a) - examRank(b);
+      if (ed !== 0) return ed;
       const td = tierRank(a) - tierRank(b);
       if (td !== 0) return td;
       const af = a.homeFeatured ? 1 : 0;
