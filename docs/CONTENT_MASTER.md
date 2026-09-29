@@ -16,6 +16,8 @@
 | SAP | `SAPクイズ/data/` | https://sap-dojo.web.app/data/ |
 | Windowsショートカット | `学習道場/subjects/windows-shortcuts/` | https://gakusyu-dojo.web.app/subjects/windows-shortcuts/ |
 | 生産管理 | `学習道場/subjects/biz-career/` | https://gakusyu-dojo.web.app/subjects/biz-career/ |
+| プランニング専門 | `学習道場/subjects/biz-pm-planning/` | https://gakusyu-dojo.web.app/subjects/biz-pm-planning/ |
+| オペレーション専門 | `学習道場/subjects/biz-pm-operation/` | https://gakusyu-dojo.web.app/subjects/biz-pm-operation/ |
 | Excel関数 | `学習道場/subjects/excel-functions/` | https://gakusyu-dojo.web.app/subjects/excel-functions/ |
 | Outlookメール | `学習道場/subjects/outlook-mail/` | https://gakusyu-dojo.web.app/subjects/outlook-mail/ |
 | Teams | `学習道場/subjects/teams-collab/` | https://gakusyu-dojo.web.app/subjects/teams-collab/ |
@@ -29,6 +31,7 @@
 1. **SAP** → `SAPクイズ` で編集 → `firebase deploy --only hosting --project sap-dojo`
 2. **生産管理 / ショートカット / オントロジー など** → `学習道場` で編集 → `firebase deploy --only hosting --project gakusyu-dojo`
 3. ビジネス道場側の問題ファイル編集は不要（マスタの `version.js` でキャッシュ更新）
+4. **buz の GitHub 自動改善と並行する** → `docs/PARALLEL_LANES.md`（buz repo 内に同梱）
 
 ## ビジネス道場に置くもの
 

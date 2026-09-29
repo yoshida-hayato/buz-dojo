@@ -201,6 +201,13 @@ def resolve_target(rel_path: str) -> tuple[Path | None, str]:
     if target.suffix not in EDITABLE_SUFFIXES:
         return None, f"対象外の拡張子です: `{rel_path}`"
     parts = target.relative_to(REPO_ROOT).parts
+    # 問題マスタは学習道場（gakusyu-dojo）専用。ビジネス道場では subject.js のみ鏡像可。
+    # 詳細: docs/PARALLEL_LANES.md
+    if len(parts) >= 2 and parts[0] == "subjects" and parts[-1] != "subject.js":
+        return None, (
+            "`subjects/` では `subject.js` のみ自動パッチ可です。"
+            "問題本体は学習道場マスタ（別 repo）で編集してください。"
+        )
     # ワークフロー(.github/)の変更は許可する。テストを通過した場合のみ
     # コミットされるため、ここは通常の変更と同じ扱いでよい。
     #
