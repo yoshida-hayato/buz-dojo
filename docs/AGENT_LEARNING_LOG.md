@@ -733,3 +733,56 @@ Cowork 側の分類器が Production Deploy として送信を拒否した。
 - js/screens-subjects.js 595行目と subjects/registry.js 190行目に
   月額前提のフォールバックが残る。到達しないが文面が二重に存在する
 - Xの親投稿リンクの是非は社長の表示回数の書き写し待ち
+
+---
+
+## 2026-09-29 15:48便
+
+### 訂正(前便の手札を過大評価していた): Chromium で本番サイトは開けない
+
+13:48便のログに「購入導線やクイズ画面が実際にどう見えるかを社長に聞かずに確かめられる」と
+書いた。これは言い過ぎだった。今便で実際に試したところ、Chromium から
+https の <http://buz-dojo.web.app|buz-dojo.web.app> への CONNECT が egress ポリシーで 403 になる。
+proxy の status エンドポイントにも connect rejected として記録されている。
+つまり実ブラウザで測れるのは、クローンしたリポジトリを 127.0.0.1 に立てた写しだけ。
+本番の画面は WebFetch(JS実行前)でしか見えない、という元の制約は生きている。
+
+教訓: 新しい手札を見つけたときは、使えた範囲だけを書く。
+ローカルで動いたことを「本番も見られる」に広げて書かない。
+なお迂回はしない。403 はポリシーの返答なので、別経路を探さず制約として記録する。
+
+### 今便で見つけた穴: 買い切りには付与を取り消す経路が1つも無い
+
+サブスクでは customer.subscription.deleted で revokeSubscription が走る。
+買い切り(mode=payment)にはこれに相当する経路が存在しない。
+つまり全額返金やチャージバックが起きても、付与は永久に残る。
+entitlements.js に revoke 系の関数は revokeSubscription だけで、
+applyOneTimePurchase の対になるものが無かった。
+
+入れたもの(3パッチ。買い切りの購入がまだ1件も無いので今日は一度も通らない):
+- revokeOneTimePurchase(uid, {paymentIntentId, checkoutSessionId})
+  支払い1件に一致する枠だけを消す。planType では消さない。
+  これが効くのは、返金 → 買い直しの順で起きたとき。古い返金イベントが
+  後から届いても、新しい付与を巻き込まない
+- Webhook に charge.refunded(全額のみ) と charge.dispute.closed(status=lost のみ)
+  一部返金と、まだ争っている途中のチャージバックでは取り消さない
+- functions/__tests__/refund-revoke.test.js で7件
+
+### 未確認のまま残したこと(次の自分へ)
+
+- stripe.checkout.sessions.list({ payment_intent }) が v17 で通るかは実測していない。
+  npm が 403 で stripe を入れられないため、手元で叩けなかった。
+  もし通らなければ返金イベントで例外 → 500 → Stripe が再送する形になる。
+  静かに失敗はしないが、取り消しは走らない
+- より確実な手は、決済セッション作成時に payment_intent_data.metadata に
+  firebaseUid を入れて、PaymentIntent から直接 uid を引くこと。
+  ただし createCheckoutSession は 14:56 の二重購入ガードが未適用の状態で
+  手元にあるため、今便では触らない。ガードが main に入ってから出す
+
+### 手元のテスト環境について(毎回作り直している無駄)
+
+npm は <http://registry.npmjs.org|registry.npmjs.org> へ 403 で jest を入れられない。
+毎回 jest の簡易シムを書き直しているので、次の自分は最初からこれを書くこと。
+Module._load を差し替えて jest.mock を実現し、describe / test / beforeEach /
+expect の主要マッチャを実装すれば足りる。test.each だけは未実装で、
+pricing-shared.test.js がそこで落ちる(シムの穴であって、コードの問題ではない)。
