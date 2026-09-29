@@ -1294,3 +1294,49 @@ PRICE_MIN を上げるか、PACK_PRICE_YEN を下げるか、パックの「今�
 
 教訓: 上限と下限を別々に決めると、按分の式は下端を動かさない。
 金額の表を変えるときは、変えた数字ではなく「出てくる値の並び」を端から数える。
+
+---
+
+## 2026-09-30 01:48便
+
+### 確定 (新規): OGP / Twitter カード / canonical がリポジトリに1件も無い
+
+`grep -rn "og:|twitter:|canonical" index.html legal/*.html` が0件。
+`robots.txt` も `sitemap.xml` も存在しない (`meta name=robots` は index,follow)。
+つまり今この URL を Slack・LINE・X に貼っても、タイトルも説明も画像も出ない。
+本番の head そのものは読めていない (下記) が、main は push で自動デプロイされるので、
+リポジトリに無いものは本番にも無いと読む。
+
+### 今便で出した1件
+
+index.html の favicon の link の直後に og:type / og:site_name / og:title /
+og:description / og:image / og:image:alt / og:locale / twitter:card の8行。
+old_string は favicon の link 1行で、出現回数1回 (grep -c で確認)。
+html.parser で解析し、8件すべてが `</head>` (80行目) より前の head 内に入ることを確認した。
+説明文は既存の `meta name="description"` をそのまま流用したので価格に触れず、
+CHECKOUT_MODE を payment にしても直す必要が無い。
+
+### 入れなかったもの (これは判断であって、忘れたのではない)
+
+canonical と og:url を入れていない。firebase.json の rewrites は `**` を
+`/index.html` に流すので、`/sap` や `/excel-functions` など科目10パスはすべて
+同じ HTML を返す。ここで canonical に `/` を名指しすると、科目パスが `/` の重複と
+判定されて検索結果から落ちる可能性がある。いま科目パスの title と description が
+全部同じである以上、先に直すべきはそちらで、canonical はその後の話。
+
+### 新しい確定ルール: WebFetch の出力を head の証拠にしない
+
+本番を WebFetch したら title は「ビジネス道場」、description は無し、と返ってきた。
+リポジトリの index.html は `<title>ビジネス道場 — 資格・業務知識の科目別クイズ</title>` と
+description を持っている。WebFetch は取得した HTML を markdown に変換してから読むので、
+head の中身は落ちるか再構成される。食い違いを「本番が古い」と読んではいけない。
+head を確かめたいときは、リポジトリの現物を読むこと。
+(WebFetch 以外の手段で取りに行くのは禁じられている。)
+
+### 状況 (01:48 時点)
+
+ブリッジは 22:01 (31dcde9) から動いていない。未適用は 23:48便の4件、00:48便の1件、
+今便の2件で計7件。GitHub Actions は JST 奇数時だが 1.5〜5時間遅れて起動するのが
+通常なので、無音を停止と判定しない。
+社長への問い (買い切りの金額の並び / PRICE_MIN・PACK_PRICE_YEN) は 00:48便のまま未回答。
+深夜なので催促しない。
