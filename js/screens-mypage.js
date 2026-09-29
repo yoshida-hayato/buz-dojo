@@ -218,7 +218,10 @@ function paintMyPageBilling(billingEl, rows) {
     } else if (priceYen <= 0) {
       html += `<span class="mypage-plan-note">購入不要</span>`;
     } else if (subscribed) {
-      html += `<button type="button" class="link-btn mypage-portal-inline">解約・変更</button>`;
+      html +=
+        typeof Entitlement !== "undefined" && Entitlement.isOneTime && Entitlement.isOneTime()
+          ? `<span class="mypage-plan-note">購入済み</span>`
+          : `<button type="button" class="link-btn mypage-portal-inline">解約・変更</button>`;
     } else {
       html += `<button type="button" class="secondary-btn mypage-buy-subject" data-subject-id="${escapeHtml(
         s.id
