@@ -61,6 +61,30 @@ async function ensureComplimentaryPack(uid, email) {
   return { ok: true, pack: true };
 }
 
+/**
+ * 期末(current_period_end)を API バージョン差に関係なく読む。
+ *
+ * Stripe は 2025-03-31.basil 以降、current_period_end を Subscription の
+ * トップレベルから subscription item へ移した。Webhook の本文は
+ * エンドポイントのバージョン(2026-08-26.dahlia)で描画され、
+ * stripe-node v17 の retrieve は 2025-02-24.acacia で返ってくるので、
+ * 同じコードに両方の形が届く。片方しか読まないと黙って null が入る。
+ * item が複数あるときは最も遅い期末を採る(いつまで使えるか、の意味に合わせる)。
+ */
+function readCurrentPeriodEnd(subscription) {
+  if (!subscription) return null;
+  if (typeof subscription.current_period_end === "number") {
+    return subscription.current_period_end;
+  }
+  const items = (subscription.items && subscription.items.data) || [];
+  let latest = null;
+  for (const item of items) {
+    const end = item && item.current_period_end;
+    if (typeof end === "number" && (latest === null || end > latest)) latest = end;
+  }
+  return latest;
+}
+
 async function applySubscription(uid, subscription) {
   const meta = subscription.metadata || {};
   const planType = meta.planType || "";
@@ -70,7 +94,7 @@ async function applySubscription(uid, subscription) {
   const subPayload = {
     subscriptionId: subscription.id,
     status,
-    currentPeriodEnd: subscription.current_period_end || null,
+    currentPeriodEnd: readCurrentPeriodEnd(subscription),
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
   };
 
