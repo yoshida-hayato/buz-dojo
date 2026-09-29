@@ -124,10 +124,20 @@ function paintMyPageBilling(billingEl, rows) {
   const billingHint = $("mypage-billing-hint");
   const supportNotice = $("mypage-support-notice");
   const thanksNotice = $("mypage-thanks-notice");
+  const oneTime =
+    typeof Entitlement !== "undefined" &&
+    Entitlement.isOneTime &&
+    Entitlement.isOneTime();
   if (billingHint) {
-    billingHint.textContent = packOn
-      ? "プレミアムパックをご利用中です。解約・カード変更は契約管理から行えます。"
-      : "単品またはプレミアムパックの状態です。購入・解約はここから進められます。プレミアムパックを購入すると、単品の購読は自動で解約されます。";
+    if (oneTime) {
+      billingHint.textContent = packOn
+        ? "プレミアムパックをご購入いただいています。買い切りのため継続課金はなく、解約のお手続きもありません。"
+        : "科目単品とプレミアムパックのご利用状況です。いずれも買い切りで、継続課金はありません。プレミアムパックは今後追加される科目も追加料金なしでご利用いただけます。";
+    } else {
+      billingHint.textContent = packOn
+        ? "プレミアムパックをご利用中です。解約・カード変更は契約管理から行えます。"
+        : "単品またはプレミアムパックの状態です。購入・解約はここから進められます。プレミアムパックを購入すると、単品の購読は自動で解約されます。";
+    }
   }
   if (supportNotice) supportNotice.classList.toggle("hidden", packOn);
   if (thanksNotice) thanksNotice.classList.toggle("hidden", !packOn);
