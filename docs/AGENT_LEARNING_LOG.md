@@ -1384,3 +1384,75 @@ repo の guides/seisan-kanri-2kyu.html は既にこの日程を正しく書い�
 
 教訓: 科目の値段と機能だけを見ていて、その科目に締切があることを数えていなかった。
 試験科目を扱う以上、日付は市場データの一部として毎回見ること。
+
+---
+
+## 2026-09-30 03:48便
+
+### 実測で確定 (自分の推論を1つ取り消した): ブラウザのキャッシュは一度も効いていない
+
+入口はこうだった。config/version.js の APP_VERSION が 2026-09-21 の be7ca8f から
+一度も変わっていない (git log -- config/version.js を102コミットの履歴で確認)。
+その間に main には100コミット入って自動デプロイされている。firebase.json は
+/js/** /css/** /config/** /data/** を public, max-age=31536000, immutable で返す。
+index.html は CORE 25本と CSS 3本を ?v=APP_VERSION で読む。
+ここまでで「9日ぶんの変更が再訪問者に届いていない」と読んだ。値を上げるパッチも作った。
+
+逆だった。Chromium で描画して要求URLを見たら、?v= の値は毎回 Date.now() だった。
+
+原因は index.html の43-48行。config/version.js を同期XHRで取って (0, eval) している。
+間接 eval の中の const / let はその eval 用の宣言環境に入って、eval が返ると捨てられる。
+var と function だけがグローバルに残る。config/version.js は const 宣言なので、
+APP_VERSION はどこにも定義されない。ページ内で測った値:
+typeof APP_VERSION は "undefined"、window に APP_VERSION プロパティは無し、
+同じページで (0,eval)('const ZZQ=1') → undefined / (0,eval)('var YYQ=1') → string。
+
+つまり ?v= は毎回ちがう値になり、immutable の1年キャッシュは一度も使われていない。
+CORE 25本 + CSS 3本で 314KB (gzip 87KB) を毎ページロード取り直している。
+js/ と css/ をぜんぶ数えると60ファイル 785KB (gzip 214KB)。
+
+教訓: firebase.json と index.html を読んだだけで「キャッシュが効いている」と決めた。
+効いているかどうかは、描画して要求URLを見れば分かる。レスポンスヘッダは取れないが、
+リクエストURLは取れる。キャッシュの話は今後かならず描画して確かめる。
+作りかけの「APP_VERSION を上げる」パッチは無意味なので投稿しなかった。
+
+### 同じ原因の派生 (どれもコードの読みだが、原因は上で実測済み)
+
+- js/premium-requests.js:73 / js/question-reports.js:114 / js/site-inquiries.js:57 の
+  appVersion は typeof APP_VERSION で分岐するので常に空文字。Firestore に残る
+  問題報告・要望・問い合わせに版が入っていない。admin/reports.html は「版: v—」と出る
+- js/app-chrome.js:366 の bundledVersion は常に null。モバイルの更新ポップアップは
+  serverVersion だけで動いていて、bundled との比較は成立していない
+- 問題データは無事。js/subject-loader.js の resolveCacheBust は外部の contentVersionUrl
+  (sap-dojo / gakusyu-dojo の data/version.js) を先に見るので、10科目すべてキャッシュが効く
+
+### 直し方 (Chromium で検証済み。ただし今便では投稿していない)
+
+index.html の (0, eval) をやめ、app-chrome.js:261 と subject-loader.js:117 が既に使って
+いるのと同じ正規表現で window.APP_VERSION に代入する。2行の置換。
+写しに当てて描画したら APP_VERSION が "2026-09-21-pmo-ch1-v1" として定義され、
+?v= の値が全アセットで1種類に揃い、pageerror は0件だった。
+
+### なぜ今便で投稿しなかったか (順番を間違えると再訪問者が固まる)
+
+APP_VERSION が安定した瞬間から、デプロイのたびに値を上げないと再訪問者は1年間そこで固まる。
+いまその上げる仕組みは1つも無い。grep -rn "APP_VERSION" .github/ scripts/ _dev/ は0件で、
+config/version.js の「デプロイのたびに更新する」というコメントは手作業の約束だったが
+9/21から守られていない。先にデプロイ時のスタンプ、後から index.html。この順を守る。
+firebase.json の hosting.predeploy でも実現できるが、失敗すると firebase deploy 全体が
+止まってデプロイ経路が死ぬ。デプロイの挙動を変える話なので社長に依頼した。
+
+### 一緒に見ること (まだ直していない)
+
+legal/terms.html:111 と legal/commerce.html:96 は config/pricing.js を ?v= 無しで読む
+(base href は / なので /config/pricing.js に解決される。パスは正しい)。
+いまは全体がキャッシュされていないので実害は無いが、index.html を直した瞬間、
+legal の2ページだけ1年 immutable で固まる。CHECKOUT_MODE を payment にしたあと、
+特商法と利用規約だけ月額の文面のまま残る形になる。index.html を直すときに必ず一緒に直す。
+
+### 観測: ブリッジは 22:01 (31dcde9) から動いていない
+
+03:48時点で約5時間47分。23:00 / 01:00 / 03:00 の3回が無音。通常1.5-5時間の遅れなので
+まだ停止とは判定しないが、範囲の上端を超えた。未適用は23:48便4件 + 00:48便1件 +
+01:48便2件 + 02:48便3件 + 今便1件で計11件。1回15件までなので取りこぼしはまだ無いが、
+次便で15件に届く。次の自分へ: ブリッジが動いていないなら、投稿は学習ログ1件に絞ること。
