@@ -1151,3 +1151,81 @@ old_string はそれぞれ出現1回を確認、path は ls で実在確認、no
   20:59 に markdown 記法の取りこぼしで落ちたぶん。実害は無いが、唯一の取り残し
 - legal/privacy.html の「サブスクリプション状態」は Stripe 側のデータ項目の説明なので、
   買い切りでも顧客オブジェクトは存在する。直す必要は無いと判断した
+
+---
+
+## 2026-09-29 23:48便
+
+### 確定(新規・お金の穴): 後払いの入金通知を Webhook が受け取っていない
+
+買い切り(mode=payment)で、コンビニ払い・銀行振込のような遅延通知の支払い方法を使うと、
+Stripe の通知は2段になる。
+
+1. 決済画面を終えた時点で checkout.session.completed が payment_status=unpaid で届く
+2. 実際に入金された時点で checkout.session.async_payment_succeeded が届く
+
+functions/entitlements.js の210行目で applyOneTimePurchase は unpaid を正しく弾く
+(9/29 3便の自分が入れた)。ところが 2 を受け取る節が functions/index.js に1つも無い。
+grep してもリポジトリ全体で async_payment は0件だった。
+つまり「入金は済んでいるのに、一生付与されない」。ログに skipped: not_paid が
+1行出るだけで、社長にも購入者にも何も届かない。
+
+サブスク(mode=subscription)では session.subscription 側で解決するので、この穴は
+買い切りに切り替えた瞬間にだけ開く。宣言を切り替える前に塞いだ。
+
+断定しないこと: コンビニ払いや銀行振込が Stripe のダッシュボードで有効かどうかは
+私からは見えない。有効でなければこの経路は発生しない。それは社長しか読めない。
+ただし塞いでも現状の挙動は1件も変わらないので、確認を待つ理由が無い。
+
+### 最初に疑った穴は、既に塞がっていた
+
+「completed で payment_status を見ずに付与しているのでは」と疑って現物を読んだら、
+entitlements.js の210行目に既に判定があった。逆向き(払っていないのに使える)は無く、
+残っていたのは(払ったのに使えない)のほうだった。
+教訓: 穴を思いついたら、まず現物でその穴が実在するかを確かめる。
+向きを取り違えたまま報告すると、直っているものを直したことになる。
+
+### 手元で実測したこと: コメント中の識別子でガードが素通りする
+
+配線ガードに async_payment_succeeded を要求するテストを足したが、最初の書き方
+expect(indexSrc).toContain("checkout.session.async_payment_succeeded") は
+case 節を削除しても通った。同じ識別子が直前のコメント文に書いてあるからだった。
+case 節そのものの文字列で判定する形に直したら、削除した状態で1件落ちるようになった。
+
+教訓: ソース文字列で配線を検査するテストは、コメントも同じソースに含まれる。
+検査対象は「その文字列が在るか」ではなく「その構文が在るか」に寄せる。
+そして、ガードを足したら必ず「ガードが落ちる状態」を1つ作って落ちることを確かめる。
+22:48便の「安全装置の判定根拠は、守る対象と同じ根拠で」の系として読める。
+
+### 静的HTMLの購読語彙は、HTMLを1文字も送らずに消した
+
+22:48便で数え直した唯一の取り残しは index.html の見出し「購読状況」だった。
+当初は index.html に id を足して js から引く2件に割ろうとしたが、
+9/28 に実測したとおり slack_send_message は本文中の見出しタグを markdown 記法へ
+変換するので、h2 を含むパッチは送った時点で壊れる可能性がある。
+そこで index.html には触れず、js/screens-mypage.js だけで解決した。
+注記(mypage-billing-hint)の親から .card-title を引く。
+手元で index.html を構文解析し、親が div.card であること、その配下の .card-title が
+ちょうど1個で中身が「購読状況」であることを確認した。推測ではない。
+
+教訓: 送信経路が壊す文字種があるなら、その文字種を使わない設計に寄せられないかを先に見る。
+回避策を工夫するより、送らずに済ませるほうが確実だった。
+
+### 今便で出した4件(すべて宣言が subscription の間は挙動を変えない)
+
+1. functions/index.js に checkout.session.async_payment_succeeded の節を追加
+2. functions/__tests__/billing-mode-guard.test.js に上記を要求するテストを追加
+3. js/screens-mypage.js でマイページの見出しを isOneTime() から出す
+4. このログへの追記
+
+検証: 3件を古い順に新しいクローンへ当て、old_string はそれぞれ出現1回、
+path は ls で実在確認、node --check は3ファイルとも通過。
+手元の簡易ランナーで billing-mode-guard 13件と pricing-sync 3件が、
+宣言が未定義の状態と payment を模した状態の両方で通ることを確認した。
+差分は19行追加0行削除。
+
+### 社長へのお願いに1件だけ足した(順番は変えていない)
+
+Stripe の Webhook 送信対象に checkout.session.async_payment_succeeded を追加すること。
+サンドボックスの charge.refunded / charge.dispute.closed と同じ作業。
+コンビニ払い・銀行振込を使う予定が無ければ不要。
