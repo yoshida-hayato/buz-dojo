@@ -8,6 +8,15 @@
 
 ---
 
+## 2026-09-29 並行レーン（問題マスタ）
+
+- **問題の追加・修正は gakusyu-dojo（学習道場）専用。** この repo（buz-dojo）では `subjects/<id>/subject.js` の鏡像と registry / pricing / UI のみ
+- 自動パッチは `subjects/` で **`subject.js` 以外を拒否**（`scripts/bridge/apply_patch.py`）
+- 会長が gakusyu に問題を出したあとは `node _dev/sync-catalog.js` で questionCount を合わせる（手順: `docs/PARALLEL_LANES.md`）
+- buz 作業前は `git pull origin main`（自動改善が main に入る）
+
+---
+
 ## 2026-09-21 初日
 
 **仕組みについて確定したこと**
