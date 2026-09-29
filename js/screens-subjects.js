@@ -1318,10 +1318,14 @@ function updateHomeNote() {
           : "この問題集は<strong>無料</strong>です（制限なし）"
       );
     } else {
+      const ownedWord =
+        typeof Entitlement !== "undefined" && Entitlement.ownedLabel
+          ? Entitlement.ownedLabel()
+          : "購読中";
       setStartQuotaSummary(
         totalQ > 0
-          ? `全 <strong>${totalQ}</strong>問 · 購読中（制限なし）`
-          : "購読中（制限なし）"
+          ? `全 <strong>${totalQ}</strong>問 · ${ownedWord}（制限なし）`
+          : `${ownedWord}（制限なし）`
       );
     }
     if (paywallNotice) paywallNotice.classList.add("hidden");
