@@ -841,3 +841,77 @@ main の最新は 14:12 JST の a04c8d8 のままで、Slack にも報告が無�
 ただし 13:17 の回も 14:11 着(54分遅れ)だったので、GitHub Actions の遅延の
 範囲内かもしれない。この時点では止まったと判定しない。
 17:17 の回も無音なら2回連続の欠測なので、そこで社長に依頼する。
+
+---
+
+## 2026-09-29 16:48便(追補): 社長の Stripe 調査への回答
+
+### 社長が持ってきた事実(自分では見られない情報)
+
+- サイトは `sk_test`(サンドボックス)のキーで動いている。Webhook は
+  サンドボックスにだけあり、本番(live)とテストには無い
+- 9/27 19:37 JST の自動更新 `customer.subscription.updated` が 500 で3回失敗。
+  署名は通っている(通らなければ 400 を返す実装なので、500 は署名の先で落ちた証拠)
+- エンドポイントの API バージョンは `2026-08-26.dahlia`。
+  `current_period_end` がトップレベルに無く `items.data[0]` の中にある
+- 購読イベントは5件。`charge.refunded` と `charge.dispute.closed` は無い
+
+### 確定: API バージョン差は 500 の原因ではない(実際に動かして確認)
+
+`applySubscription` に dahlia 形式の payload を渡して実行した。
+`subscription.current_period_end` は undefined になるが、コードは
+`|| null` で受けるので**例外にならず、黙って null が保存される**。
+acacia 形式では 1792592000 が入る。つまりこの差が生むのは
+データ欠損であって、500 ではない。
+
+教訓: 「バージョンが違う」は原因の候補であって原因ではない。
+落ちるかどうかは、その形の payload を実際に通して確かめる。
+社長の見立てをそのまま結論にしない。
+
+### 推定(未確定): 500 は付与の**あと**の掃除で起きている
+
+`syncSubscriptionAndMaybeCancelSubjects` は
+`applySubscription`(Firestore 書き込み)→ `cancelSubjectSubscriptions`
+(Stripe API 呼び出し)の順。前者は上のとおり投げない。
+残る未捕捉の経路は後者の `stripe.subscriptions.list` だけ。
+ここが投げると 500 になり、Stripe が再送し、付与済みの処理が何度も走る。
+3回失敗という形と一致する。
+
+検証可能な予測: 当該ユーザーの Firestore
+`users/{uid}/private/entitlements` を見て、`packSubscription.currentPeriodEnd`
+が null なら、(1) dahlia 差が効いている (2) 付与自体は成功していた、
+の両方が同時に確かめられる。確定は Cloud Logging の
+`Webhook handler error:` の行を読むのが早い。
+
+### 今便で出した3つの修正
+
+1. `readCurrentPeriodEnd` を入れ、トップレベルと `items.data[]` の両方から読む。
+   item が複数なら最も遅い期末を採る。これでエンドポイントの版に依存しない
+2. 掃除(`cancelSubjectSubscriptions`)を try/catch で包み、失敗しても
+   Webhook 全体を 500 にしない。付与は保存済みなので、再送しても掃除が
+   また失敗するだけ。3回失敗でエンドポイントが止まるのを避ける
+3. catch のログに `eventType` / `eventId` / `eventApiVersion` / `stack` を出す。
+   ダッシュボードに 500 だけ残って原因に辿り着けない状態をなくす
+
+テストは `functions/__tests__/api-version-period-end.test.js` に6件。
+修正前の main に当てると dahlia の2件が落ちることも確認した(傘が効く形)。
+
+### 確定: Webhook エンドポイントの API バージョンは後から変えられない
+
+`POST /v1/webhook_endpoints` は `api_version` を受け取るが、更新の
+エンドポイントは `description` / `disabled` / `enabled_events` / `metadata` / `url`
+しか受け取らない。版を変えるには作り直す。`enabled_events` は更新できるので、
+イベントの追加は作り直し不要。
+
+### 確定: stripe-node v12 以降は送信側の版を SDK に固定する
+
+v17 は `2025-02-24.acacia` を送る。一方 Webhook の本文はアカウントの既定版
+(いま `2026-08-26.dahlia`)で描かれる。**同じコードに2つの版が届く**のが
+この構成の常態であって、異常ではない。Stripe の推奨はエンドポイントの版を
+SDK の版に合わせること。手順書を `docs/STRIPE_WEBHOOK_SETUP.md` に置いた。
+
+### 気づいたが判断を保留したこと
+
+`sk_test` で動いている間、決済画面で払われた金額は実際には入金されない。
+買い切りへ切り替えてもキーが `sk_test` のままなら売上は 0 のまま。
+意図的な段階かもしれないので断定せず、社長に確認として投げた。
