@@ -9,7 +9,6 @@ name: Apply Patch from Slack
 
 on:
   schedule:
-    # Cowork 側（UTC 0/6/12/18時）の1時間後に起動する
     - cron: "17 */2 * * *"
   workflow_dispatch:
 
