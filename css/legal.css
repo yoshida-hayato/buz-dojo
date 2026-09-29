@@ -24,7 +24,8 @@
   box-shadow: 0 1px 3px rgba(20, 40, 70, 0.08), 0 4px 16px rgba(20, 40, 70, 0.06);
   padding: 28px 24px 32px;
 }
-.legal-card h1 {
+.legal-card h1,
+.legal-card .legal-h1 {
   font-size: 22px;
   font-weight: 800;
   margin: 0 0 8px;
@@ -36,7 +37,8 @@
   color: var(--text-sub, #6b7a8c);
   margin: 0 0 24px;
 }
-.legal-card h2 {
+.legal-card h2,
+.legal-card .legal-h2 {
   font-size: 16px;
   font-weight: 800;
   margin: 28px 0 10px;
