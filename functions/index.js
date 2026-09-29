@@ -128,6 +128,20 @@ exports.createCheckoutSession = onCall(
         "プレミアムパック購読中のため、単品プランは不要です"
       );
     }
+    // 買い切りは解約が無いので、同じ商品の決済画面を二度作ると二重に課金できてしまう。
+    // サブスクでは解約後の再契約が正当なので、この判定は宣言が payment のときだけ効かせる。
+    if ((pricing.CHECKOUT_MODE || "subscription") === "payment") {
+      const alreadyOwned =
+        planType === "pack"
+          ? entitlements.pack === true
+          : Boolean(entitlements.subjects && entitlements.subjects[subjectId]);
+      if (alreadyOwned) {
+        throw new HttpsError(
+          "failed-precondition",
+          "こちらはすでに購入済みです。買い切りのため、追加のお支払いは必要ありません"
+        );
+      }
+    }
     let customerId = await ensureStripeCustomer(
       stripe,
       uid,
