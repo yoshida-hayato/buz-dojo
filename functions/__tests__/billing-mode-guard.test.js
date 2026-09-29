@@ -54,6 +54,13 @@ describe("課金モードと金額の整合性", () => {
     expect(server.CHECKOUT_MODE).toBe(client.CHECKOUT_MODE);
   });
 
+  // 読む側はどこも (CHECKOUT_MODE || "subscription") === "payment" の形なので、
+  // 綴り違いは例外にならず静かに subscription として動き続ける。
+  test("宣言が入ったら値は payment か subscription のどちらかである", () => {
+    if (client.CHECKOUT_MODE === undefined) return;
+    expect(["payment", "subscription"]).toContain(client.CHECKOUT_MODE);
+  });
+
   test("subscription のうちは買い切りの金額を入れられない", () => {
     if (declaredMode() !== "subscription") return;
     expect(currentAmounts()).toEqual(SUBSCRIPTION_ERA);
