@@ -212,9 +212,54 @@ async function applyOneTimePurchase(uid, session) {
   return { ok: true, planType, subjectId };
 }
 
+// 買い切り(mode=payment)の返金・チャージバックで付与を取り消す。
+// サブスクの revokeSubscription と違い planType では消さない。
+// 支払い1件(paymentIntent / checkoutSession)に紐づく枠だけを消すので、
+// 別の科目や、返金後にもう一度買い直した分を巻き込まない。
+async function revokeOneTimePurchase(uid, ref) {
+  const paymentIntentId = (ref && ref.paymentIntentId) || null;
+  const checkoutSessionId = (ref && ref.checkoutSessionId) || null;
+  if (!uid || (!paymentIntentId && !checkoutSessionId)) {
+    return { ok: false, reason: "no_uid_or_ref" };
+  }
+  const matches = (rec) => {
+    if (!rec || rec.purchaseType !== "one_time") return false;
+    if (paymentIntentId && rec.paymentIntentId === paymentIntentId) return true;
+    if (checkoutSessionId && rec.checkoutSessionId === checkoutSessionId) return true;
+    return false;
+  };
+  const current = await getEntitlements(uid);
+  const complimentary = current.complimentary === true;
+  const next = {
+    pack: Boolean(current.pack),
+    subjects: { ...(current.subjects || {}) },
+  };
+  if (complimentary) {
+    next.complimentary = true;
+    if (current.complimentaryReason) next.complimentaryReason = current.complimentaryReason;
+    if (current.complimentaryEmail) next.complimentaryEmail = current.complimentaryEmail;
+  }
+  const removed = [];
+  if (matches(current.packPurchase)) {
+    next.pack = complimentary ? true : false;
+    next.packPurchase = admin.firestore.FieldValue.delete();
+    removed.push("pack");
+  }
+  for (const subjectId of Object.keys(next.subjects)) {
+    if (matches(next.subjects[subjectId])) {
+      delete next.subjects[subjectId];
+      removed.push(subjectId);
+    }
+  }
+  if (removed.length === 0) return { ok: false, reason: "no_matching_purchase" };
+  await saveEntitlements(uid, next);
+  return { ok: true, removed };
+}
+
 module.exports = {
   entitlementsRef,
   applyOneTimePurchase,
+  revokeOneTimePurchase,
   getEntitlements,
   saveEntitlements,
   setStripeCustomerId,
