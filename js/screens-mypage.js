@@ -409,7 +409,11 @@ async function renderMyPage() {
     typeof Entitlement !== "undefined" &&
     Entitlement.hasAnySubscription &&
     Entitlement.hasAnySubscription();
-  if (portalBtn) portalBtn.classList.toggle("hidden", !user || !hasSub);
+  const portalOneTime =
+    typeof Entitlement !== "undefined" &&
+    Entitlement.isOneTime &&
+    Entitlement.isOneTime();
+  if (portalBtn) portalBtn.classList.toggle("hidden", !user || !hasSub || portalOneTime);
 
   if (typeof QuizStorage !== "undefined" && typeof QuizStorage.invalidateStatsSummariesCache === "function") {
     QuizStorage.invalidateStatsSummariesCache();
