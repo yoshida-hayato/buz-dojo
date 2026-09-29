@@ -437,9 +437,9 @@ function buildPickerRows(subjects, catalogCounts, allSummaries, summariesLoaded)
 const BIZCAREER_EXAM_DATES = ['2026-10-04', '2027-02-14'];
 const BIZCAREER_EXAM_SUBJECTS = ['biz-career', 'biz-pm-planning', 'biz-pm-operation'];
 
-function subjectExamCountdownHtml(subjectId) {
+function bizCareerExamDaysLeft(subjectId) {
   try {
-    if (BIZCAREER_EXAM_SUBJECTS.indexOf(subjectId) < 0) return '';
+    if (BIZCAREER_EXAM_SUBJECTS.indexOf(subjectId) < 0) return null;
     const nowJst = new Date(Date.now() + 32400000);
     const today = Date.UTC(
       nowJst.getUTCFullYear(),
@@ -451,15 +451,20 @@ function subjectExamCountdownHtml(subjectId) {
       const exam = Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
       const days = Math.round((exam - today) / 86400000);
       if (days < 0) continue;
-      if (days > 60) return '';
-      const label =
-        days === 0 ? '本日がビジキャリ試験日です' : 'ビジキャリ試験まであと' + days + '日';
-      return '<div class="subject-card-note">' + label + '</div>';
+      return days;
     }
-    return '';
+    return null;
   } catch (e) {
-    return '';
+    return null;
   }
+}
+
+function subjectExamCountdownHtml(subjectId) {
+  const days = bizCareerExamDaysLeft(subjectId);
+  if (days === null || days > 60) return '';
+  const label =
+    days === 0 ? '本日がビジキャリ試験日です' : 'ビジキャリ試験まであと' + days + '日';
+  return '<div class="subject-card-note">' + label + '</div>';
 }
 
 function paintSubjectPickerSkeleton(box, count) {
