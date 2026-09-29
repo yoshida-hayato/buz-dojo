@@ -203,7 +203,11 @@ const Entitlement = (function () {
   function formatPrice(yen) {
     const n = Number(yen) || 0;
     if (n <= 0) return "無料";
-    return "¥" + n.toLocaleString("ja-JP") + "/月";
+    // 価格表記は config/pricing.js の CHECKOUT_MODE に従う。決済モードと
+    // 表記が別々に動くと「月額と書いて買い切りで課金する」が起きるので、
+    // 宣言1つで両方が同時に変わるようにしている。未定義なら従来どおり月額。
+    const suffix = P && P.CHECKOUT_MODE === "payment" ? "（買い切り）" : "/月";
+    return "¥" + n.toLocaleString("ja-JP") + suffix;
   }
 
   function stopSync() {
