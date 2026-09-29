@@ -607,7 +607,11 @@ function paintSubjectPickerCards(box, rows, packOn) {
       `<div class="pack-card-title">${escapeHtml(packTitle)}</div>` +
       benefitsHtml +
       `<div class="subject-card-meta"><span class="subject-card-price">${escapeHtml(price)}</span>` +
-      `<span>パック購入時、単品は解約</span></div>` +
+      `<span>${
+        typeof Entitlement !== "undefined" && Entitlement.isOneTime && Entitlement.isOneTime()
+          ? "今後追加される科目も追加料金なし"
+          : "パック購入時、単品は解約"
+      }</span></div>` +
       `<div class="subject-card-actions">` +
       `<button type="button" class="primary-btn pack-buy-btn">プレミアムパックを購入</button>` +
       `</div>`;
