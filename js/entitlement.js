@@ -298,6 +298,9 @@ const Entitlement = (function () {
     canStart,
     recordAnswer,
     formatPrice,
+    isOneTime: () => Boolean(P && P.CHECKOUT_MODE === "payment"),
+    ownedLabel: () => (P && P.CHECKOUT_MODE === "payment" ? "購入済み" : "購読中"),
+    unownedLabel: () => (P && P.CHECKOUT_MODE === "payment" ? "未購入" : "未購読"),
     startSync,
     stopSync,
   };
