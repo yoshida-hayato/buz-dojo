@@ -100,3 +100,44 @@ Stripe Dashboard → Developers → Webhooks → Add endpoint
 - [ ] 特商法ページで氏名・住所・電話は「請求があれば開示」になっていること（必要ならお問い合わせで開示できる準備）
 - [ ] 返金ポリシーは利用規約・特商法表記を確認
 - [ ] Stripe のビジネス情報・銀行口座登録
+
+## 10. 本番Webhookと買い切り移行 (2026-09-29 時点)
+
+### 本番の Webhook エンドポイント (作成済み・未使用)
+
+- 名前: buz-dojo-production
+- URL: <https://asia-northeast1-buz-dojo.cloudfunctions.net/stripeWebhook>
+- API バージョン: 2026-08-26.dahlia (作成画面で選択できなかったため既定値。dahlia で動く前提でコードを修正済み)
+- 送信対象イベント: 作成画面で選んだ11件のまま (内訳は未確認。下の「必要な6件」との過不足を要確認)
+- 署名シークレット (whsec): まだ Firebase に登録していない。登録すると
+  サンドボックスの Webhook が全て署名検証に失敗するため、sk_live への切替と同時に入れ替える
+
+### 本番切替の手順 (この順でないと途中で決済が壊れる)
+
+1. Secret Manager の STRIPE_SECRET_KEY を sk_live に、STRIPE_WEBHOOK_SECRET を
+   本番エンドポイントの whsec に、同時に入れ替える
+2. Functions を再デプロイする (シークレットは再デプロイしないと反映されない)
+3. 本番エンドポイントの「送信対象イベント」に必要な6件が入っていることを確認する
+4. 少額の実決済を1回通して、付与と返金取り消しを確認する
+
+### コードが分岐しているイベント (必要な6件)
+
+- checkout.session.completed — 購入時の付与 (サブスク・買い切りの両方)
+- customer.subscription.created / updated / deleted — 月額の契約状態 (買い切り移行後は発火しない)
+- charge.refunded — 全額返金で買い切りの付与を取り消す
+- charge.dispute.closed — チャージバック確定 (status=lost) で付与を取り消す
+
+上の6件以外は switch の default で無視される。余分に購読していても害は無いが、
+不要な配信はリトライとログのノイズになるので、削れるなら削ってよい。
+逆に1件でも欠けると、その経路は署名検証も通り、例外も出ず、ログにも残らないまま走らない。
+
+### サンドボックス側
+
+charge.refunded と charge.dispute.closed は未追加。テスト購入の前に、
+Webhook -> stripeWebhook -> 送信先を編集 から2件にチェックを入れて保存する。
+「作成」ではなく「編集」なので署名シークレットは変わらない。
+
+### 買い切り移行の合格条件
+
+docs/SANDBOX_TEST_CHECKLIST.md を参照。サンドボックスでそのチェックリストを
+全て通してから、上の本番切替に進む。
