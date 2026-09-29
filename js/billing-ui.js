@@ -89,7 +89,11 @@ function bindSubjectPurchase(btn, subjectId, priceYen) {
   const subscribed =
     typeof Entitlement !== "undefined" && Entitlement.hasAccess(subjectId);
   btn.classList.remove("hidden");
-  btn.textContent = subscribed ? "購読中" : `購入 ${Entitlement.formatPrice(priceYen)}`;
+  const ownedWord =
+    typeof Entitlement !== "undefined" && Entitlement.ownedLabel
+      ? Entitlement.ownedLabel()
+      : "購読中";
+  btn.textContent = subscribed ? ownedWord : `購入 ${Entitlement.formatPrice(priceYen)}`;
   btn.disabled = subscribed;
   btn.onclick = (e) => {
     e.stopPropagation();
