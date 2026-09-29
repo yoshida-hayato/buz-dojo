@@ -135,8 +135,11 @@ exports.createCheckoutSession = onCall(
       entitlements.stripeCustomerId || null
     );
 
+    // 決済モードは config/pricing.js の CHECKOUT_MODE が唯一の宣言。
+    // 未定義なら従来どおりサブスク。宣言が入るまでこの分岐は一切効かない。
+    const isOneTimeCheckout = (pricing.CHECKOUT_MODE || "subscription") === "payment";
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode: isOneTimeCheckout ? "payment" : "subscription",
       customer: customerId,
       // Managed Payments 有効アカウントでは tax_code 必須になるため、当面は無効化
       managed_payments: { enabled: false },
@@ -145,7 +148,8 @@ exports.createCheckoutSession = onCall(
           price_data: {
             currency: "jpy",
             unit_amount: line.amountYen,
-            recurring: { interval: "month" },
+            // 買い切りに recurring を付けると Stripe がリクエストごと拒否する
+            ...(isOneTimeCheckout ? {} : { recurring: { interval: "month" } }),
             product_data: {
               name: line.name,
               metadata: line.metadata,
@@ -154,13 +158,18 @@ exports.createCheckoutSession = onCall(
           quantity: 1,
         },
       ],
-      subscription_data: {
-        metadata: {
-          firebaseUid: uid,
-          planType: line.metadata.planType,
-          subjectId: line.metadata.subjectId,
-        },
-      },
+      // subscription_data は mode=subscription のときだけ許される
+      ...(isOneTimeCheckout
+        ? {}
+        : {
+            subscription_data: {
+              metadata: {
+                firebaseUid: uid,
+                planType: line.metadata.planType,
+                subjectId: line.metadata.subjectId,
+              },
+            },
+          }),
       client_reference_id: uid,
       metadata: {
         firebaseUid: uid,
