@@ -1632,3 +1632,88 @@ sitemap だけ足しても10ページが1ページに統合されて終わる公
 
 約69便ぶん。タスクは有効で、今便は起動している。各便の実行結果は私からは見えないので、
 起動していて無言だったのか、起動自体がされなかったのかは分からない。
+
+---
+
+## 2026-10-03 04:48便
+
+### 結果の確認: 本番はいま最新。03:48便の「9/29昼で止まっている」は解消した
+
+04:48 時点で3つ測り直した (いずれも WebFetch)。
+
+- index.html に「ご購入でのご協力をお願いしています」「いただいた料金は、…」
+  (40d821c / 81a527e、9/29 11:52-12:00 UTC)
+- head に og:description / og:image / og:locale がある (515ea7b、9/29 19:29 UTC)
+- `js/screens-subjects.js?v=probe-20261003-0448` に `EXAM_LIFT_DAYS = 14` と
+  `BIZCAREER_EXAM_DATES = ['2026-10-04','2027-02-14']` と `bizCareerExamDaysLeft`
+  がある (6a62e45、9/29 23:47 UTC)
+
+つまり **10/4 の試験のために作ったカウントダウンと並べ替えは本番に出ている**。
+公開版は 495d147 (9/29 23:47 UTC) 以降。1時間前は js が 9/21 版だったので、
+反映は 03:48〜04:48 JST の間に起きた。
+
+### どちらで直ったかは私からは区別できない
+
+(a) 社長が 03:48便の依頼1番 (`firebase deploy --only hosting`) を手で流した、
+(b) 今便の直前の push (b63644f、19:24 UTC = 04:24 JST) が Actions を通った、
+のどちらか。Actions は見えず、hosting の中身はどちらでも同じになる。
+区別点は functions が上がったかどうかだけだが、`onRequest` は `stripeWebhook` しか
+無く、本番の Webhook を叩くわけにはいかないので測れない。
+**社長に1行だけ訊く: 手で流したのか、勝手に出たのか。** (a) なら経路はまだ壊れている。
+
+### 訂正: 03:48便の deploy.yml 依頼 (APP_VERSION スタンプ) はそのまま入れてはいけない
+
+`config/version.js` を毎デプロイで書き換えると、**戻ってきたスマホ利用者全員に
+毎回「最新版を読み込む」モーダルが出る**。読んだ現物:
+
+- `js/app-chrome.js:356` の `ensureAppUpdateBeforeLoad` は `js/app.js:130` (起動時) と
+  `js/screens-subjects.js:5` (科目を開く時) の両方で await される
+- `isMobileDevice()` が false (PC) なら即 return。モーダルはスマホだけ
+- `fetchServerAppVersion()` は `config/version.js` を `cache:"no-store"` で取り
+  正規表現で値を抜く。firebase.json で no-cache なので必ず新しい値が届く
+- `js/app-chrome.js:404` の `if (stored !== version || ...)` で `showUpdateModal`。
+  利用者がスキップか再読込を押すまで **問題データの読み込みが止まる**
+
+ブリッジは2時間ごとに push し、push ごとにデプロイが走る。スタンプを入れると
+1日最大12回、問題を開く手前にモーダルが挟まる。試験週にこれをやってはいけない。
+依頼を出す前に「その設定が入ったあと何が起きるか」を呼び出し元まで辿ること。
+
+### 分けるべき2つが1つのファイルに混ざっている
+
+`config/version.js` の `APP_VERSION` が2役を兼ねている。
+
+- `?v=` のキャッシュ鍵 — デプロイごとに変わってほしい
+- 利用者に「更新してください」と言う版 — 伝える価値があるときだけ変わってほしい
+
+直す順 (10/5以降):
+
+1. `config/build.js` を新設して `BUILD_ID` を置く。firebase.json に
+   `/config/build.js` の no-cache ヘッダを足す (`config/**` は1年 immutable なので必須)
+2. index.html の `?v=` を `BUILD_ID` から取る。間接 eval の `const` が捨てられる件も
+   ここで直す (`var` か window への代入)
+3. そのうえで deploy.yml のスタンプ対象は `config/build.js`。`config/version.js` は
+   社長が手で動かす「利用者に見せる版」として残す
+
+社長への依頼はこの3段で出し直す。3 を先に入れるとモーダル連発になる。
+
+### 今便はコードを1行も触っていない (理由)
+
+試験は明日 10/4。`js/` にテストは1本も無く、本番を実ブラウザで開く手段も無い。
+いま index.html のローダに触って壊すと、年間でいちばん使われる週に、気づけないまま
+止まる。キャッシュが効いていない損 (毎ロード gzip 87KB) より壊した場合の損が大きい。
+コードの再開は 10/5 以降。
+
+### 確認: 本番はまだ月額サブスク
+
+`config/pricing.js` に `CHECKOUT_MODE` の定義は無い (grep で0件)。
+読む側はどこも `(CHECKOUT_MODE || "subscription")` なので subscription。
+金額は `PACK_PRICE_YEN = 1980` / `PRICE_MIN = 290` / `PRICE_MAX = 980` のまま。
+
+### 次の自分へ
+
+- 社長の返事待ち4件: 金額の並び (00:48便) / 切替は10/5以降に (02:48便) /
+  deploy.yml は上の3段で出し直す (03:48便の5行は取り下げ) /
+  **手で流したか勝手に出たか (今便)**
+- 本番が最新かを測る最短手順: WebFetch で `/js/screens-subjects.js?v=<毎回変える文字列>`
+  を取り、直近に入れた識別子を探す。1年 immutable は `?v=` を変えれば回避できる
+- 10/5 になったら、並べ替えが自動で元の並びに戻ったかを同じ手順で確かめる
