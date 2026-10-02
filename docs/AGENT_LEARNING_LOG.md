@@ -1568,3 +1568,67 @@ sitemap だけ足しても10ページが1ページに統合されて終わる公
 ブリッジは 04:28-04:30 に14件を反映して `c42195b` まで進んだ。04:48便の3件 (試験14日前の
 並べ替え2件 + 学習ログ1件) はまだ main に入っていない (`git grep EXAM_LIFT_DAYS origin/main`
 が0件)。並べ替えが意図どおり効いたかの確認は、入ってからの便に持ち越す。
+
+---
+
+## 2026-10-03 03:48便
+
+### 最重要の確定: 本番サイトは 9/29 昼の版で止まっている
+
+公開中の版は 2026-09-29 の 03:06〜11:52 UTC (JST 12:06〜20:52) のどこか。
+それ以降に main に入ったものは1つも公開されていない。約3.6日ぶん。
+
+証拠(キャッシュの言い逃れができない経路を選んだ):
+
+- index.html は firebase.json で no-cache, no-store, must-revalidate。本番のトップの支援文は
+  「購読でのご協力をお願いしています」「購読料は、…」のまま。これを「ご購入でのご協力」
+  「いただいた料金は、…」に変えたのは 40d821c (9/29 11:52 UTC) と 81a527e (12:00 UTC)
+- guides/seisan-kanri-2kyu.html (fe39f28, 9/29 03:04 UTC 追加) は本番で返る。見出しまで一致
+- js/screens-subjects.js と js/screens-mypage.js は 9/21 (be7ca8f) の版。一度も要求されていない
+  クエリ (?v=probe-20261003-a) を付けて取っても同じ。EXAM_LIFT_DAYS / BIZCAREER_EXAM_DATES /
+  Entitlement.ownedLabel / billingTitle はすべて無く、9/21 の「購読中」の文言が残っている
+
+### 公開されていない具体物
+
+- 試験日カウントダウンと、試験14日以内に生産管理系3科目を最上段へ上げる並べ替え
+  (どちらも 10/4 の試験のために作ったもの)
+- OGP と Twitter カード
+- 買い切りに向けた文面の全部 (index.html / js/ / legal/)
+- functions: 返金とチャージバックでの付与取り消し、二重購入のガード、Webhook の例外ログ、
+  period_end の Stripe API 版差対応
+
+### 原因は特定できていない。材料だけ残す
+
+- deploy.yml は GCP_SA_KEY が空なら exit 1。登録されているかは私からは見えない
+- 「firebase deploy --only hosting,functions」は1コマンドなので、functions 側が落ちると
+  hosting も上がらない。この構造自体が、今回のような片側の失敗を全体の停止にする
+- firebase.json の functions predeploy 「python3 _dev/sync-shared.py」は b3c5e24 (9/29 03:05 UTC)
+  で追加され、公開が止まった窓と同じ便に入っている。ただし手元の python3 で走らせたら exit 0 で
+  差分も出なかったので、これが原因だとは書けない
+- GitHub Actions の実行結果は私からは読めない (GitHub API は403)
+
+### 11日間だれも測っていなかった前提
+
+9/21 のログには「本番への反映は社長の手動。main に入っただけでは公開サイトは変わらない」と
+書いてある。9/22〜24 の復元で「main への push で自動デプロイが走る」に変わり、以後の便は
+これを前提に「main に入ったから本番に出た」と書いてきた (1307行目がその例)。
+前提そのものを測った便は1つも無い。9/29 15:48便で「本番サイトは実ブラウザで開けない」と
+確定したあと、公開されたかどうかを確かめる代わりの手段を誰も作らなかった。
+
+教訓: 自分の成果物が本番に出たかどうかは、no-cache のパス (index.html / legal/ / admin/) に
+入った文字列を WebFetch で読んで確かめる。/js/ /css/ /config/ /subjects/ /assets/ は
+1年 immutable なので証拠に使いにくい。「main に入った」は「公開された」ではない。
+
+### 社長への依頼 (私には .github/ もデプロイ権限も無い)
+
+1. いちばん速い復旧: 手元の main で「firebase deploy --only hosting --project buz-dojo」。
+   hosting だけなら functions の失敗に巻き込まれない
+2. Actions の Deploy to Firebase の失敗ログを読む
+3. deploy.yml の Deploy 手順を hosting と functions の2手順に分ける
+4. CHECKOUT_MODE を payment にするのは functions のデプロイが成功したあと。
+   返金取り消しと二重購入ガードが未公開のまま課金モードを変えるのは危ない
+
+### 観測: 9/30 06:48便から10/03 02:48便まで、Slackにもログにも何も残っていない
+
+約69便ぶん。タスクは有効で、今便は起動している。各便の実行結果は私からは見えないので、
+起動していて無言だったのか、起動自体がされなかったのかは分からない。
