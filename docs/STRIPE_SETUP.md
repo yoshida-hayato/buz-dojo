@@ -117,19 +117,37 @@ Stripe Dashboard → Developers → Webhooks → Add endpoint
 1. Secret Manager の STRIPE_SECRET_KEY を sk_live に、STRIPE_WEBHOOK_SECRET を
    本番エンドポイントの whsec に、同時に入れ替える
 2. Functions を再デプロイする (シークレットは再デプロイしないと反映されない)
-3. 本番エンドポイントの「送信対象イベント」に必要な6件が入っていることを確認する
+3. 本番エンドポイントの「送信対象イベント」に必要な7件が入っていることを確認する
 4. 少額の実決済を1回通して、付与と返金取り消しを確認する
 
-### コードが分岐しているイベント (必要な6件)
+### コードが分岐しているイベント (必要な7件)
+
+このリストは functions/__tests__/webhook-events-doc.test.js が
+functions/index.js の switch と突き合わせている。コードに case を足したら
+ここにも1行足さないと CI が落ちる。1イベント1行で、名前は略さずに書くこと。
 
 - checkout.session.completed — 購入時の付与 (サブスク・買い切りの両方)
-- customer.subscription.created / updated / deleted — 月額の契約状態 (買い切り移行後は発火しない)
+- checkout.session.async_payment_succeeded — 遅延通知の支払い方法 (コンビニ・銀行振込) の入金確定
+- customer.subscription.created — 月額の契約開始 (買い切り移行後は発火しない)
+- customer.subscription.updated — 月額の契約更新・状態変化 (同上)
+- customer.subscription.deleted — 月額の解約 (同上)
 - charge.refunded — 全額返金で買い切りの付与を取り消す
 - charge.dispute.closed — チャージバック確定 (status=lost) で付与を取り消す
 
-上の6件以外は switch の default で無視される。余分に購読していても害は無いが、
+上の7件以外は switch の default で無視される。余分に購読していても害は無いが、
 不要な配信はリトライとログのノイズになるので、削れるなら削ってよい。
 逆に1件でも欠けると、その経路は署名検証も通り、例外も出ず、ログにも残らないまま走らない。
+
+### async_payment_succeeded を落とすと何が起きるか
+
+コンビニ払い・銀行振込では、決済画面を終えた時点の checkout.session.completed が
+payment_status=unpaid で届く。applyOneTimePurchase は unpaid を弾くので、ここでは付与しない。
+実際の入金は後から checkout.session.async_payment_succeeded で通知され、そこで付与する。
+
+このイベントを購読していないと、入金は済んでいるのに付与されない。
+しかも署名検証は通り、例外も出ず、ログにも何も残らない。
+コンビニ払い・銀行振込を Stripe 側で有効にしているなら、この1件は
+charge.refunded と同じ重さで必須。無効にしているなら発火しないので余分な購読になる。
 
 ### サンドボックス側
 
