@@ -2231,3 +2231,65 @@ describe.each が落ち、1件を偽の失敗として数えた。**ラップし
   これは異常ではない
 - ブリッジが 15:00 も動かなければ、停止として社長に知らせることを検討する
   (08:52 から3回連続で落ちたことになる)
+
+
+---
+
+## 2026-10-03 14:48便
+
+### 最重要: ブリッジの「mainに反映しました」は push の成否を見ていない
+
+14:27 の回は「15件中 14件をmainに反映しました」と報告した。だが origin/main は
+769cb95 (ts=1790981814 = 08:52 JST) のまま1ミリも動いていない。clone 2回と
+raw.githubusercontent の 404 (functions/__tests__/exam-application.test.js) の
+3経路で確認した。09:48 から 13:48 までの便の成果は main に1件も入っていない。
+
+コードを読めば理由が書いてある。scripts/bridge/apply_patch.py は commit までしかせず、
+push は .github/workflows/apply_patch.yml の「Push commit (if any)」ステップが行う。
+そして ✅ と「今回の処理:」の Slack 投稿は push より前に出る。
+つまり push が落ちても Slack は成功と表示される。
+
+### 原因 (手元で再現した。実測であって推測ではない)
+
+push ステップは `git pull --rebase origin main` のあとに `git push` する。
+functions/pricing-shared.js は git の追跡対象で、functions/package.json の pretest が
+`python3 _dev/sync-shared.py` でこれを毎回再生成する (config/pricing.js の写し)。
+config/pricing.js を変えるパッチが入ると生成物も書き換わるが、process_patch が git add に渡すのは
+そのパッチの path 1つだけなので、生成物は未ステージのまま残る。
+汚れたツリーのまま pull --rebase に入ると
+
+    error: cannot pull with rebase: You have unstaged changes.   (exit 128)
+
+で push が走らない。手元で config/pricing.js の questionCount を 295 にして
+sync-shared.py を走らせ、config だけをコミットして pull --rebase を叩き、exit 128 を実測した。
+今日は config/pricing.js 宛のパッチが初めて入った日で、push が止まった最初の回と一致する。
+GitHub Actions のログは API 403 で読めないので、ログ側からの確認はしていない。
+
+### 波及 (時限爆弾)
+
+- 処理位置 .agent-state/last-applied-ts も push されないので、次の回は同じパッチを
+  最初から処理する。パッチ自体はまだ失われていない
+- ただし1回の回で ✅14件 + ❌3件 + 要約1件 = 約18メッセージが積まれる。
+  fetch_pending_patches は conversations.history limit=50。押せない回が2〜3回続くと、
+  古い未適用パッチが50件の窓から落ちて二度と読まれない
+- もう1つ: changed_line_count は `git diff --numstat HEAD` でツリー全体を数える。
+  生成物のドリフトが残ると同じ回の後続パッチ全部の行数に上乗せされ、200行の上限に当たりやすくなる
+
+### 今便の1手
+
+応急 — path を functions/pricing-shared.js にしたパッチを1件投稿した。process_patch は
+run_tests (pretest で再生成) のあとに そのパスを git add するので、生成物がステージされて
+コミットされ、ツリーが綺麗になる。新規投稿は最後に処理されるので、そのあとの pull --rebase が通る。
+new_string の中身は pretest に上書きされるため、入るのは正規の同期結果と同一。
+万一この1件が落ちても discard_changes が `git checkout -- .` でツリー全体を掃除するので、
+どちらに転んでも push は通る。
+
+恒久 — .github/workflows/apply_patch.yml の push ステップで、`git pull --rebase` の前に
+`git checkout -- .` を1行入れる。.github/ は私の手では触れないので社長に依頼した。
+
+### 次の自分へ
+
+- ブリッジの ✅ を結果と見なさない。clone か git ls-remote で origin/main の SHA と時刻を必ず見る。
+  14:27 の回は17件の成功報告を出して main を動かしていない
+- config/pricing.js など生成元を変えるパッチを出すときは、恒久対策が入るまで、
+  同じ便の最後に生成物 (functions/pricing-shared.js) 宛のパッチを1件添えること
