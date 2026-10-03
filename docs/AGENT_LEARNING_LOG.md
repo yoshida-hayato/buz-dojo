@@ -2988,3 +2988,79 @@ DOMContentLoaded 待ちになって走らないので、URLSearchParams のス�
 - 同じく待ちになっているテストが2件ある。01:48便の申込受付期間のテストと、
   privacy.html に購読語が無いことを要求するガード。ソースが入った順に出す
 - 社長への未回答は1件に戻った: config/pricing.js 22行目の subscription を payment に
+
+
+---
+
+## 2026-10-04 05:48便
+
+### 観測: 03:17 と 05:17 の2回が無音。ただし起こす理由は無い
+
+origin/main は 3650d6d のまま、処理位置は 00:53:50。ブリッジの最後の発言は 01:29。
+未適用は8件 (01:48便の screens-subjects.js、02:48便の privacy.html 2件とログ、03:48便のログ、
+04:48便の billing.js 2件とログ)。今便の2件で10件、上限15なので窓は余裕がある。
+今日の 8:15 の X 投稿に入る試験当日の1行は 01:17 の回で main に入っているので、
+深夜便が置いていた期限はもう越えた。カードの申込表示の期限は 10/5 で、
+それまでに 07:17 から 23:17 まで9回の機会が残っている。だから通知は出していない。
+
+### 今便の1手: 手評価をやめた。jest 無しで既存テストを全件走らせるランナーを入れた
+
+09-21 から全便が npm の 403 を前提にしていて、テストは毎回 vm と手評価でやってきた。
+これには時間のほかに穴がある。自分が書いた関数は検められるが、自分が触っていない
+既存テストを壊したかどうかを投稿前に確かめられない。CI が落ちてその1件が破棄されて
+初めて分かる。実際にそれで1便を失っている。
+
+_dev/tools/jest-run.js を足した。Node 22 の標準機能だけで jest の使われている分を実装し、
+functions/__tests__ の11ファイルを1文字も変えずに走らせる。
+使い方は node _dev/tools/jest-run.js で全件、引数を足すとファイル名にそれを含む分だけ。
+
+実装したのは describe / test / test.each / beforeEach / afterEach / beforeAll / afterAll /
+expect の11種 (toBe toEqual toContain toBeGreaterThan toBeGreaterThanOrEqual
+toBeLessThanOrEqual toBeUndefined toBeDefined toBeNull toBeTruthy toHaveBeenCalled と not) /
+jest.fn / jest.mock / jest.spyOn / jest.resetModules。
+jest.mock は Module._load を差し替えて実現した。テストが firebase-admin を
+ファイル先頭で mock しているので、require.cache に後から入れる形では間に合わない。
+
+### 今日はじめて測れた数字: 既存テストは 101件、全部通っている
+
+11ファイル 101件、通過101・失敗0。この数はこれまでどの便も持っていなかった。
+次便からは、パッチを投稿する前にこれを走らせて 101件が保たれていることを見てから出す。
+
+### 効いていることの確認を2通り取った (ランナー自体を疑う手順)
+
+ランナーが黙って通すだけの置物でないことを、2つの壊し方で確かめた。
+
+1. ランナーの toBe の比較を常に偽に書き換えると 58件が落ちた。
+   つまり表明は現に評価されていて、通過の101件は素通りではない。
+2. legal/terms.html の52行目の手がかりを一語ずらすと、legal-swap-targets.test.js の
+   該当する1件だけが落ちた。文面も正しく、期待値が負の1だと言っている。
+
+1回目の確認は失敗していた。はじめ sed でファイル全体を置換したので、
+静的な本文と差し替えスクリプトの中の手がかり文字列が両方同時に直り、
+テストは正しく通った。ランナーの不備ではなく、こちらの壊し方の不備だった。
+次の自分へ: 法務ファイルの手がかりを壊して試すときは、行番号を指定して
+本文側 (pricing.js の読み込みより前) だけを直す。両方直すと当然通る。
+
+### 行数の制約との付き合い方 (次の自分へ)
+
+最初に書いた版は235行で、1件200行の上限を超えて出せなかった。
+削ったのは、使われていないマッチャ4件 (toHaveLength toBeLessThan toBeFalsy toThrow)、
+mockClear、それと1行で済む関数の波かっこの改行。184行に収めた。
+新規作成のパッチは、ファイルの行数がそのまま行数制限に当たる。
+書き終えたら wc -l を見てから JSON を組むこと。
+
+### 投稿前に機械で検めた3つ (21:48便と22:48便の手順を継いだ)
+
+バッククォート0件、アスタリスク0件、URL0件。node --check 通過。
+JSON は手で組まず、実ファイルを読んで python の json.dumps で組み立てた。
+
+### 次の自分へ
+
+- 07:17 の回で今便の2件の成否を見る。入っていたら、次便からは必ず
+  node _dev/tools/jest-run.js を投稿前に走らせる。101件が基準値
+- 待ちになっているテストは3件。04:48便の pack-upgrade-warning (js/billing.js 待ち)、
+  01:48便の申込受付期間 (js/screens-subjects.js 待ち)、privacy.html の購読語ガード
+  (legal/privacy.html 待ち)。ソースが main に入った順に出す
+- ランナーに足りないマッチャが要る日が来たら、その便のパッチで1件だけ足す。
+  いま入っていないのは toMatch toThrow toHaveLength toBeCloseTo など
+- 社長への未回答は1件のまま: config/pricing.js 22行目の subscription を payment に
