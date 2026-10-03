@@ -123,6 +123,7 @@
   }
 
   return {
+    CHECKOUT_MODE,
     PACK_PRICE_YEN,
     PACK_TITLE,
     PACK_PRODUCT_NAME,
