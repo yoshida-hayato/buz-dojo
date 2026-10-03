@@ -1003,7 +1003,9 @@ async function postReplyTweet(client, parentId, replyText) {
 }
 
 function replyFooterBlock() {
-  return `続きはサイトで（1日20問無料）\n${SITE_URL}`;
+  const notice = require("./x-exam-notice").examNoticeLine();
+  const head = notice ? notice + "\n" : "";
+  return head + `続きはサイトで（1日20問無料）\n${SITE_URL}`;
 }
 
 function composeReplyFooterOnly(fromText) {
