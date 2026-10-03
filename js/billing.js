@@ -145,6 +145,9 @@ const Billing = (function () {
       openLoginModal();
       return;
     }
+    if (planType === "pack" && typeof confirmPackUpgrade === "function") {
+      if (!confirmPackUpgrade()) return;
+    }
     busy = true;
     try {
       const ok = await ensureReady();
