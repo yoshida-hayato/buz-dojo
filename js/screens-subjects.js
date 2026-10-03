@@ -468,12 +468,61 @@ function bizCareerExamDaysLeft(subjectId) {
   }
 }
 
-function subjectExamCountdownHtml(subjectId) {
+// 申込受付期間(両端を含む)。出典は中央職業能力開発協会の令和8年度試験日程ページ(2026-10-03 確認)
+const BIZCAREER_APPLICATION_PERIODS = [
+  { since: '2026-04-20', until: '2026-07-10', examDate: '2026-10-04' },
+  { since: '2026-10-05', until: '2026-12-04', examDate: '2027-02-14' }
+];
+
+// ISO の暦日を UTC ミリ秒に
+function bizCareerDayMs(isoDate) {
+  const parts = String(isoDate).split('-');
+  return Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+// 2026-12-04 を 12/4 にする
+function bizCareerShortDate(isoDate) {
+  const parts = String(isoDate).split('-');
+  return Number(parts[1]) + '/' + Number(parts[2]);
+}
+
+// いま申込受付期間の中ならその期間、外なら null。
+// 両端を含む判定を不等号ではなく Math.min で書いているのは、パッチ経路で山かっこを増やさないため
+function bizCareerApplicationPeriod(subjectId) {
+  try {
+    if (BIZCAREER_EXAM_SUBJECTS.indexOf(subjectId) === -1) return null;
+    const nowJst = new Date(Date.now() + 32400000);
+    const today = Date.UTC(nowJst.getUTCFullYear(), nowJst.getUTCMonth(), nowJst.getUTCDate());
+    for (let i = 0; i !== BIZCAREER_APPLICATION_PERIODS.length; i++) {
+      const p = BIZCAREER_APPLICATION_PERIODS[i];
+      const a = bizCareerDayMs(p.since);
+      const b = bizCareerDayMs(p.until);
+      if (Math.min(today, a) === a && Math.min(today, b) === today) return p;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// 優先順: 試験当日 / 申込受付期間中 / 試験まで60日以内 / 何も出さない
+function subjectExamCountdownNote(subjectId) {
   const days = bizCareerExamDaysLeft(subjectId);
-  if (days === null || days > 60) return '';
-  const label =
-    days === 0 ? '本日がビジキャリ試験日です' : 'ビジキャリ試験まであと' + days + '日';
-  return '<div class="subject-card-note">' + label + '</div>';
+  if (days === 0) return '本日がビジキャリ試験日です';
+  const period = bizCareerApplicationPeriod(subjectId);
+  if (period) {
+    return 'ビジキャリ申込受付中。申込は' + bizCareerShortDate(period.until) +
+      'まで、試験は' + bizCareerShortDate(period.examDate);
+  }
+  if (days === null) return '';
+  if (Math.min(days, 60) !== days) return '';
+  return 'ビジキャリ試験まであと' + days + '日';
+}
+
+function subjectExamCountdownHtml(subjectId) {
+  const note = subjectExamCountdownNote(subjectId);
+  if (!note) return '';
+  return '<div class="subject-card-note">' + note + '</div>';
 }
 
 function paintSubjectPickerSkeleton(box, count) {
