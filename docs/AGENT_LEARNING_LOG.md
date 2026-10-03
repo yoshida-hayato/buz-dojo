@@ -2846,3 +2846,82 @@ config/pricing.js 22行目の1語を押しても法務の字面はどちらの�
   いま privacy.html に対するテストは1件も無い (functions/__tests__ を grep して確認)
 - 期限は 10/5。カードの申込表示が 10/5 から効く。03:17 / 05:17 / 07:17 / 09:17 と機会はある
 - 社長への未回答は1件のまま。config/pricing.js 22行目の subscription を payment に
+
+
+---
+
+## 2026-10-04 03:48便
+
+### 観測: 03:17 の回は 03:49 時点でまだ来ていない。未適用は4件
+
+origin/main は 3650d6d のまま、処理位置は 00:53:50。ブリッジの最後の発言は 01:29。
+未適用は 01:48便の screens-subjects.js 1件と 02:48便の3件で計4件。上限15なので窓は余裕がある。
+01:17 は通っているので 23:48便が置いた起こす条件(01:17 と 03:17 の両方が無音)は満たさない。通知は出していない。
+03:17 待ちの検証は次便に回し、今便は依存しない1件をやった。
+
+### 今便の1手: 宣言を実際に押して、通るかどうかを実測した
+
+これまでの便は「社長が config/pricing.js 22行目の1語を押せば切り替わる」を読んで推論していた。
+今便は clone で実際に subscription を payment に書き換え、以下を実測した。
+
+- python3 _dev/sync-shared.py で functions/pricing-shared.js 25行目も payment になる。
+  同期は firebase.json の predeploy と functions/package.json の pretest の両方に入っているので、
+  手で押して firebase deploy しても、main に push しても、写しは必ず追従する。写し忘れの穴は無い
+- functions/pricing.js は pricing-shared.js を再 export するだけの殻。宣言は2箇所ではなく1箇所
+- billing-mode-guard.test.js の表明13個を Node で1つずつ評価して 13/13 通過。
+  配線5件(付与・Webhook・宣言読み・分岐・後払い)も表記4件(特商法・規約・画面)も揃っている
+- 決済セッションは price-data の動的生成で、payment のとき recurring と subscription-data を
+  両方落とす。固定の Price ID を持っていないので「サブスク用の Price で payment を作って Stripe に
+  拒否される」経路は存在しない
+- 金額を見るテスト(pricing-shared.test.js と pricing-sync.test.js)は全部 PRICE-MAX 相対で書かれており、
+  980 という数字はテスト名にしか無い。倒しても落ちない
+
+つまり配線と法務と CI の観点では、宣言は安全に押せる。これは推論ではなく実測。
+
+### 実測した価格表(両モード)
+
+単品は 月額 から 買い切り の順。sap 980 から 1980 / biz-career 460 から 710 /
+biz-pm-planning 430 から 640 / windows-shortcuts 350 から 430 / biz-pm-operation 340 から 400 /
+excel-functions 300 から 320 / ai-ontology-core 290 から 290。
+outlook-mail(100問) teams-collab(95問) ai-ontology-intro(60問) は両モードとも無料。
+有料は7科目。単品を全部買うと 3150円/月 から 4770円。パックは 1980円/月 から 3980円。
+
+### 見つけた穴: 単品を買った人がパックを買うと、単品代が丸ごと沈む
+
+サブスク時代は、パックの契約が有効になると syncSubscriptionAndMaybeCancelSubjects が
+cancelSubjectSubscriptions を呼び、単品のサブスクを解約していた。だから重複は最大1か月分で止まる。
+
+買い切りには解約が無い。applyOneTimePurchase の pack の節は、意図して単品の購入記録を残す
+(支払った事実を残す、とコメントが書いてある)。記録としては正しいが、相殺も返金も割引も警告も無い。
+
+- createCheckoutSession の二重払いガードは2つだけ。同じ商品の2度買いを止めるのと、
+  パック所有者に単品を売らないこと。逆向き(単品所有者にパックを売る)は素通りする
+- js/billing-ui.js に、すでに持っている単品に触れる文言は1件も無い(grep で0件)
+
+沈む額は所有していた単品の定価そのまま。sap 1980 / biz-career 710 / biz-pm-planning 640 /
+windows-shortcuts 430 / biz-pm-operation 400 / excel-functions 320 / ai-ontology-core 290。
+最悪は sap を買ってからパックに上げる人で、3980円の商品に 5960円払う形になる。パック価格の50%。
+sap は4951問の看板科目で最初の1件になりやすいので、これは端の事例ではなく本線。
+
+単品を全部買うと 4770円、パックは 3980円。つまり2〜3件買った時点でパックに気づく人が必ず出る。
+その瞬間がいちばん損をする瞬間になっている。
+
+### 社長に投げた(勝手に決めなかった理由)
+
+差額をいくらにするかは値付けの判断で、コードの不備ではない。選択肢は3つ:
+上げ値を 3980 から所有済み単品の合計を引いた額にする / 購入前に返金されないと警告だけ出す / 何もしない。
+
+下ごしらえだけ確認した: createCheckoutSession は line を組んだあとで entitlements を読む順になっている
+(102から105行目で line、123行目で entitlements)。差額にするならこの順を入れ替えてパックの line を
+組み直す形になり、変更は1関数に収まる。
+
+### 次の自分へ
+
+- 社長への未回答は2件になった。(1) config/pricing.js 22行目の1語 (2) 単品からパックへの差額をどうするか。
+  (2) は (1) の答えを変えうるので、(1) だけ催促しないこと
+- 03:17 と 05:17 の回で 01:48便の screens-subjects.js と 02:48便の privacy.html 2件の成否を見る。
+  入っていたら 申込受付期間の単体テスト1件(loadAt で関数を呼ぶ形。blockSource で切り出す作りはやめる)と
+  privacy.html に購読語が無いことを要求するガード1件
+- 期限は 10/5。カードの申込表示が 10/5 から効く。05:17 と 07:17 と 09:17 と機会はまだある
+- この環境では npm が 403 で jest を入れられない。テストを実測したいときは Node で表明を手で評価する。
+  文字列と値の照合だけのテストならこれで足りる
