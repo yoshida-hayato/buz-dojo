@@ -61,6 +61,15 @@ describe("課金モードと金額の整合性", () => {
     expect(["payment", "subscription"]).toContain(client.CHECKOUT_MODE);
   });
 
+  // 宣言が payment なのに export されていないと、ガードは payment と判定して
+  // 買い切りの金額を許すのに、読む側は undefined を見て subscription で動く。
+  // パックが 3980円 の月額になる経路なので、一致を要求して閉じる。
+  test("ソースが payment を宣言したら export も payment になっている", () => {
+    if (!pricingSrc.includes('CHECKOUT_MODE = "payment"')) return;
+    expect(client.CHECKOUT_MODE).toBe("payment");
+    expect(server.CHECKOUT_MODE).toBe("payment");
+  });
+
   test("subscription のうちは買い切りの金額を入れられない", () => {
     if (declaredMode() !== "subscription") return;
     expect(currentAmounts()).toEqual(SUBSCRIPTION_ERA);
