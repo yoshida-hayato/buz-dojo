@@ -53,7 +53,7 @@
     },
     "biz-pm-operation": {
       title: "ビジネスキャリア検定（生産管理オペレーション2級・専門知識）",
-      questionCount: 60,
+      questionCount: 295,
     },
     "excel-functions": {
       title: "Excel関数・表計算実務",
