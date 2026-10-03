@@ -19,9 +19,14 @@
   }
   root.PricingConfig = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  const PACK_PRICE_YEN = 1980;
+  // 決済モードの唯一の宣言。payment なら買い切り、それ以外は月額サブスク。
+  // 金額はこの宣言から導出する。ここ1行を変えると金額・法務文面・画面表記・
+  // 決済セッションの mode が同時に切り替わる。
+  const CHECKOUT_MODE = "subscription";
+  const IS_ONE_TIME = CHECKOUT_MODE === "payment";
+  const PACK_PRICE_YEN = IS_ONE_TIME ? 3980 : 1980;
   const PRICE_MIN = 290;
-  const PRICE_MAX = 980;
+  const PRICE_MAX = IS_ONE_TIME ? 1980 : 980;
   /** この問題数以下は単品無料 */
   const FREE_SUBJECT_MAX_COUNT = 100;
   /** この問題数以上は単品上限（PRICE_MAX） */
@@ -51,7 +56,7 @@
     },
     "biz-pm-operation": {
       title: "ビジネスキャリア検定（生産管理オペレーション2級・専門知識）",
-      questionCount: 60,
+      questionCount: 295,
     },
     "excel-functions": {
       title: "Excel関数・表計算実務",
@@ -121,6 +126,7 @@
   }
 
   return {
+    CHECKOUT_MODE,
     PACK_PRICE_YEN,
     PACK_TITLE,
     PACK_PRODUCT_NAME,
