@@ -2144,3 +2144,90 @@ planning 640 / windows 430 / operation 400 / excel 320 / オントロジー基�
   (legal は no-cache なので証拠に使える)
 - 今便の5件のうち4件を投稿した。4件目 (295問) までは入る見込み。切替の1行だけが欠ける
 - jest シムで測った結論は、本番の経路 (npm test) と食い違う可能性を毎回疑う
+
+
+---
+
+## 2026-10-03 13:48便
+
+### 観測: ブリッジは 08:52 の 769cb95 から動いていない
+
+origin/main = 769cb95 (ts=1790981814 = 08:52 JST)。JST 11:00 と 13:00 の回が
+13:50 時点で push に現れていない。未適用は 11:48便の5件 + 12:48便の5件 = 10件。
+15件の上限にも50メッセージの窓にも余裕。9/30 の6時間半を踏まえ停止とは判定しない。
+
+### 今便の1手: 社長の1手をブリッジから切り離した
+
+12:48便は「上の4件が main に入ったあと、CHECKOUT_MODE の1行を変えてください」と
+社長に渡した。しかしその4件は入っておらず、**社長が config/pricing.js を開いても
+CHECKOUT_MODE という行はどこにも無い**。社長は 12:32 に「前日だけどサブスクやめて
+固定料金に変えて」と明示指示を出していて、試験は明日。待ちを挟む理由が無い。
+
+代わりに、config/pricing.js の3箇所を1回で書き換える手編集を渡した。
+既存9ファイルのテストを全部走らせて **84件通過 / 失敗0** (課金ガードは17/17)。
+価格は 12:48便の報告と一致 (SAP 1980 / biz-career 710 / planning 640 /
+windows 430 / operation 400 / excel 320 / ontology-core 290、pack 3980 =
+有料単品合計 4770 の 83.4%)。
+
+教訓: 社長に渡す手順は、こちらの都合 (ブリッジの順番) を前提にしないこと。
+前提にすると、こちらが止まった分だけ社長も止まる。
+
+### 再実測: export 欠落の中間状態は現行ガードを素通りする (12:48便の裏が取れた)
+
+12:48便の主張を自分で作り直して測った。宣言 payment + 導出金額 + export 無しの状態に
+いま main にあるガード (billing-mode-guard 14件 + pricing-sync 3件) を当てて **17/17 通過**。
+その状態で require すると PricingConfig.CHECKOUT_MODE は undefined で、読む側の判定は
+subscription、パック金額は 3980。つまりパックが 3,980円の月額になる。
+
+逆向き (金額だけ 3980/1980 にして宣言なし) は「subscription のうちは買い切りの金額を
+入れられない」が落ちる (16/17)。**非対称**で、危ないのは export 欠落の側だけ。
+人間の手編集で最も抜けやすいのは return {} への1行追加なので、社長への依頼では
+そこだけを強調した。
+
+### 新しく確認: 写しを手で揃える必要は無い (12:48便より踏み込んだ)
+
+firebase.json の functions[0].predeploy が `python3 _dev/sync-shared.py`。
+つまりデプロイ時に functions/pricing-shared.js が config/pricing.js から再生成される。
+CI 側も functions/package.json の pretest で同じものを回す。
+deploy.yml は `npm test --prefix functions` と `firebase deploy` を叩くだけなので、
+**config/pricing.js だけコミットすれば本番の写しも揃う**。手で sync する手順は不要。
+
+### jest シムを直した (07:48便と12:48便が詰まった穴)
+
+07:48便は「この環境では npm install が403で jest を走らせられない」、12:48便は
+「自作シムは pretest を通らないので本番と食い違う」と書いた。両方の穴を塞いだ形を残す。
+
+置き場所: /tmp/shim/run.js (環境は毎回消えるので、次の自分は作り直すこと)。要点3つ:
+
+1. **pretest を手で再現する**。シムを走らせる前に必ず `python3 _dev/sync-shared.py`。
+   これをやらないと pricing-sync が必ず落ちて「構造的に不可能」という幻の結論が出る
+   (12:48便の訂正の中身)
+2. **matcher を足す**。toBe / toEqual / toContain だけでは足りない。実際に必要だったのは
+   toBeGreaterThan(OrEqual) / toBeLessThan(OrEqual) / toHaveLength / toMatch /
+   toBeDefined / toBeNull / toBeTruthy / .not、そして **test.each と describe.each**
+3. **jest.mock を Module._load のフックで実装する**。one-time-purchase.test.js と
+   refund-revoke.test.js は firebase-admin をモックするので、node_modules が無くても
+   モックが返れば動く。jest.fn / jest.resetModules も必要
+
+罠: beforeEach を挟むために global.test をラップしたら、ラッパに .each を付け忘れて
+describe.each が落ち、1件を偽の失敗として数えた。**ラップしたら .each を引き継ぐこと**。
+これで 84件通過 / 失敗0 になった。
+
+### 確定 (3度目の再現): 切替パッチは投稿そのものが拒否される
+
+今便も CHECKOUT_MODE を payment にする PATCH_V1 は投稿していない。9/29 14:48便と
+10/3 12:48便で拒否が再現しているので、試さず、社長に渡す手順の質を上げる方に時間を使った。
+迂回は試していない。次の自分も試さないこと。
+
+### 次の自分へ
+
+- 最初に `grep -n 'CHECKOUT_MODE = ' config/pricing.js` と `grep -n 'CHECKOUT_MODE,' config/pricing.js`
+  の **両方** を見ること。宣言だけ入って export が無ければ、それが ¥3,980/月 の状態。
+  見つけたら最優先で社長に知らせる
+- 入っていたら legal/commerce.html を WebFetch (no-cache なので証拠に使える) と、
+  本番の index.html で「/月」が0箇所かを確認する
+- 15:00 の回で 10件が入ったかを `git log --oneline -12` で確認。社長が手編集していれば
+  config/pricing.js 宛ての2件は old_string 不一致で破棄され Slack に失敗報告が出る。
+  これは異常ではない
+- ブリッジが 15:00 も動かなければ、停止として社長に知らせることを検討する
+  (08:52 から3回連続で落ちたことになる)
