@@ -1925,3 +1925,125 @@ admin/reports.html から admin-x-schedule.js が読まれ、日付ごとの上�
   目視だけだった担保が CI に変わる。入ったかは `git log --oneline -5` で確認
 - 社長への問いは増やしていない。未回答は変わらず1件 (04:48便: 本番が最新に戻ったのは
   手で流されたからか、勝手に出たからか)
+
+---
+
+## 2026-10-03 11:48便
+
+### 社長から2件 (11:07)
+
+1. 「銀行振り込みとかはなくて良いよ」 → 10:48便の依頼 (Stripe に
+   `checkout.session.async_payment_succeeded` を追加) は不要。コンビニ払い・銀行振込を
+   有効にしないなら発火しない。10:48便で出した手順書とテストはそのまま残してよい
+   (コードの switch が分岐している以上、手順書と一致している方が正しい)。未回答の問いは0件に戻った
+2. 「オペレーションの問題数変わってるから反映しといて。定期的に変わると嬉しいんだけどね」 → 今便の仕事
+
+### 実測: マスタ10科目の問題数 (2026-10-03 11:50 時点、公開URLを直接読んだ)
+
+| 科目 | マスタ実数 | updatedAt | ハードコード | 判定 |
+|---|---|---|---|---|
+| sap | 4951 | 2026-09-14 | 4951 | 一致 |
+| windows-shortcuts | 341 | 2026-10-01 | 341 | 一致 |
+| biz-career | 823 | 2026-09-21 | 823 | 一致 |
+| biz-pm-planning | 694 | 2026-09-21 | 694 | 一致 |
+| **biz-pm-operation** | **295** | **2026-10-01** | **60** | **ズレ** |
+| excel-functions | 150 | 2026-09-21 | 150 | 一致 |
+| outlook-mail | 100 | 2026-10-01 | 100 | 一致 |
+| teams-collab | 95 | 2026-09-21 | 95 | 一致 |
+| ai-ontology-intro | 60 | 2026-09-21 | 60 | 一致 |
+| ai-ontology-core | 107 | 2026-09-21 | 107 | 一致 |
+
+ズレは1科目だけ。取得先は `<https://gakusyu-dojo.web.app/subjects/<id>/catalog.js>` と
+`<https://sap-dojo.web.app/data/catalog.js`。**この環境では> curl がプロキシに403で止められる。
+WebFetch なら読める。** 次の自分へ: 毎便この表を測り直すのは安い。ズレたら気づける。
+
+### 断定を1つ取り消した: 本番の画面はすでに295問と出ている
+
+「サイトに60問と出ている」と報告しかけて、先に表示経路を読んだ。
+`js/screens-subjects.js:358` と `js/screens-mypage.js:55` は `SubjectCatalog.getQuestionCountSync`
+を使う。これはマスタの catalog.js をライブで読むので、**問題数の表示は今日すでに295**。
+ハードコードの60が効いているのは問題数の表示ではなく**価格**だけだった。
+295問の単品価格は¥340 (`priceForQuestionCount(295)` を実行して確認)。
+いまオペレーション専門は、295問あるのに¥0 = 全問無料として扱われている。
+
+### 今便の1手: 決済が問題数を見に行く先に2科目が抜けていた
+
+`functions/subject-catalog.js` の `SUBJECT_CONTENT_URLS` は8件。`SUBJECT_CATALOG` は10件。
+**biz-pm-planning と biz-pm-operation が無い**。無いと `fetchCatalogCount` は
+`fallbackCount` に落ちて `pricing-shared.js` のハードコードを使う。
+つまりマスタ側で問題数が増えても、決済はそれを知らない。
+2026-09-24 に planning で「表示430円 / 決済340円」が起きたのと同じ型の穴。
+2件足した。これで決済はマスタの増減を10分 (CACHE_TTL_MS) 以内に自動で追う。
+`functions/__tests__/catalog-urls.test.js` で `SUBJECT_CATALOG` と
+`subjects/registry.js` の contentBase に双方向で突き合わせる (修正前の状態で1件落ちるのを確認)。
+
+### 新しい制約 (重要): 2ファイルが同時に動く変更は、ブリッジでは絶対に通せない
+
+`scripts/bridge/apply_patch.py` の `process_patch` は **1件ごとに `run_tests()` を走らせ、
+落ちたらそのパッチを破棄する**。そして `main()` は「成功・失敗にかかわらず処理済みとして
+先に進む」(ts を進める)。再試行はされない。
+
+`config/pricing.js` の問題数を変えると `functions/pricing-shared.js` との間で
+`pricing-sync.test.js` が落ちる。逆順でも落ちる。両方の順序で実際に走らせて確認した:
+
+- A: pricing.js=295 / pricing-shared.js=60 → FAIL → 破棄
+- B: pricing.js=60 / pricing-shared.js=295 → FAIL → 破棄
+
+**つまり問題数のハードコードは、私の手では永久に変えられない。**
+2件出せば2件とも消え、ts が進むので復活もしない。
+同じ罠は「コードと手順書を突き合わせるテスト」(10:48便の webhook-events-doc) の片側を
+直すときにも起きる。pricing-shared.js は `_dev/sync-shared.py` が config/pricing.js から
+生成する写しなので、本来1コミットで動くべき2ファイル。
+
+次の自分へ: **パッチを出す前に「このテストは他のファイルも見ていないか」を確認する。**
+見ているなら、そのパッチは単体では緑にならない。社長に1コミットを依頼するか、
+ハードコードを読まなくて済む形に変えるしかない。
+
+### 単一ファイルで済む代替案 (設計済み・投稿していない)
+
+`js/entitlement.js` だけを触る。ハードコードを「フォールバック」に落とす。
+
+1. `getSubjectPriceYen` は現在 `P.getSubjectPriceYen` (ハードコード) を優先し、
+   ライブを使うのは `CURRENT_SUBJECT.id === subjectId` のときだけ (138行目付近)。
+   これを「`resolveQuestionCount` が0より大きければ常にそれを使う」に変える
+2. `isFreeSubject` は `P.isSubjectFree` で短絡している (118行目)。この短絡を外し、
+   `getSubjectPriceYen(subjectId) === 0` だけで判定する
+
+マスタが落ちていれば `getQuestionCountSync` はハードコードに落ちるので、
+**失敗方向は「無料になる」= 誰も不当に拒否されない**。安全な向き。
+これを入れると2つのハードコードは価格に効かなくなり、社長の「定期的に変わると嬉しい」が
+人手なしで満たされる。順序の制約: `functions/subject-catalog.js` が main に入る前に
+これだけ入ると、画面は¥340と出すのに決済は `fallbackCount`=60 → 価格0 →
+`getPlanLineItemLive` が null → 「この問題集は無料のため購入できません」で買えなくなる。
+**必ず subject-catalog.js の後に出すこと。**
+
+投稿しなかった理由: これを入れるとオペレーション専門が**無料から¥340の有料科目に変わる**。
+試験前日の今日、直前に詰めている受験者が1日20問で止まる。
+値付けの判断は社長のものなので聞いた (今便の依頼1件)。
+
+### 観測: 表示と請求のズレは、いまはキャッシュTTLの差だけになる
+
+クライアントは sessionStorage に6時間 (`js/subject-catalog.js` の CACHE_TTL_MS)、
+サーバはメモリに10分 (`functions/subject-catalog.js`)。マスタの問題数が
+価格の段 (10円刻み) をまたいで変わった直後は、最大6時間、表示と請求が違いうる。
+今日の時点で実害は無い (ズレは1科目で、その科目はまだ無料扱い)。設計として残す。
+
+### ブリッジの容量の実数 (推測で書かないために読んだ)
+
+- `MAX_PATCHES_PER_RUN` は `apply_patch.py` の既定が **5**。15になっているのは
+  `.github/workflows/apply_patch.yml:34` が env で上書きしているから。プロンプトの「15」は
+  ワークフロー経由で正しい
+- `patches[:15]` で切ったあと `save_state` は**15件目の ts しか記録しない**ので、
+  16件目以降は失われず次の回に回る
+- 11:48時点の未適用は11件 (08:48の3件 + 09:48の4件 + 10:48の4件)。
+  JST 13:00 の回で埋まるのは残り4枠。今便は5件出したので、学習ログ(5件目)は 15:00 に回る
+- `discard_changes()` の `git clean` 対象は docs js css functions scripts subjects config。
+  **guides/ が入っていない**ので、guides/ の新規ファイルがテストで落ちると
+  ランナー上に残る (ワークスペースは使い捨てなので実害は無いが、覚えておく)
+
+### 次の自分へ
+
+- 12:48便: `git log --oneline -5` で `functions/subject-catalog.js` と
+  `catalog-urls.test.js` が main に入ったか確認する。入っていれば、社長の回答次第で
+  `js/entitlement.js` の1件を出す (上の設計そのまま、順序の制約は解消済み)
+- 社長への依頼・問いは1件 (下の「依頼」)。未回答の問いは他に無い
