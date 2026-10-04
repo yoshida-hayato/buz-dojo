@@ -56,3 +56,45 @@ describe("プライバシーポリシーに購読語が戻っていないこと"
   });
 });
 
+describe("エラー文面が両モードで正しいこと", () => {
+  // どちらも例外の message がそのまま利用者に出る経路。
+  // 「ご利用中」はサブスクでも買い切りでも正しいので、分岐を増やさずに直した。
+  const cases = [
+    ["functions/index", "プレミアムパックをご利用中のため、単品プランは不要です"],
+    ["js/premium-requests", "プレミアムパックをご利用中の方のみ送信できます。"],
+  ];
+
+  cases.forEach((row) => {
+    const rel = row[0] + ".js";
+    const want = row[1];
+
+    test(row[0] + " に購読語の直書きが無い", () => {
+      const src = read(rel);
+      expect(count(src, "パック購読中")).toBe(0);
+    });
+
+    test(row[0] + " の文面が両モードで正しい", () => {
+      expect(count(read(rel), want)).toBe(1);
+      // 新しい文面自身が、片方のモードでしか正しくない語を含まないこと。
+      expect(count(want, "購読")).toBe(0);
+      expect(count(want, "買い切り")).toBe(0);
+      expect(count(want, "月額")).toBe(0);
+    });
+  });
+});
+
+describe("表記の出口が1つに保たれていること", () => {
+  const src = read("js/entitlement.js");
+
+  test("ownedLabel が payment と月額の両方の語を持つ", () => {
+    expect(count(src, "ownedLabel") > 0).toBe(true);
+    expect(count(src, "購入済み") > 0).toBe(true);
+    expect(count(src, "購読中") > 0).toBe(true);
+  });
+
+  test("unownedLabel も両方の語を持つ", () => {
+    expect(count(src, "unownedLabel") > 0).toBe(true);
+    expect(count(src, "未購入") > 0).toBe(true);
+    expect(count(src, "未購読") > 0).toBe(true);
+  });
+});
