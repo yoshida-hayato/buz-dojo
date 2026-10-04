@@ -116,13 +116,19 @@ const Entitlement = (function () {
     return priceForQuestionCount(n);
   }
 
+  // 無料かどうかも、金額と同じ出どころで決める。
+  // P.isSubjectFree は config/pricing.js の静的な問題数だけを見るので、
+  // これを先に見ると、静的値が100以下で catalog.js が100超の間だけ
+  // 「画面には金額が出ているのに、無制限で無料」になる (収入の穴)。
+  // 静的値は、catalog.js も静的値も取れないときの最後の落ち先にとどめる。
   function isFreeSubject(subjectId) {
     if (!subjectId) return false;
-    if (P && typeof P.isSubjectFree === "function" && P.isSubjectFree(subjectId)) {
-      return true;
-    }
     const yen = getSubjectPriceYen(subjectId);
-    return yen === 0;
+    if (yen != null) return yen === 0;
+    if (P && typeof P.isSubjectFree === "function") {
+      return P.isSubjectFree(subjectId) === true;
+    }
+    return false;
   }
 
   function loadUsage() {
