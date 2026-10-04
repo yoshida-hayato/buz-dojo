@@ -125,3 +125,66 @@ describe("受付期間の両端 (後期)", () => {
   });
 });
 
+describe("受付期間の両端 (前期)", () => {
+  test("開始の前日は何も出さない", () => {
+    expect(noteOn("2026-04-19")).toBe("");
+  });
+
+  test("開始の当日から受付中が出る", () => {
+    expect(noteOn("2026-04-20")).toBe(
+      "ビジキャリ申込受付中。申込は7/10まで、試験は10/4"
+    );
+  });
+
+  test("終了の当日まで出る", () => {
+    expect(noteOn("2026-07-10")).toContain("申込は7/10まで");
+  });
+
+  test("終了の翌日は何も出さない", () => {
+    expect(noteOn("2026-07-11")).toBe("");
+  });
+});
+
+describe("対象の科目", () => {
+  test("生産管理系の3科目に出る", () => {
+    for (const id of ["biz-career", "biz-pm-planning", "biz-pm-operation"]) {
+      expect(noteOn("2026-10-05", id)).toContain("申込受付中");
+    }
+  });
+
+  test("ほかの科目には何も出さない", () => {
+    for (const id of ["sap", "excel", "outlook", "teams", "windows"]) {
+      expect(noteOn("2026-10-05", id)).toBe("");
+    }
+  });
+});
+
+describe("一年を通して壊れた字面を出さない", () => {
+  // 定数の足し忘れや日付の計算違いは、負の残り日数や NaN として画面に出る。
+  // 2026-04-01 から 2027-03-31 までの全日を1日ずつ見る。
+  test("365日ぶんの注記に負の数も NaN も出ない", () => {
+    const bad = [];
+    let ms = Date.UTC(2026, 3, 1);
+    for (let i = 0; i !== 365; i++) {
+      const iso = new Date(ms).toISOString().slice(0, 10);
+      ms += 86400000;
+      const note = noteOn(iso);
+      if (note.indexOf("あと-") >= 0) bad.push([iso, note]);
+      if (note.indexOf("NaN") >= 0) bad.push([iso, note]);
+      if (note.indexOf("undefined") >= 0) bad.push([iso, note]);
+    }
+    expect(bad).toEqual([]);
+  });
+
+  test("注記が出る日と出ない日の数が想定どおり", () => {
+    let spoken = 0;
+    let ms = Date.UTC(2026, 3, 1);
+    for (let i = 0; i !== 365; i++) {
+      if (noteOn(new Date(ms).toISOString().slice(0, 10)) !== "") spoken += 1;
+      ms += 86400000;
+    }
+    // 前期の受付82日 + 前期の60日前から当日まで61日
+    // + 後期の受付61日 + 後期の60日前から当日まで61日 = 265日
+    expect(spoken).toBe(265);
+  });
+});
