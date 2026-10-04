@@ -1506,10 +1506,11 @@ function updateHomeNote() {
 function isFreeQuotaExhausted() {
   if (!CURRENT_SUBJECT || typeof Entitlement === "undefined") return false;
   if (Entitlement.hasAccess(CURRENT_SUBJECT.id)) return false;
-  const priceYen = Entitlement.priceForQuestionCount(
-    typeof QUIZ_DATA !== "undefined" ? QUIZ_DATA.length : 0
+  const priceYen = subjectPriceYenForUi(
+    CURRENT_SUBJECT.id,
+    typeof QUIZ_DATA !== "undefined" && Array.isArray(QUIZ_DATA) ? QUIZ_DATA.length : 0
   );
-  if (priceYen <= 0 || Entitlement.isFreeSubject(CURRENT_SUBJECT.id)) return false;
+  if (priceYen <= 0) return false;
   return Entitlement.remainingFree(CURRENT_SUBJECT.id) <= 0;
 }
 
