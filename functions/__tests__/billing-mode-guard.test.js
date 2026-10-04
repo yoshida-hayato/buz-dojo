@@ -182,6 +182,12 @@ describe("payment に切り替える前に必要なキャッシュ鍵の更新",
 
   test("payment に切り替えるならキャッシュ鍵も動いている", () => {
     if (declaredMode() !== "payment") return;
-    expect(appVersion()).not.toBe(SUBSCRIPTION_ERA_APP_VERSION);
+    // 落ちた人が見るのは GitHub Actions のログ1行だけなので、値ではなく文で
+    // 比べて、その1行に直し方を入れる。2026-10-04 18:48便の実測では、宣言だけを
+    // payment にしたコミットはここ1件で落ち、CI が赤なので自動デプロイも走らない。
+    const stale = appVersion() === SUBSCRIPTION_ERA_APP_VERSION;
+    const todo =
+      "直し方: config/version.js の APP_VERSION を同じコミットで上げる (data/version.js の写しも同じ値に)";
+    expect(stale ? todo : "ok").toBe("ok");
   });
 });
