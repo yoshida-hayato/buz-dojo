@@ -1363,9 +1363,11 @@ function updateHomeNote() {
   const sid = CURRENT_SUBJECT.id;
   const totalQ =
     typeof QUIZ_DATA !== "undefined" && Array.isArray(QUIZ_DATA) ? QUIZ_DATA.length : 0;
-  const priceYen = Entitlement.priceForQuestionCount(totalQ);
+  // 金額と無料判定は、請求と同じ出どころから。
+  // totalQ (読込済みの件数) は catalog に無い科目の落ち先として渡すだけ。
+  const priceYen = subjectPriceYenForUi(sid, totalQ);
   const priceLabel = Entitlement.formatPrice(priceYen);
-  const freeSubject = priceYen <= 0 || Entitlement.isFreeSubject(sid);
+  const freeSubject = priceYen <= 0;
   const packOn =
     Entitlement.getEntitlements && Entitlement.getEntitlements().pack === true;
   const hasAccess = Entitlement.hasAccess(sid);
