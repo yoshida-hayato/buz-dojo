@@ -1312,6 +1312,21 @@ function updateHomeNextMove() {
   }
 }
 
+// 画面に出す単品の金額。請求と同じ出どころ (catalog.js 優先、
+// 取れないときだけ config/pricing.js の静的値) から取る
+// Entitlement.getSubjectPriceYen を先に見る。
+// 読込済みの QUIZ_DATA.length は、科目が catalog に無いときの
+// 最後の落ち先にとどめる。分けないと、科目切替中 (QUIZ_DATA が
+// undefined) に priceForQuestionCount(0) が 0 を返し、有料科目が
+// 0円 = 無料と読まれる。戻り値は円。Entitlement が無いときだけ null。
+function subjectPriceYenForUi(subjectId, loadedCount) {
+  if (typeof Entitlement === "undefined") return null;
+  const resolved = subjectId ? Entitlement.getSubjectPriceYen(subjectId) : null;
+  if (resolved != null) return resolved;
+  const n = Number(loadedCount);
+  return Entitlement.priceForQuestionCount(n > 0 ? n : 0);
+}
+
 function updateHomeNote() {
   const saveEl = $("save-mode-note");
   if (saveEl) {
