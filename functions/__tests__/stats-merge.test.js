@@ -107,3 +107,87 @@ describe("混ぜ方（合算ではなく max と和集合）", () => {
     expect(twice.choiceLog.length).toBe(once.choiceLog.length);
   });
 });
+
+describe("normalizeStats の後方互換と掃除", () => {
+  test("ck が無い古い行は、記述の試行が無ければ k から埋める", () => {
+    const n = normalizeStats({ answered: 1, q: { "sap-1": { a: 3, c: 2, k: 2 } } });
+    expect(n.q["sap-1"].ck).toBe(2);
+  });
+
+  test("ck が無く記述の試行がある行は、選択の習得を 0 にする", () => {
+    const n = normalizeStats({ answered: 1, q: { "sap-1": { a: 3, k: 5, ia: 1 } } });
+    expect(n.q["sap-1"].ck).toBe(0);
+  });
+
+  test("daily は日付の形でない鍵と、回答0の日を落とす", () => {
+    const n = normalizeStats({
+      answered: 1,
+      daily: { "2026-10-01": { a: 2, c: 1 }, "10/1": { a: 9, c: 9 }, "2026-10-02": { a: 0, c: 0 } },
+    });
+    expect(Object.keys(n.daily).length).toBe(1);
+    expect(n.daily["2026-10-01"].c).toBe(1);
+  });
+
+  test("choiceLog は 0 と 1 に正規化される", () => {
+    const n = normalizeStats({ answered: 2, choiceLog: [true, false, 1, 0] });
+    expect(n.choiceLog.join("")).toBe("1010");
+  });
+
+  test("壊れた入力は空の記録になる", () => {
+    expect(normalizeStats(undefined).answered).toBe(0);
+    expect(normalizeStats("x").answered).toBe(0);
+    expect(qSize(emptyStats())).toBe(0);
+  });
+});
+
+describe("statsChanged（書き込むかどうかの判定）", () => {
+  test("q に新しい問題が増えたら真", () => {
+    const before = normalizeStats({ answered: 1, q: { "sap-1": { a: 1 } } });
+    const after = normalizeStats({ answered: 1, q: { "sap-1": { a: 1 }, "sap-2": { a: 1 } } });
+    expect(statsChanged(before, after)).toBe(true);
+  });
+
+  test("同じ問題の試行回数が増えたら真", () => {
+    const before = normalizeStats({ answered: 1, q: { "sap-1": { a: 1 } } });
+    const after = normalizeStats({ answered: 1, q: { "sap-1": { a: 2 } } });
+    expect(statsChanged(before, after)).toBe(true);
+  });
+
+  test("何も増えていなければ偽（無駄な書き込みをしない）", () => {
+    const same = normalizeStats({ answered: 5, correct: 3, q: { "sap-1": { a: 5, c: 3 } } });
+    expect(statsChanged(same, normalizeStats({ answered: 5, correct: 3, q: { "sap-1": { a: 5, c: 3 } } }))).toBe(false);
+  });
+});
+
+describe("buildSummaryPayload（画面に出る数）", () => {
+  const stats = normalizeStats({
+    answered: 9, correct: 6, inputAnswered: 3, inputCorrect: 2,
+    q: {
+      "sap-1": { a: 3, c: 3, k: 2, ck: 2 },
+      "sap-2": { a: 3, c: 1, k: 0, ck: 0 },
+      "sap-3": { a: 3, c: 3, ia: 3, ic: 3, ik: 2 },
+    },
+    daily: { "2026-10-01": { a: 9, c: 6 } },
+  });
+
+  test("選択の習得は ck が2以上の問題の数", () => {
+    expect(buildSummaryPayload(stats, "sap", "a@b.c").masteredChoice).toBe(1);
+  });
+
+  test("記述の習得は ik が2以上の問題の数", () => {
+    expect(buildSummaryPayload(stats, "sap", "a@b.c").masteredInput).toBe(1);
+  });
+
+  test("科目とスキーマ版と宛先が入る", () => {
+    const p = buildSummaryPayload(stats, "biz-career", null);
+    expect(p.subjectId).toBe("biz-career");
+    expect(p.schemaVersion).toBe(2);
+    expect(p.email).toBeNull();
+    expect(p.daily["2026-10-01"].a).toBe(9);
+  });
+
+  test("保存済みの習得数が大きければ、数え直しで減らさない", () => {
+    const withSaved = { ...stats, masteredChoice: 7 };
+    expect(buildSummaryPayload(withSaved, "sap", null).masteredChoice).toBe(7);
+  });
+});
