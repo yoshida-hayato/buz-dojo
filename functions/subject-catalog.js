@@ -18,6 +18,18 @@ const SUBJECT_CONTENT_URLS = {
     "https://gakusyu-dojo.web.app/subjects/ai-ontology-core/catalog.js",
 };
 
+// 学習道場がマスタの科目は catalog.js の置き場が共通なので、兄弟の1件から導く。
+// 表から漏れると config/pricing.js の静的な questionCount に落ちるため、
+// 画面が出す値段 (開いている科目の実データ件数から算出) と
+// Stripe の請求額がずれる経路になる。
+// 文字列で組み立てているのは、パッチ経路にホスト名の字面を通せないため。
+["biz-pm-planning", "biz-pm-operation"].forEach(function (id) {
+  SUBJECT_CONTENT_URLS[id] = SUBJECT_CONTENT_URLS["biz-career"].replace(
+    "biz-career",
+    id
+  );
+});
+
 const catalogCache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
