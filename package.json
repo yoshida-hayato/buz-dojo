@@ -5,6 +5,7 @@
   "scripts": {
     "test:rules": "firebase emulators:exec --only firestore --project buz-dojo-rules-test \"jest firestore-tests\"",
     "test:functions": "npm --prefix functions test",
+    "test:mini": "node scripts/minijest.js",
     "test": "npm run test:functions && npm run test:rules"
   },
   "devDependencies": {
