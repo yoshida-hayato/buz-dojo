@@ -1537,12 +1537,20 @@ function updateStartQuotaGate(exhausted, priceLabel) {
     return;
   }
 
+  // 無料枠切れの案内に出す金額も、請求と同じ出どころ (catalog.js 優先) から
+  // 出す。読込済みの QUIZ_DATA.length を直に見ると、catalog より少ない間
+  // (科目切替中・部分読込・キャッシュが古い間) は priceForQuestionCount(0)
+  // が 0 を返し、formatPrice(0) が「無料」になる。有料科目を止めている
+  // ペイウォールが「単品 無料」と書き、購入ボタンが「購入（無料）」になる。
   const label =
     priceLabel ||
-    (typeof Entitlement !== "undefined"
+    (typeof Entitlement !== "undefined" && CURRENT_SUBJECT
       ? Entitlement.formatPrice(
-          Entitlement.priceForQuestionCount(
-            typeof QUIZ_DATA !== "undefined" ? QUIZ_DATA.length : 0
+          subjectPriceYenForUi(
+            CURRENT_SUBJECT.id,
+            typeof QUIZ_DATA !== "undefined" && Array.isArray(QUIZ_DATA)
+              ? QUIZ_DATA.length
+              : 0
           )
         )
       : "");
@@ -1562,9 +1570,13 @@ function updateStartQuotaGate(exhausted, priceLabel) {
 function showFreeQuotaExhaustedAtStart() {
   let priceLabel = "";
   if (typeof Entitlement !== "undefined" && CURRENT_SUBJECT) {
+    // updateStartQuotaGate と同じ理由で、subjectPriceYenForUi に通す
     priceLabel = Entitlement.formatPrice(
-      Entitlement.priceForQuestionCount(
-        typeof QUIZ_DATA !== "undefined" ? QUIZ_DATA.length : 0
+      subjectPriceYenForUi(
+        CURRENT_SUBJECT.id,
+        typeof QUIZ_DATA !== "undefined" && Array.isArray(QUIZ_DATA)
+          ? QUIZ_DATA.length
+          : 0
       )
     );
   }
