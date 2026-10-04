@@ -125,7 +125,7 @@ function enter(name, parent) {
   };
   suites.push(current);
   global.test = makeTest(current);
-  <http://global.it|global.it> = global.test;
+  global["it"] = global.test;
   return current;
 }
 
@@ -135,7 +135,7 @@ global.describe = function (name, body) {
   body();
   current = parent;
   global.test = makeTest(parent);
-  <http://global.it|global.it> = global.test;
+  global["it"] = global.test;
 };
 global.beforeEach = function (h) { current.before.push(h); };
 global.afterEach = function (h) { current.after.push(h); };
