@@ -91,22 +91,25 @@ const Entitlement = (function () {
     return resolveQuestionCount(subjectId);
   }
 
+  // 表示する金額は、請求額と同じ出どころから出す。
+  // 請求額は functions/subject-catalog.js が master の catalog.js に問い合わせた
+  // 問題数で決まり、取れないときだけ config/pricing.js の静的な値に落ちる。
+  // SubjectCatalog.getQuestionCountSync も同じ順 (catalog.js → 静的値) なので、
+  // これを先に見れば画面と請求が同じ数から出る。
+  // 以前は読込済みの QUIZ_DATA.length を優先していた。あれは master 側で
+  // catalog.js を生成し直すより新しくなることがあり、開いている科目だけ
+  // ボタンの金額と Stripe の請求額がずれる経路だった。
   function getSubjectPriceYen(subjectId) {
+    if (
+      typeof SubjectCatalog !== "undefined" &&
+      typeof SubjectCatalog.getQuestionCountSync === "function"
+    ) {
+      const live = Number(SubjectCatalog.getQuestionCountSync(subjectId));
+      if (live > 0) return priceForQuestionCount(live);
+    }
     if (P && typeof P.getSubjectPriceYen === "function") {
       const catalogYen = P.getSubjectPriceYen(subjectId);
-      if (catalogYen != null) {
-        const live = resolveQuestionCount(subjectId);
-        // カタログとライブが大きくズレないよう、読込済みならライブ優先
-        if (
-          live != null &&
-          typeof CURRENT_SUBJECT !== "undefined" &&
-          CURRENT_SUBJECT &&
-          CURRENT_SUBJECT.id === subjectId
-        ) {
-          return priceForQuestionCount(live);
-        }
-        return catalogYen;
-      }
+      if (catalogYen != null) return catalogYen;
     }
     const n = resolveQuestionCount(subjectId);
     if (n == null) return null;
