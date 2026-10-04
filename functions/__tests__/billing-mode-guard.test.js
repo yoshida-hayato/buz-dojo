@@ -152,3 +152,36 @@ describe("payment に切り替える前に必要な表記", () => {
     expect(read("js/entitlement.js")).toContain("CHECKOUT_MODE");
   });
 });
+
+// 配線も表記も正しくても、再訪ユーザーのブラウザは config/version.js の
+// APP_VERSION を鍵にして js/css/config を1年 immutable で握り続ける。
+// 宣言だけ payment に動かすと、戻ってきた人には月額の金額と月額の決済経路が
+// 出たままになる。受入チェックリストの節0は URL 直打ちなので、この状態でも通る。
+// だから「切替の日に鍵も動いていること」をここで要求する。
+//
+// 鍵を先に動かしてから宣言を動かす順なら、どちらのパッチも落ちない。
+// 逆順にすると宣言のパッチだけが落ち、理由がこの1件で分かる。
+const SUBSCRIPTION_ERA_APP_VERSION = "2026-10-04-v1";
+
+function appVersion() {
+  const src = read("config/version.js");
+  const key = "APP_VERSION = ";
+  const i = src.indexOf(key);
+  if (i < 0) return "";
+  const q1 = src.indexOf('"', i);
+  if (q1 < 0) return "";
+  const q2 = src.indexOf('"', q1 + 1);
+  if (q2 < 0) return "";
+  return src.slice(q1 + 1, q2);
+}
+
+describe("payment に切り替える前に必要なキャッシュ鍵の更新", () => {
+  test("APP_VERSION が1つだけ読み取れている", () => {
+    expect(appVersion().length).toBeGreaterThan(3);
+  });
+
+  test("payment に切り替えるならキャッシュ鍵も動いている", () => {
+    if (declaredMode() !== "payment") return;
+    expect(appVersion()).not.toBe(SUBSCRIPTION_ERA_APP_VERSION);
+  });
+});
