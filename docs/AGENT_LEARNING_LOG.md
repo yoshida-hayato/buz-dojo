@@ -3900,3 +3900,71 @@ statsChanged 3件、buildSummaryPayload 4件。
   テストの置き方(字面か、評価して global から取るか)を先に決めること
 - 21:17 の回で今便の4件と待っている6件の成否を見る。無音なら2回連続の見送り
 - 社長の手作業は3つのまま: サンドボックス webhook へ2件追加 / 切替の2行 / sk-live
+
+---
+
+## 2026-10-04 20:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### 新しい制約: npm install が 403 で通らない便がある
+
+今便は npm install が <http://registry.npmjs.org|registry.npmjs.org> に 403 で弾かれ、jest が手元に無かった。
+過去の便は件数を測れていたので、便ごとに違う。
+代わりに最小の jest シム(describe / test / test.each / expect の toBe・toBeNull・
+toContain / jest.resetModules だけ)を scratch に書き、新しいテストファイル1本を
+node で走らせた。次の自分へ: 403 の便は「そのファイル単体はシムで通った、
+リポジトリ全体の件数は測っていない」と報告に明記すること。シムは jest.mock も
+toEqual も持たないので、既存テストの大半はこの方法では走らない。
+
+### 今便の1手: 表示金額と請求額が、別々の数から出ていた
+
+js/entitlement.js の getSubjectPriceYen は、開いている科目(CURRENT_SUBJECT)
+だけ読込済み QUIZ_DATA.length から金額を出していた。請求額は
+functions/subject-catalog.js が master の catalog.js の questionCount から出す。
+catalog.js は master 側の生成物(自動生成: sync-catalog.js、updatedAt 2026-10-01)
+なので、生成し直す前に問題が増減すると、この1経路だけ金額がずれる。
+少なく出れば、画面の表示より高い額を請求する側に倒れる。
+直し: SubjectCatalog.getQuestionCountSync を先に見る。これは catalog.js →
+静的値の順で、サーバの fetchCatalogCount と同じ落ち方をする。
+
+実測(シム): 新しいテスト20件は全通過。QUIZ_DATA.length 優先に戻すと12件落ち、
+読込済みが catalog より37件多いだけで windows-shortcuts 350/360、biz-career
+460/470、biz-pm-planning 430/440、biz-pm-operation 340/350 と請求/表示がずれた
+(いまの月額の傾き。買い切りでは上限が 1980 なので傾きは約2.4倍)。
+既存の字面ガード(billing-mode-guard の CHECKOUT_MODE、subscription-wording-guard
+の ownedLabel/unownedLabel)は今便の書き換え後も満たしている。
+
+### 観測: master の catalog.js 10件は、静的値と完全一致
+
+sap 4951 / windows-shortcuts 341 / biz-career 823 / biz-pm-planning 694 /
+biz-pm-operation 295 / excel-functions 150 / outlook-mail 100 / teams-collab 95 /
+ai-ontology-intro 60 / ai-ontology-core 107。
+17:48便の請求額の表は、いまの master と合っている。
+
+### 観測: 本番は 10/5 の申込受付をもう配っている
+
+本番の js/screens-subjects.js に since 2026-10-05 / until 2026-12-04 /
+examDate 2027-02-14 が現に入っている。明日の朝から注記が出る。
+
+### 測れなかったこと
+
+QUIZ_DATA.length の実際の値は測れていない。WebFetch は大きい questions.js を
+途中で切る(biz-pm-operation は102問目で切れた)。curl は使えない。
+だから「現にずれているか」は未確認で、直したのは経路のほう。
+もう1つ残っている: isFreeSubject は静的値を見る P.isSubjectFree を先に見るので、
+静的100・ライブ101 のとき「無料扱いなのに金額が出る」状態になる。
+いま全科目一致なので実害なし。次の候補。
+
+### 次の自分へ
+
+- 21:17 の回で今便の3件が入ったか見る。順番はコード→テスト→ログ。
+  逆順にするとテストだけ落ちるので、投稿順を変えないこと
+- ブリッジが最後に走ったのは 17:31。19:17 は無音。21:17 も無音なら窓の話を通知
+- 社長への未回答: 本番の STRIPE_SECRET_KEY が sk_test のままか(18:48便の質問)
