@@ -4023,3 +4023,92 @@ community discussion 207346 に、2026-08-27 以降 schedule の起動が1日0�
 - 社長に出した提案: 外部 cron から workflow dispatch を叩く形に替える。
   細粒度 PAT を第三者の cron サービスに置くことになるので、そこは社長の判断
 - 社長の未回答: 本番の STRIPE SECRET KEY が sk test のままかどうか (18:48便から)
+
+
+---
+
+## 2026-10-04 23:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### 観測: main は 17:31 の fbc4a6d から6時間20分動いていない。23:17 も無音
+
+未適用は14件。今便のこの1件で15件。1回の上限が15件なので、社長が Run workflow を
+1回押せばちょうど全部入る。だから今便はこのログ1件だけで、報告もコードも出していない。
+
+22:48便の「夜は黙る」に1件だけ足した理由は、窓の実数を数えたから。最古の未適用は
+上から19件目で、読み取り窓は50件。1件足して20件目、残り30枠。窓が理由で失うものは無い。
+次の自分へ: いま15件で上限にちょうど乗っている。ドレインするまで1件も出さないこと。
+
+### 今便の1手: 無料判定に、20:48便の金額の修正では閉じなかった穴が残っていた
+
+20:48便は getSubjectPriceYen を直して、表示金額を請求と同じ出どころ
+(catalog.js、取れなければ静的値) から出すようにした。それでも
+Entitlement.isFreeSubject は config/pricing.js の静的な問題数だけを見る
+P.isSubjectFree を先に見て、真なら即座に無料を返す。静的値が100以下で
+catalog.js が100超の間、画面は金額を出し、同時に無制限で無料になる。
+
+未適用14件を手元で順に当てた状態 (社長がボタンを押した後の main) で実測した。
+静的100 / 実データ400 のとき getSubjectPriceYen は360を返し、isFreeSubject は真、
+hasAccess は購入なしで真。開いている科目でも、開いていない科目でも同じだった。
+
+### この穴は、いまちょうど1問ぶんの距離にある
+
+公式の catalog.js を読んだ。outlook-mail は実データ100・静的100、
+teams-collab は95・95、ai-ontology-intro は60・60。無料のしきい値は100。
+つまり社長が学習道場で outlook-mail に1問足した瞬間、catalog.js は101になり、
+290円の有料科目になるべきところが、sync-catalog.js を走らせて buz に入るまで
+無制限で無料のまま、画面には290円と出る。収入の穴としてはこれが最短の経路。
+
+### 用意した直し (次の自分はこれをそのまま出せる)
+
+path は js/entitlement.js。置換前は現在の isFreeSubject の宣言から閉じ括弧までの
+8行 (手元の grep でちょうど1回)。置換後は理由のコメントと、この本体。
+
+    function isFreeSubject(subjectId) {
+      if (!subjectId) return false;
+      const yen = getSubjectPriceYen(subjectId);
+      if (yen != null) return yen === 0;
+      if (P && typeof P.isSubjectFree === "function") {
+        return P.isSubjectFree(subjectId) === true;
+      }
+      return false;
+    }
+
+静的値は、catalog.js も静的値も取れないときの最後の落ち先だけにする。知らない科目は
+金額が null になり P.isSubjectFree も偽なので、直す前と同じく有料扱い (ロック) のまま。
+無料に倒れる向きは増やしていない。4つの場合で実測して、狙った通りに変わった。
+
+### 測れた数字: 149件、通過149・失敗0。ただしこの穴を見張るテストは0件
+
+jest は npm が403で入らないので、最小の実行器を書いて走らせた。対象は
+firebase-admin のモックが要らない11本 (billing-mode-guard 17、
+subscription-wording-guard 12、price-source-consistency 20、pricing-sync 3、
+exam-countdown 7、bizcareer-application-period 18、x-exam-notice 27、
+price-table-doc 9、ほか)。直す前も直した後も149件通過・0失敗。
+つまり既存のテストはこの穴を1件も見ていない。20:48便の20件も素通りする。
+
+次の自分は、直しと一緒にテストを置くこと。形は、静的値と catalog.js を食い違わせた
+vm のコンテキストで isFreeSubject と hasAccess を見るもの。境界は100と101の両側、
+開いている科目と開いていない科目、知らない科目。
+
+### 仕組みについて2つ
+
+1. vm のコンテキストから const は取り出せない (15:48便の既知) が、同じコンテキストで
+   runInContext に式を1つ渡せば値は取れる。Entitlement という式を評価するだけでよい。
+   js/entitlement.js のような IIFE をテストするときはこの手を使う
+2. 自作の実行器は非同期のテストを待たない。subject-content-urls の69行目は async で、
+   通過数に入らず後からスタックだけ出る。数えるときは対象から外すこと
+
+### 次の自分へ
+
+- 未適用が15件で上限にちょうど乗っている。ドレインまで投稿0件
+- ドレインしたら、上の直し1件とテスト1件を出す。順序はどちらでもよい (交差しない)
+- 社長の手作業は3つのまま: サンドボックス webhook 2件 / 宣言1語 / デプロイ
+- 今日も CHECKOUT-MODE は subscription。本番はまだ月額のまま
