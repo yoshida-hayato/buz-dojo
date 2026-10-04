@@ -4179,3 +4179,98 @@ null <= 0 が真なので、知らない科目が無料扱いになる。今便�
 - 社長の未回答: 本番の STRIPE SECRET KEY が sk test のままかどうか (18:48便から)
 - 社長の手作業は3つのまま: サンドボックス webhook 2件 / 宣言1語 / デプロイ
 - 今日も CHECKOUT-MODE は subscription。本番はまだ月額のまま
+
+
+---
+
+## 2026-10-05 01:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### 観測: 01:17 は無音。遠隔の main は 00:12 の 570d685 のまま
+
+未適用は00:48便の3件。今便で5件足して8件。上限15件まで余裕がある。
+21:48便が持ってきた「GitHub 側の schedule 起動が1日0〜2回に落ちている」と
+整合する。00:09 の1回が入ったので、次は数時間後と見ておく。
+
+### 今便の1手: 金額の出どころの穴は、画面側に1層残っていた
+
+20:48便は js/entitlement.js の getSubjectPriceYen を、00:48便は isFreeSubject を
+catalog.js 優先 (= 請求と同じ) に直した。しかし js/screens-subjects.js の2か所は
+そのどちらも通っていなかった。1351行目 (updateHomeNote) と 1492行目
+(isFreeQuotaExhausted) が、Entitlement.priceForQuestionCount(QUIZ_DATA.length) を
+直に呼んでいた。00:48便が次の候補として挙げた screens-subjects.js の
+null <= 0 を見に行って、呼び出しの引数がそもそも別の出どころだと分かった。
+
+次の自分へ: ある層を直したら、同じ値を使う層を grep で全部数えること。
+20:48便と00:48便は entitlement.js の中だけを見て「直した」と書いている。
+その関数を通らない呼び出しが2か所あったので、穴は閉じていなかった。
+
+### なぜ 0 が危ないのか (推測ではなく読んだ)
+
+- config/pricing.js の priceForQuestionCount(0) は、count <= 100 で 0 を返す
+- js/subject-loader.js の clearGlobals() は loadSubject の冒頭で
+  window.QUIZ_DATA = undefined にする。科目を切り替えるたびに通る
+- 画面側は 0円 を「無料」と読む (priceYen <= 0)。つまり科目切替中は
+  有料科目でも全問無料になり、開始ボタンの無料枠ゲートも外れる
+- catalog.js の件数と読込済みの件数がずれたときも、画面の金額だけがずれる。
+  sync-catalog.js を走らせる前の窓が、ここでもう一度効いていた
+
+### 実測 (vm で画面側を評価した)
+
+有料科目 (catalog 400問) で無料20問を使い切り、QUIZ_DATA を undefined にする。
+直す前は isFreeQuotaExhausted() が false、つまりゲート無し。直した後は true。
+金額は、直す前は 0、直した後は 360。知らない科目は、直す前と同じく読込済みの
+件数に落ちる (0件なら 0円) ので、無料に倒れる向きは増やしていない。
+
+### 直しの形: 判断を1つの関数に寄せた
+
+subjectPriceYenForUi(subjectId, loadedCount) を1つ置き、2か所から呼ぶ。
+Entitlement.getSubjectPriceYen を先に見て、null のときだけ読込済みの件数に落ちる。
+同じ判断が2か所に散っていたのがこの穴の形なので、散らしたまま両方直すのはやめた。
+パッチは3件に分けた (関数を置く / 呼び出し1 / 呼び出し2)。どの1件が破棄されても
+残りがテストを通る順序にしてある。
+
+### 測れた数字: 207件、通過207・失敗0。直す前は11件のうち8件落ちる
+
+内訳は既存196件 + 今便の11件。00:48便の7件は手元のファイルに無いので入っていない。
+直す前のコードに今便のテストを当てると8件落ちる。うち7件は関数が無いことによる
+落ち方だが、1件 (有料科目で枠を使い切り QUIZ_DATA が undefined のときゲートが
+外れる) は挙動の違いで落ちる。関数の有無ではなく穴を見ているテストが1件ある、
+ということ。次の自分へ: 「直す前に当てたら落ちた」は、落ちた理由まで見ること。
+
+### 自作実行器を3つ拡張した (次の自分はここから始められる)
+
+00:48便の実行器に足したもの。
+
+1. test.each を実装した。rows を回して queue に積むだけ。これが無いと
+   price-source-consistency.test.js が読み込みの時点で TypeError で落ち、
+   そのファイルだけでなく実行器ごと止まる
+2. toBeGreaterThanOrEqual / toBeLessThan / toBeDefined / toMatch /
+   toHaveLength / toThrow / toBeCloseTo と、not.toEqual / not.toBeNull /
+   not.toContain / not.toMatch を足した。足す前は pricing-sync と
+   webhook-events-doc が「matcher が無い」で偽の失敗を10件出していた
+3. screens-subjects.js のような DOM を触る画面スクリプトも、最上位が宣言だけなら
+   vm でそのまま評価できる。関数宣言はコンテキストのプロパティになるので、
+   末尾に式を足さなくても ctx.関数名 で取れる (const は取れない、は既知のまま)
+
+### 同じ系統で、まだ見ていない層
+
+- js/screens-subjects.js の600行目 (科目カードの一覧) は
+  s.priceYen があればそれ、無ければ priceForQuestionCount(total) を使う。
+  total は成績側の問題数で、catalog の件数とは別の出どころ。今便は触っていない
+- 00:48便が挙げた null <= 0 の件は、1351/1492 では解消した。600行目は未確認
+
+### 次の自分へ
+
+- 未適用は8件 (00:48便3件 + 今便5件)。上限15まで7件の余裕
+- 次に手を付けるなら600行目。ただし total の出どころを先に読むこと
+- 社長の未回答: 本番の STRIPE SECRET KEY が sk test のままかどうか (18:48便から)
+- 社長の手作業は3つのまま: サンドボックス webhook 2件 / 宣言1語 / デプロイ
+- 今日も CHECKOUT-MODE は subscription。本番はまだ月額のまま
