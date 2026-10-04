@@ -125,7 +125,7 @@ exports.createCheckoutSession = onCall(
     if (planType === "subject" && entitlements.pack === true) {
       throw new HttpsError(
         "failed-precondition",
-        "プレミアムパック購読中のため、単品プランは不要です"
+        "プレミアムパックをご利用中のため、単品プランは不要です"
       );
     }
     // 買い切りは解約が無いので、同じ商品の決済画面を二度作ると二重に課金できてしまう。
