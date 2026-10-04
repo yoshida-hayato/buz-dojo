@@ -176,10 +176,28 @@ function paintMyPageBilling(billingEl, rows) {
 
   for (const { s, summary, err } of rows) {
     const total = summary ? summary.questionTotal : 0;
+    // 金額は、請求と同じ出どころ (catalog.js 優先、取れなければ
+    // config/pricing.js の静的値) から出す。summary.questionTotal は
+    // buildMyPageRows が catalog の件数で埋めるが、途中で例外が出た行
+    // (err = true) では 0 のまま残る。0 問は priceForQuestionCount(0) で
+    // 0 円 になり、0 円は無料と読まれるので、有料科目に無料問題集・購入不要が
+    // 出て購入ボタンまで消えていた。読込済みの件数は、catalog にも静的値にも
+    // 無い科目の落ち先だけにとどめる。
+    const resolvedYen =
+      typeof Entitlement !== "undefined" &&
+      typeof Entitlement.getSubjectPriceYen === "function"
+        ? Entitlement.getSubjectPriceYen(s.id)
+        : null;
+    // 金額が分からないときは NaN を入れる。null を入れると null <= 0 が
+    // true になって無料側に倒れる。NaN は <= 0 も > 0 も false なので、
+    // 以降の判定がすべて「無料ではない・金額は出さない」に倒れ、
+    // 無料問題集も購入不要も出ず、購入ボタンが残る。
     const priceYen =
-      typeof Entitlement !== "undefined"
-        ? Entitlement.priceForQuestionCount(total)
-        : 0;
+      resolvedYen != null
+        ? resolvedYen
+        : typeof Entitlement !== "undefined" && total > 0
+          ? Entitlement.priceForQuestionCount(total)
+          : NaN;
     const priceLabel =
       typeof Entitlement !== "undefined" ? Entitlement.formatPrice(priceYen) : "";
     const subscribed =
