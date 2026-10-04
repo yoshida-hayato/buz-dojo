@@ -89,3 +89,41 @@ describe("受入チェックリスト節1の請求額の表", () => {
     expect(bad.map(function (r) { return r.id + ":" + r.yen + " want " + payPrice(r.count); })).toEqual([]);
   });
 });
+
+describe("受入チェックリスト節1の請求額の表 (続き)", () => {
+  const rows = rowsOf(docSrc);
+
+  test("式の前提になる定数が config と一致している", () => {
+    expect(pricing.PRICE_MIN).toBe(290);
+    expect(pricing.FREE_SUBJECT_MAX_COUNT).toBe(100);
+    expect(pricing.PRICE_CAP_COUNT).toBe(3000);
+  });
+
+  test("上限と無料の端点が買い切りの式で正しい", () => {
+    expect(payPrice(pricing.PRICE_CAP_COUNT)).toBe(PAY_MAX);
+    expect(payPrice(pricing.PRICE_CAP_COUNT + 1)).toBe(PAY_MAX);
+    expect(payPrice(pricing.FREE_SUBJECT_MAX_COUNT)).toBe(0);
+    expect(payPrice(pricing.FREE_SUBJECT_MAX_COUNT + 1)).toBe(pricing.PRICE_MIN);
+  });
+
+  test("無料科目の行は3件以上あり、どれも無料の上限以下", () => {
+    const free = rows.filter(function (r) { return r.yen === 0; });
+    expect(free.length).toBeGreaterThanOrEqual(3);
+    const over = free.filter(function (r) { return r.count > pricing.FREE_SUBJECT_MAX_COUNT; });
+    expect(over.map(function (r) { return r.id; })).toEqual([]);
+  });
+
+  test("パックの金額と、表が腐ったときの読み方が書かれている", () => {
+    expect(count(docSrc, "プレミアムパックは " + PAY_PACK + " 円")).toBe(1);
+    expect(count(docSrc, "問題数が動けば金額も動く")).toBe(1);
+    expect(count(docSrc, "金額ではなく問題数のほうを先に疑う")).toBe(1);
+  });
+
+  test("切替後は、実際の価格関数と表が一致する", () => {
+    if (pricing.CHECKOUT_MODE !== "payment") return;
+    expect(pricing.PRICE_MAX).toBe(PAY_MAX);
+    expect(pricing.PACK_PRICE_YEN).toBe(PAY_PACK);
+    const bad = rows.filter(function (r) { return pricing.priceForQuestionCount(r.count) !== r.yen; });
+    expect(bad.map(function (r) { return r.id; })).toEqual([]);
+  });
+});
