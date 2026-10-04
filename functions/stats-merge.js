@@ -80,11 +80,24 @@ function mergeDaily(d1, d2) {
   return out;
 }
 
+// 「記録が無い」の判定は answered だけでは足りない。
+// legacy-import.js の入口は「answered === 0 かつ q が空」のときだけ no_data で
+// 止める。つまり「answered は 0 なのに q に行がある」書き出しはここまで流れてくる。
+// それを answered だけで空と見なすと q を丸ごと捨てたうえで statsChanged も偽に
+// なり、取り込み済みフラグだけが立って二度と再取り込みできない (取り込みは
+// 1ユーザー1回きり)。q に行があるなら記録はある。下の本体は totals を max、
+// q を和集合で混ぜるので、どちら側の totals が欠けていても正しく通る。
+function hasAnyRecord(stats) {
+  if (!stats) return false;
+  if ((stats.answered || 0) > 0) return true;
+  return Object.keys(stats.q || {}).length > 0;
+}
+
 function mergeStats(a, b) {
   const left = normalizeStats(a);
   const right = normalizeStats(b);
-  if (right.answered === 0) return left;
-  if (left.answered === 0) return right;
+  if (!hasAnyRecord(right)) return left;
+  if (!hasAnyRecord(left)) return right;
 
   const merged = {
     answered: 0,
