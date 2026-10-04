@@ -50,7 +50,7 @@ const PremiumRequests = (function () {
     const db = getDb();
     if (!db) throw new Error("Firebase が未設定のため送信できません。");
     if (!hasPremiumPack()) {
-      throw new Error("プレミアムパック購読中のみ送信できます。");
+      throw new Error("プレミアムパックをご利用中の方のみ送信できます。");
     }
 
     const user = firebase.auth && firebase.auth().currentUser;
