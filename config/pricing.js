@@ -19,7 +19,7 @@
   // 決済モードの唯一の宣言。payment なら買い切り、それ以外は月額サブスク。
   // 金額はこの宣言から導出する。ここ1行を変えると金額・法務文面・画面表記・
   // 決済セッションの mode が同時に切り替わる。
-  const CHECKOUT_MODE = "subscription";
+  const CHECKOUT_MODE = "payment";
   const IS_ONE_TIME = CHECKOUT_MODE === "payment";
   const PACK_PRICE_YEN = IS_ONE_TIME ? 3980 : 1980;
   const PRICE_MIN = 290;
