@@ -227,6 +227,45 @@ exports.ensureAdminComplimentaryPack = onCall(
   }
 );
 
+// 管理者向け: いま本番で動いている Stripe が test モードか live モードかを返す。
+// 鍵には触らない。Stripe 側が返す livemode を読むだけなので、
+// 鍵の字面も長さも接頭辞も、この口からは一切出ない。
+// 社長が「本番の鍵はまだテストかも。確認してない」と言ってから2週間、
+// 答えが人の手作業に依存したままだった。ここを計器にする。
+exports.getStripeMode = onCall(
+  {
+    region: REGION,
+    secrets: [stripeSecret],
+    cors: true,
+    serviceAccount: SERVICE_ACCOUNT,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "ログインが必要です");
+    }
+    const { COMPLIMENTARY_PACK_EMAILS } = require("./entitlements");
+    const token = request.auth.token || {};
+    const who = String(token["email"] || "").trim().toLowerCase();
+    if (!COMPLIMENTARY_PACK_EMAILS.includes(who)) {
+      throw new HttpsError("permission-denied", "対象外のアカウントです");
+    }
+
+    const api = stripeClient(stripeSecret.value());
+    let livemode = null;
+    let chargeCount = null;
+    try {
+      const balance = await api["balance"]["retrieve"]();
+      livemode = balance && balance["livemode"] === true;
+      const charges = await api["charges"]["list"]({ limit: 10 });
+      chargeCount = (charges && charges["data"] && charges["data"].length) || 0;
+    } catch (err) {
+      console.error("getStripeMode failed:", (err && err.message) || err);
+      throw new HttpsError("internal", "Stripe に問い合わせできませんでした");
+    }
+    return { stripeMode: livemode ? "live" : "test", livemode, chargeCount };
+  }
+);
+
 /** Stripe Customer Portal（解約・カード変更） */
 exports.createPortalSession = onCall(
   {
