@@ -53,6 +53,14 @@ firebase functions:list --project buz-dojo
 
 Stripe Dashboard → Developers → Webhooks → Add endpoint
 
+注意 (2026-10-10 追記): すぐ下の Events の4件は月額時代のリストで、買い切りでは足りない。
+送信対象イベントは、この文書の後半「コードが分岐しているイベント」の節に挙げた全件を入れる。
+4件だけで作ると、買い切りでは subscription の3件が発火しないため、実際に効くのは
+checkout.session.completed の1件だけになる。遅延入金の付与と、全額返金の取り消しと、
+チャージバック確定の取り消しは、署名検証も通り例外も出ずログにも残らないまま走らない。
+既に作成済みのエンドポイントは、送信先を編集 から足せる。編集では署名シークレットは
+変わらない。
+
 - **Endpoint URL:** 上記 `stripeWebhook` の URL
 - **Events:**
   - `checkout.session.completed`
