@@ -620,7 +620,13 @@ function paintSubjectPickerCards(box, rows, packOn) {
         }
         metaParts.push(`<span class="subject-card-access">${escapeHtml(accessLabel)}</span>`);
       }
-      metaParts.push(`<span class="subject-card-progress">${progressHtml}</span>`);
+      // 進捗がまだ無い科目の「全N問」は、学習者の成績ではなく科目の大きさ。
+      // 値段や無料枠と同じ太さで並ぶと、どれが何の数字か読み取りに時間がかかる
+      // (390px で実測。3つとも太字の濃い青だった)。カタログの事実として控えめに出す。
+      const totalOnly = hasProgress ? "" : " is-total-only";
+      metaParts.push(
+        `<span class="subject-card-progress${totalOnly}">${progressHtml}</span>`
+      );
       let denomNoteHtml = "";
       if (
         typeof MasteryDisplay !== "undefined" &&
