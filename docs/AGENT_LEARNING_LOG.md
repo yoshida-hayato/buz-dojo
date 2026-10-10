@@ -7079,3 +7079,101 @@ _dev/tools/jest-run.js は 28ファイル328件を通すが、buy-button-label.t
   無い)。canonical が入ったので、次に効くのは sitemap だが これは社長の手が要る
 - 鍵は sk live。本番は買い切り (CHECKOUT MODE は payment)。chargeCount は0
 - 今便の投稿は4件 (パッチ3 + 報告1)
+
+---
+
+## 2026-10-11 04:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### 今便の1手: 宙に浮いていた admin-stripe-status.js を作り直した
+
+03:48便が「次便で片付けます」と書いた件。admin/reports.html の CORE に
+../js/admin-stripe-status.js への参照だけが入り、本体は 03:42 に2回落ちて
+存在しない状態だった。本体とガードの2件を作り直して出した。
+
+### 落ちた原因が確定した: Slack は「firebase 点 app」をドメインと見る
+
+破棄の理由は slack-autolink-guard が捕まえた js/admin-stripe-status.js:34。
+その行は firebase に続けて 点 app() 点 functions(REGION) を1行で書いていた。
+.app は実在する gTLD なので、Slack は「firebase 点 app」をドメインと判定して
+リンク記法に書き換える。三連バッククォートの中でも起きる。
+
+直し方は既にこのリポジトリの中にあった。js/admin-x-schedule.js は
+firebase / .app() / .functions(...) / .httpsCallable(...) を4行に分けている。
+行をまたぐと「語 点 TLD」の形にならないので Slack は手を出さない。
+js/billing.js:97 は1行に書いてあるが、あれは人の手で入ったファイルである。
+
+次の自分へ: パッチに載せる前に「語 点 既存TLD」を機械で探すこと。
+危ないのは .app .dev .io .ai .co .id .in .is .it .me .sh .so .tv .name .link
+.page .top .run .new など。今便は195行を走査して0件を確かめてから出した。
+slack-autolink-guard は投稿後に main で見つける道具で、投稿前には効かない。
+
+### 新しく分かった仕組みの話: MCP で読んだ本文はパッチの復元に使えない
+
+落ちたパッチを slack_read_channel で拾い直して直す、という手を最初に
+取ったが、拾った中身は原文ではなかった。HTML タグがマークダウンに
+潰されていた。
+
+- 原文の '### ' が '### ' になっていた
+- 対になる '' が '""' (空文字列) になっていた
+
+JSON としては読めるので、そのまま投げれば画面に ### という字が出る。
+気づいたのは 81行目の + "" という宙に浮いた空文字列である。
+
+ブリッジ側は壊れていない。ブリッジは conversations.history の生の本文を
+読むので、HTML タグはタグのまま届く。潰しているのは MCP の整形だけ。
+
+次の自分へ: 落ちたパッチを拾い直すときは、中身をそのまま信じないこと。
+JS と CSS だけのパッチなら 01:48便のやり方 (手元の clone に再生) が効くが、
+HTML タグを含むパッチは MCP 経由では復元できない。書き直すほうが速い。
+
+### 測ったこと
+
+- 実ブラウザ (Chromium + python3 -m http.server) で、admin/reports.html の
+  nav とパネル6枚を写した殻を作り、firebase を差し替えて動かした。
+  タブは7個目として入る / パネルは最初畳まれている / 押すと開いて他の5枚が
+  畳まれる / 口は getStripeMode と getStripeWebhookStatus の2本だけ呼ばれる /
+  別のタブに移ると自分だけ畳まれ is-active も移る / 再読み込みボタンで
+  もう一度呼ばれる。JavaScript のエラーは0件
+- 注入を試した。Stripe から来る url に img と onerror を入れた値を返させたら、
+  img は0個、onerror は走らなかった。esc() を通っている
+- 欠けているイベントの判定を確かめた。charge.dispute.closed だけを外した
+  endpoint で「付与を取り消せません。欠けている: charge.dispute.closed」と出た
+- ガード admin-stripe-status-guard.test.js は7件とも通過。手元の簡易ランナーで
+  29ファイル327通過。残る1件 (buy-button-label の not.toMatch) は
+  _dev/tools/jest-run.js が not.toMatch を実装していないためで、
+  CI の jest では 10/11 03:43 に通って main に入っている
+- node --check を通した。アスタリスクとバッククォートは両ファイルとも0文字
+
+### 遠隔とブリッジの状態 (05:10 時点)
+
+- main の先端は db4532d。03:41-03:44 の定時起動で15件中13件が入った
+- 破棄は3件: JSON が改行で壊れた1件 (01:48便の自覚済み)、
+  admin-stripe-status.js の自動リンク1件、そのガード1件
+- 未適用は 03:48便の3件 + 今便の3件 = 6件。上限15件まで9枠ある
+- 50件の窓: いちばん古い未適用 (03:48便) は上から数えて十分新しい
+
+### 次の自分へ
+
+- まず git ls-remote。db4532d から動いていたら6件が入った
+- 入ったら管理画面 admin/reports.html を社長に開いてもらう前に、
+  本番の js/admin-stripe-status.js を WebFetch して字面が来ているか見る。
+  タブの動きは JavaScript なので WebFetch では読めない
+- 社長の A / B / C (科目一覧 / 解いている画面 / 色と余白と字) の返事が来たら、
+  自分の優先度より社長の返事を先にする
+- 23:48便の残り1件 (無料科目と有料科目でカードの形が違う) が次の候補
+- robots.txt と sitemap.xml はパッチで作れない (.txt と .xml が許可外)。
+  Hosting の設定が要るので社長への依頼に回す
+- 社長の未回答: Search Console に登録済みか / APP VERSION を効かせるか消すか /
+  解析を入れるか文面から外すか / 10/05-10/10 の出社停止は意図的だったか /
+  UI の A B C
+- 鍵は sk live。本番は買い切り (CHECKOUT MODE は payment)。chargeCount は0
+- 今便の投稿は4件 (パッチ3 + 報告1)。携帯通知は出していない。
+  壊れて困るものは無く、社長の判断が要る新しい論点も無く、いまそちらは夜中
