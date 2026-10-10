@@ -450,12 +450,22 @@ body.subjects-screen-active .site-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 10px;
-  line-height: 1.35;
+  gap: 6px 7px;
+  line-height: 1.5;
 }
+/* 値段・無料枠・問題数の3つが同じ太さで並ぶと、どれが何の数字か読み取れない
+   (390px の実測で、3つとも太字の濃い青だった)。性質ごとに見た目を分ける:
+   値段は買う判断の数字なので太く大きく、無料枠は「いまの状態」なので丸い札、
+   問題数は科目の大きさを表すだけなので控えめに。 */
 .subject-card-meta .subject-card-progress {
   font-weight: 700;
   color: var(--sap-blue-dark);
+}
+/* まだ1問も解いていない科目の「全N問」は学習者の成績ではなくカタログの事実。
+   成績 (習得 12/107) と同じ強さで出すと、値段の隣で competing する。 */
+.subject-card-meta .subject-card-progress.is-total-only {
+  font-weight: 500;
+  color: var(--text-muted, #64748b);
 }
 .subject-card-meta .subject-card-progress .mastery-pct-secondary,
 .mastery-pct-secondary {
@@ -469,10 +479,22 @@ body.subjects-screen-active .site-title {
   line-height: 1.5;
   color: var(--text-muted, #475569);
 }
+/* 「本日あと20/20」「全問無料」「購入済み」は、値段でも問題数でもなく、
+   いまこの科目をどこまで解けるかという状態。丸い札にして地の文から切り離す。 */
 .subject-card-meta .subject-card-access {
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
-.subject-card.is-free-entry .subject-card-access {
+.subject-card.is-free-entry .subject-card-access,
+.subject-card-meta .subject-card-access.is-free {
+  background: #dcfce7;
   color: #047857;
 }
 .subject-card-note {
