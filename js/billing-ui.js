@@ -93,7 +93,18 @@ function bindSubjectPurchase(btn, subjectId, priceYen) {
     typeof Entitlement !== "undefined" && Entitlement.ownedLabel
       ? Entitlement.ownedLabel()
       : "購読中";
-  btn.textContent = subscribed ? ownedWord : `購入 ${Entitlement.formatPrice(priceYen)}`;
+  // ボタンに見える字は動詞だけにする。金額を入れると幅の狭い端末で
+  // 「購入 ¥1,980（買い」「切り）」と語の途中で割れる (360 / 390 / 430 / 768 で実測)。
+  // 金額は同じカードの1行上の .subject-card-meta が太字で出しているので、
+  // ボタンから外しても買う直前に金額が見えなくなることはない。
+  // 読み上げソフトにはボタン単体で金額まで要るので aria-label に残す。
+  const priceLabel =
+    typeof Entitlement !== "undefined" && Entitlement.formatPrice
+      ? Entitlement.formatPrice(priceYen)
+      : "¥" + Number(priceYen).toLocaleString("ja-JP");
+  btn.textContent = subscribed ? ownedWord : "購入する";
+  if (subscribed) btn.removeAttribute("aria-label");
+  else btn.setAttribute("aria-label", "購入する " + priceLabel);
   btn.disabled = subscribed;
   btn.onclick = (e) => {
     e.stopPropagation();
