@@ -21,26 +21,48 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
   <script>
     // /sap など科目パス、または前回選択科目があるときはピッカーを見せずローディングから始める
+    // known は科目パスの一覧と、検索結果に出る題と説明の出どころを兼ねる。
+    // 10本の科目URLはすべて同じ index.html が返るので (firebase.json の
+    // rewrites が全パスをここへ送る)、ここで差し替えないと検索エンジンには
+    // 「題も説明も同じページが10枚」として見える。
+    // 題と説明に問題数と金額を書かないこと。あれは master の件数から動くので、
+    // 静的な字面に写すと黙って古くなる。index-html-guard が見張っている。
     (function () {
       try {
         var known = {
-          sap: 1,
-          "windows-shortcuts": 1,
-          "biz-career": 1,
-          "excel-functions": 1,
-          "outlook-mail": 1,
-          "teams-collab": 1,
-          "ai-ontology-intro": 1,
-          "ai-ontology-core": 1,
-          "biz-pm-planning": 1,
-          "biz-pm-operation": 1
+          sap: ["SAP 練習問題 — ビジネス道場", "SAPのTコード、モジュール、伝票処理を択一クイズで確認できます。間違えた問題だけをあとで解き直せます。"],
+          "windows-shortcuts": ["Windowsショートカット 練習問題 — ビジネス道場", "Windowsのキーボードショートカットを、操作の場面ごとの択一クイズで身につけます。"],
+          "biz-career": ["ビジネスキャリア検定 生産管理 共通知識 練習問題 — ビジネス道場", "ビジネス・キャリア検定の生産管理（共通知識）を、択一クイズで分野ごとに演習できます。"],
+          "excel-functions": ["Excel関数・表計算実務 練習問題 — ビジネス道場", "ExcelのVLOOKUPやSUMIFSなど、実務で使う関数と表計算の手順を択一クイズで確認します。"],
+          "outlook-mail": ["Outlookメール実務 練習問題 — ビジネス道場", "Outlookの仕分けルール、予定表、不在設定など、メール実務の操作を択一クイズで確認します。"],
+          "teams-collab": ["Teamsの使い方 練習問題 — ビジネス道場", "Teamsのチャネル運用、会議、ファイル共有の使い分けを択一クイズで確認します。"],
+          "ai-ontology-intro": ["オントロジー入門 練習問題 — ビジネス道場", "クラス、インスタンス、プロパティといったオントロジーの基本語彙を、やさしい択一クイズから始めます。"],
+          "ai-ontology-core": ["オントロジー基礎 練習問題 — ビジネス道場", "RDFやOWLの考え方、関係の向き、推論の初歩を択一クイズで確認します。"],
+          "biz-pm-planning": ["ビジネスキャリア検定 生産管理プランニング専門知識 練習問題 — ビジネス道場", "ビジネス・キャリア検定の生産管理プランニング（専門知識）を、択一クイズで分野ごとに演習できます。"],
+          "biz-pm-operation": ["ビジネスキャリア検定 生産管理オペレーション専門知識 練習問題 — ビジネス道場", "ビジネス・キャリア検定の生産管理オペレーション（専門知識）を、択一クイズで分野ごとに演習できます。"]
         };
         var seg = (location.pathname || "/").split("/").filter(Boolean)[0];
-        var fromPath = seg && known[seg];
+        var hit = seg ? known[seg] : null;
         var fromStore = localStorage.getItem("biz_dojo_selected_subject");
-        if (fromPath || fromStore) {
+        if (hit || fromStore) {
           document.documentElement.classList.add("boot-resume-subject");
         }
+        var setMeta = function (selector, value) {
+          var el = document.querySelector(selector);
+          if (el) el.setAttribute("content", value);
+        };
+        if (hit) {
+          document.title = hit[0];
+          setMeta('meta[name="description"]', hit[1]);
+          setMeta('meta[property="og:title"]', hit[0]);
+          setMeta('meta[property="og:description"]', hit[1]);
+        }
+        // 正典のURLを1本だけ置く。知らないパスは全部トップに寄せる
+        // (rewrites のせいで、どんなパスでもトップの複製が 200 で返るため)。
+        var canonical = document.createElement("link");
+        canonical.setAttribute("rel", "canonical");
+        canonical.setAttribute("href", location.origin + "/" + (hit ? seg : ""));
+        document.head.appendChild(canonical);
       } catch (e) { /* ignore */ }
     })();
   </script>
