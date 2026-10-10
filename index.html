@@ -61,6 +61,7 @@
         // (rewrites のせいで、どんなパスでもトップの複製が 200 で返るため)。
         var canonical = document.createElement("link");
         canonical.setAttribute("rel", "canonical");
+        canonical.setAttribute("id", "canonical-link");
         canonical.setAttribute("href", location.origin + "/" + (hit ? seg : ""));
         document.head.appendChild(canonical);
       } catch (e) { /* ignore */ }
