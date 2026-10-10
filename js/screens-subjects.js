@@ -331,10 +331,13 @@ function enabledSubjectsSorted() {
   if (typeof SUBJECT_REGISTRY === "undefined") return [];
   // じっくり学ぶ（応用・判断）を上、すぐ使える（操作）を下。同帯内は homeFeatured → レジストリ順
   const tierRank = (s) => (s.depthTier === "depth" ? 0 : 1);
-  // 試験が EXAM_LIFT_DAYS 日以内に迫っている科目は最上段へ。過ぎれば自動で元の並びに戻る
+  // 申込受付期間中、または試験が EXAM_LIFT_DAYS 日以内の科目は最上段へ。
+  // 期間が終われば自動で元の並びに戻る
   const EXAM_LIFT_DAYS = 14;
   const examRank = (s) => {
     if (typeof bizCareerExamDaysLeft !== "function") return 1;
+    // 添字で書くのは、Slack の自動リンクがドット記法を書き換えるのを避けるため (パッチ経路)
+    if (typeof bizCareerApplicationPeriod === "function" && bizCareerApplicationPeriod(s["id"])) return 0;
     const d = bizCareerExamDaysLeft(s.id);
     return d !== null && d <= EXAM_LIFT_DAYS ? 0 : 1;
   };
