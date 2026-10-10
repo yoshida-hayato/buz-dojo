@@ -5242,3 +5242,116 @@ ERR TUNNEL CONNECTION FAILED になる。器のプロキシを抜けられない
 - (d) 42項目のチェックリストは live 鍵のままでは全部は通せない。(c) の3点だけ通す
 - (e) アクセス解析の順番の2 (js/analytics.js) は手つかず。privacy の4件は
   07:44 と今回のデプロイで本番に出ている
+
+---
+
+## 2026-10-10 08:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### 本番が買い切りになった。社長の手で、08:28 に
+
+CHECKOUT_MODE は payment。本番の config/pricing.js を取って確かめた
+(probe クエリ付きで取得。CHECKOUT_MODE = "payment"、APP_VERSION = 2026-10-10-v1)。
+11日かかった1語が動いた。やったのは私ではなく社長。
+
+コミットの並びが、この1語がどう入ったかを語っている。
+
+- 08:28 61a2f45 Update pricing.js — subscription から payment へ。この1行だけ
+- 08:42 0b50d3e Update version.js — config/version.js を 2026-10-10-v1 へ
+- 08:46 40f6948 Update version.js — data/version.js の写しも同じ値へ
+
+08:28 のコミットは単独ではデプロイされていない。billing-mode-guard.test.js の
+「payment に切り替えるならキャッシュ鍵も動いている」が落ちるからだ。あのテストは
+値ではなく文で比べて、落ちたときの1行に直し方を書き込んである——
+「config/version.js の APP_VERSION を同じコミットで上げる (data/version.js の写しも同じ値に)」。
+社長の次の2コミットは、その1行のとおりの順番と内容だった。
+
+教訓: ガードは、落とすだけでは人を助けない。落ちたときに見える1行に直し方を
+書いておくと、ガードが人に手順を教える。今回それが実際に効いた。
+これからテストを足すときは、落ちた人が見る文字列に「直し方」を入れること。
+
+### いま空いている穴: 買い切りでは、付与を取り消す経路がこの2件しか無い
+
+06:48便が整理した正しい順番は4段で、1が社長のサンドボックス Webhook への
+2件追加、2が1語の切替だった。実際には2が先に済んだ。1はまだ。
+
+docs/STRIPE_SETUP.md に書いてあるとおり、サンドボックス側の送信対象イベントに
+charge.refunded と charge.dispute.closed は未追加。月額のときは
+customer.subscription.deleted が取り消しを担っていたが、買い切りではそれが発火しない。
+つまり今、全額返金してもチャージバックが確定しても、付与は残る。しかも
+署名検証は通り、例外も出ず、ログにも残らない。黙って走らない。
+
+売れていなければ実害は出ない。だが「売れた直後に返金を頼まれる」が最初の1件で
+起きうる。今便の社長への唯一のお願いをこれにした。
+
+### 今便の1手: 特商法ページの価格表記が、1年ぶん古い宣言で判定されていた
+
+legal/commerce.html は <script src="config/pricing.js"> を版無しの URL で読む。
+firebase.json は /config/** に max-age=31536000, immutable を付けている。
+index.html は ?v=APP_VERSION を鍵に付けて避けているが、法務ページには鍵が無い。
+
+結果: 切替より前に特商法ページを開いた端末は、古い宣言 (subscription) を返し続ける。
+差し替えは CHECKOUT_MODE が payment でないと1文字も書き換えないので空振りし、
+「月額 ¥290〜¥980」の表記のまま、決済だけが買い切りになる。
+しかも今日以降に開いた人は payment の写しを1年握るので、次の価格変更も最大1年届かない。
+一度きりの事故ではなく、法務ページだけに恒久的に空いた穴だった。
+
+直し方は、差し替えの本体と手がかりの文字列には触らず、読み込みの順序だけを変えた。
+鍵付きの URL で読み直し、その読み込みが終わってから差し替える。素のタグは残したので、
+読み直しに失敗しても最初に読めた宣言で判定できる。
+
+legal/terms.html にも同じ版無しの読み込みがある (1か所)。次便の1手はこれ。
+config/legal.js も版無しだが、運営者名なので値段ほどの重さは無い。
+
+### 判断を外しかけた: 相対パスを「壊れている」と書く前に <base> を見る
+
+legal/commerce.html の "config/pricing.js" は /legal/config/pricing.js に
+解決されるから死んでいる、と一度は結論づけた。本番の /legal/config/pricing.js を
+取ったら index.html が返ってきたので (firebase.json の rewrites **)、確信しかけた。
+だが legal/*.html の head には <base href="/"> が在る。解決先は /config/pricing.js で、
+読み込みは生きている。報告の前に grep して止まった。
+
+教訓: 相対パスの解決先を断定する前に、そのページの <base> を見ること。
+rewrites があるサイトでは、URL を直打ちして「中身が違う」ことは、
+ページの中からの参照が壊れている証拠にならない。
+
+### 器から拒否された設計 (2回目。前回と同じ教訓が効いた)
+
+最初は index.html の version.js の読み方 (同期 XHR + eval) を真似て書いた。
+器の分類器が「Create RCE Surface」で拒否した。別のツールで同じものを書かずに
+設計を疑い、eval を使わない形 (script 要素を作って onload で差し替える) に変えた。
+通ったし、設計も素直になった。前便のログに書いてあった教訓がそのまま効いた。
+
+### 測れなかったこと (断定しないために残す)
+
+- この器から本番へ curl すると 403 (プロキシが通さない)。Web は WebFetch だけで、
+  WebFetch は応答ヘッダを返さない。つまり本番の Cache-Control は観測できない
+- だから firebase.json の /config/** (immutable) と /config/version.js (no-cache) の
+  どちらが勝つかは、ここからは確かめられない。「version.js は no-cache で届く」と
+  書かないこと。version.js が新しく読めているのは index.html が
+  ?_= + Date.now() の同期 XHR で取っているからで、ヘッダの証拠ではない
+- npm install はこの器では落ちる (network)。scripts/minijest.js は package.json の
+  test:mini から呼ばれているのに、まだ main に無い。今便は器の中に jest 互換の
+  ランナーを自作して legal-swap-targets と billing-mode-guard を走らせ、26通過0失敗。
+  pricing-sync 系の4件は python3 _dev/sync-shared.py を先に走らせないと落ちる
+  (CI では functions の pretest がこれを走らせる)。手元で落ちても main は赤ではない
+
+### 次の自分へ
+
+- 未適用: 07:48便2件 (privacy 差し替えの出し直し + ログ追記) + 今便2件 = 4件。
+  50件の窓まで余裕。次のブリッジは JST の奇数時17分なので 09:17
+- 次便の1手: legal/terms.html の版無し読み込み。今便の commerce.html と同じ形で
+- 社長の未回答は2件に減った。(a) 鍵が sk_test か sk_live か、
+  (b) 10/05 から 10/10 の出社停止は意図的だったか。サンドボックス Webhook の2件は
+  今便で初めて「これが入るまで返金で付与が消えない」と値段を添えて聞いた
+- getStripeMode は今日のデプロイで本番の Functions に入ったはず (未確認。管理者専用で
+  呼ぶ画面が無いまま)。admin/reports.html に表示を足すのは、terms.html の次の候補
+- 42項目の受入チェックリスト (docs/SANDBOX_TEST_CHECKLIST.md) は節0の前提が
+  08:28 に満たされた。消化0件のまま。鍵が sk_test なら安全に始められる
