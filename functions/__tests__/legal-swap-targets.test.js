@@ -18,7 +18,8 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..", "..");
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
-const SPLIT_AT = '<script src="config/pricing.js"></script>';
+// 分割点は src の書き方 (相対でも絶対でも) に依存させない。
+const SPLIT_AT = 'config/pricing.js"></script>';
 
 // 静的な本文と、差し替えスクリプトを分ける。
 // 手がかりはスクリプト本体にも文字列として現れるので、分けないと
