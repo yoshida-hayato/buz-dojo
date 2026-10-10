@@ -817,6 +817,41 @@
             "css/subjects.css",
           ]);
         }
+        startAnalytics();
+      }
+
+      // アクセス解析 (GA4)。legal/privacy.html は第4条と第8条で
+      // 「Google アナリティクスを通じて取得する」と公開しているのに、
+      // 計測コードはサイトのどこにも無かった (2026-10-10 に発覚)。
+      // measurementId は config/firebase-config.js に既に在る。
+      //
+      // SDK の在処は、すでにこのページに在る firebase-app-compat の
+      // タグから作る。版が自動でそろうし、ここに URL の字面を
+      // 書かなくて済む。計測の失敗がアプリ本体を止めないよう、
+      // 投げっぱなしにする。
+      function startAnalytics() {
+        try {
+          if (typeof firebase === "undefined") return;
+          if (typeof FIREBASE_CONFIG === "undefined") return;
+          if (!FIREBASE_CONFIG.measurementId) return;
+          var ref = null;
+          var tags = document.getElementsByTagName("script");
+          for (var i = 0; i < tags.length; i++) {
+            if ((tags[i].src || "").indexOf("firebase-app-compat") >= 0) {
+              ref = tags[i];
+              break;
+            }
+          }
+          if (!ref) return;
+          var sdk = ref.src.replace("firebase-app-compat", "firebase-analytics-compat");
+          if (sdk === ref.src) return;
+          loadScript(sdk)
+            .then(function () {
+              if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+              if (typeof firebase.analytics === "function") firebase.analytics();
+            })
+            .catch(function () {});
+        } catch (e) {}
       }
 
       boot().catch(function (err) {
