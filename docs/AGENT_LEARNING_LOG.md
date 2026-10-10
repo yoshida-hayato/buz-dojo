@@ -7294,3 +7294,96 @@ index-html-guard.test.js が privacy.html の宣言と突き合わせて見張�
 - 鍵は sk live。本番は買い切り (CHECKOUT MODE は payment)。chargeCount は0
 - 今便の投稿は6件 (パッチ5 + 報告1)。携帯通知は出していない。
   壊れているものは無く、そちらは日曜の未明である
+
+---
+
+## 2026-10-11 06:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### 今便の1手: 未適用の待ち行列を先に再生して、自分同士の衝突を1件見つけた
+
+ブリッジは 03:42-03:44 に動いて db4532d まで進んだ。05:00 の定時起動は来ていない。
+03:48便(3件)・04:48便(3件)・05:48便(6件)の計12件が未適用で待っている。
+上限は15件なので、今便は新しい思いつきを足さず、待っている12件が本当に通るかを
+先に確かめた。これが正しかった。
+
+db4532d のきれいな clone に12件を投稿順(古い順)で再生し、
+node _dev/tools/jest-run.js を回した。結果、05:48便の2件が必ず破棄される。
+
+- 03:48便が足した functions/__tests__/index-html-guard.test.js は
+  「index.html に静的な canonical タグを置かないこと (2本出ると無視される)」を
+  expect(INDEX.indexOf(rel=canonical)).toBe(-1) で見張っている
+- 05:48便の「トップページに canonical を1行足す」は、まさにその静的タグを足す。
+  ブリッジは古い順に当てるので、ガードが先に repo に入り、このパッチが落ちる
+- その連れで、05:48便の functions/__tests__/seo-canonical-guard.test.js は
+  「静的な canonical が在り id を持っている」を見張っているので、こちらも落ちる
+
+### それで何が起きていたか: syncPageMeta の canonical 行が黙って死ぬ
+
+05:48便の syncPageMeta は document.getElementById で canonical-link を探す。
+その id を作るのは落ちる側のパッチだったので、12件が入ったあとの本番では
+link が常に null になり、canonical は画面遷移に追従しない。
+description と og は querySelector なので効く。canonical だけが死ぬ。
+
+実害は小さい。03:48便が index.html の起動スクリプトで canonical を1本作っており、
+着地した URL に対しては正しい値が入る。クローラは SPA の遷移をしないので
+検索エンジンの見え方は変わらない。だが「追従する」と書いた機能が追従しない状態で
+repo に残り、次の人がそれを事実として読む。
+
+### 今便が投げた1手
+
+起動スクリプトが作っている link 要素に id を1行足した。
+canonical.setAttribute(id, canonical-link) を rel と href の間に入れただけ。
+静的タグを増やさないのでガードに当たらず、字面に rel=canonical も出ない。
+canonical は1本のまま、syncPageMeta が掴める。
+
+確かめたこと:
+- 07:00 の到着時の index.html (= 12件適用後、ただし上記2件は破棄) に対して
+  old_string が ちょうど1回。grep ではなく python の count で数えた
+- その状態で jest-run は 29ファイル 335通過 1失敗。残る1失敗は
+  buy-button-label の not.toMatch で、これはランナー側の未実装 (後述)
+- Slack が エスケープする側を自分で足してから unescape する round trip を取り、
+  投げた JSON が手元の dict と完全一致することを確認
+- 投稿後に slack_read_channel で読み戻し、三連バッククォートが3個のまま、
+  JSON の中に生の改行が無いことを確認
+
+### 次の自分へ (器の話): jest-run.js に toMatch が無い
+
+_dev/tools/jest-run.js の TABLE には toMatch / toThrow / toHaveLength /
+toBeFalsy / toBeLessThan / toHaveBeenCalledWith が無い。だから全件実行は
+常に fail 1 以上で終わり、「1件は既知」という頭の注釈が必要になる。
+注釈が要る計器は、いつか読み間違える。
+これを足すのは本番に触らない安全なパッチで、次便以降の候補として置いておく。
+
+### 次の自分へ (手順の話)
+
+未適用が溜まっている便では、新しい1手を考える前に待ち行列を再生すること。
+手順は3つだけ。
+1. git clone --depth 20 して、ls-remote の先端に checkout
+2. slack_read_channel で未適用のパッチを拾い、投稿順(古い順)で当てる。
+   html.unescape はかけない (MCP は既に1回済み)
+3. node _dev/tools/jest-run.js を回す
+
+今便はこれで12件のうち2件の破棄を事前に読めた。1便1手の「1手」は、
+新しい機能でなくてよい。待っているものが通るかを確かめるのも1手である。
+
+### 次の自分へ (状態)
+
+- 07:00 台のブリッジのあと、入るのは13件のうち11件。破棄2件の報告が
+  チャンネルに出るが、それは今便が予期したもので、読み飛ばしてよい
+- 05:48便の seo-canonical-guard.test.js は repo に入らない。canonical を
+  見張るガードが要るなら、静的タグではなく setAttribute(id) の字面を
+  見張る形で書き直すこと
+- 社長の未回答: GA4 直近7日のユーザー数 / Search Console 済か未か /
+  APP VERSION を効かせるか消すか / 解析を入れるか文面から外すか /
+  UI の A B C
+- 鍵は sk live。本番は買い切り (CHECKOUT MODE は payment)。chargeCount は0
+- 今便の投稿は3件 (パッチ2 + 報告1)。携帯通知は出していない。
+  社長の手を要する新しい事実が無く、未回答のお願いは 05:48便が既に出しているため
