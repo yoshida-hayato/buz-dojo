@@ -73,6 +73,56 @@ const SubjectLoader = (function () {
     return getPathSubjectId() || getSelected();
   }
 
+  // --- 検索エンジンに対する頁の身元 -------------------------------------
+  // firebase.json の rewrites が全パスを index.html に送るので、既定では
+  // /sap も /excel-functions も、綴りを間違えた /sapp も、トップページと
+  // 同じ canonical と description を返す。クローラから見ると、同じ頁が
+  // いくつもある状態になる。URL を書き換えるのは此処なので、頁の身元も
+  // 此処で一緒に揃える。こうすれば canonical が URL とずれようがない。
+  let metaDefaults = null;
+
+  function rememberMetaDefaults() {
+    if (metaDefaults) return metaDefaults;
+    const pick = (sel) => {
+      const el = document.querySelector(sel);
+      return el ? el.getAttribute("content") || "" : "";
+    };
+    metaDefaults = {
+      desc: pick('meta[name="description"]'),
+      ogTitle: pick('meta[property="og:title"]'),
+      ogDesc: pick('meta[property="og:description"]'),
+    };
+    return metaDefaults;
+  }
+
+  function setMetaContent(sel, value) {
+    const el = document.querySelector(sel);
+    if (el && value) el.setAttribute("content", value);
+  }
+
+  // id を渡せばその科目の頁、falsy ならトップページとして宣言する
+  function syncPageMeta(id) {
+    const base = rememberMetaDefaults();
+    // レジストリに無い id は入口を持たない。トップページとして宣言する。
+    const meta = id ? findMeta(id) : null;
+    const link = document.getElementById("canonical-link");
+    if (link) link.setAttribute("href", meta ? "/" + id : "/");
+    let desc = String((meta && meta.description) || "").trim();
+    if (!desc) {
+      setMetaContent('meta[name="description"]', base.desc);
+      setMetaContent('meta[property="og:title"]', base.ogTitle);
+      setMetaContent('meta[property="og:description"]', base.ogDesc);
+      return;
+    }
+    if (desc.length > 120) desc = desc.slice(0, 118) + "\u2026";
+    setMetaContent('meta[name="description"]', desc);
+    setMetaContent('meta[property="og:description"]', desc);
+    setMetaContent(
+      'meta[property="og:title"]',
+      (meta.formalTitle || meta.title || "") + " — ビジネス道場"
+    );
+  }
+
   /** 科目ホーム等: `/sap` + 既存 search/hash に揃える */
   function syncUrlForSubject(id) {
     if (!id || !window.history || !window.history.replaceState) return;
