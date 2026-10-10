@@ -266,6 +266,89 @@ exports.getStripeMode = onCall(
   }
 );
 
+// コードが分岐している Webhook イベント。下の switch と一致させる。
+// 一致は webhook-status-guard.test.js が見張る。
+const WEBHOOK_EVENTS_REQUIRED = [
+  "checkout.session.async_payment_succeeded",
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "charge.refunded",
+  "charge.dispute.closed",
+];
+
+// 管理者向け: 本番の Stripe に登録されている Webhook の送信対象イベントを読む。
+// 鍵には触らない。url と状態と送信対象イベント名、そして上の必要イベントの
+// うち欠けているものを計算して返すだけ。
+//
+// なぜ在るか: 購読から漏れたイベントは「署名検証は通る / 例外は出ない /
+// ログにも残らない / ただ走らない」形で静かに落ちる。買い切りに移った今、
+// charge.refunded と charge.dispute.closed が欠けていると、全額返金でも
+// チャージバック確定でも付与が残る。この有無を人の記憶ではなく機械に答えさせる。
+//
+// 制約: 鍵が live なら live のエンドポイントしか見えない。
+// サンドボックス側の登録はこの口からは確かめられない。
+exports.getStripeWebhookStatus = onCall(
+  {
+    region: REGION,
+    secrets: [stripeSecret],
+    cors: true,
+    serviceAccount: SERVICE_ACCOUNT,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "ログインが必要です");
+    }
+    const { COMPLIMENTARY_PACK_EMAILS } = require("./entitlements");
+    const token = request.auth.token || {};
+    const who = String(token["email"] || "").trim().toLowerCase();
+    if (!COMPLIMENTARY_PACK_EMAILS.includes(who)) {
+      throw new HttpsError("permission-denied", "対象外のアカウントです");
+    }
+
+    // Stripe は「全イベント」を1文字のワイルドカードで表す。
+    // パッチの経路にその文字を載せられないので、コード点から組む。
+    const WILDCARD = String.fromCharCode(42);
+
+    const api = stripeClient(stripeSecret.value());
+    let endpoints = [];
+    let livemode = null;
+    try {
+      const list = await api["webhookEndpoints"]["list"]({ limit: 20 });
+      const rows = (list && list["data"]) || [];
+      endpoints = rows.map((row) => {
+        const events = (row && row["enabled_events"]) || [];
+        const everything = events.includes(WILDCARD);
+        const missing = everything
+          ? []
+          : WEBHOOK_EVENTS_REQUIRED.filter((name) => !events.includes(name));
+        return {
+          url: String((row && row["url"]) || ""),
+          status: String((row && row["status"]) || ""),
+          endpointLivemode: (row && row["livemode"]) === true,
+          enabledEvents: events.slice().sort(),
+          eventCount: events.length,
+          subscribesEverything: everything,
+          missing,
+          missingCount: missing.length,
+        };
+      });
+      const balance = await api["balance"]["retrieve"]();
+      livemode = balance && balance["livemode"] === true;
+    } catch (err) {
+      console.error("getStripeWebhookStatus failed:", (err && err.message) || err);
+      throw new HttpsError("internal", "Stripe に問い合わせできませんでした");
+    }
+    return {
+      keyMode: livemode ? "live" : "test",
+      required: WEBHOOK_EVENTS_REQUIRED,
+      endpointCount: endpoints.length,
+      endpoints,
+    };
+  }
+);
+
 /** Stripe Customer Portal（解約・カード変更） */
 exports.createPortalSession = onCall(
   {
