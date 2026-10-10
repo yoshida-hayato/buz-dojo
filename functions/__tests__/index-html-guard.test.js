@@ -123,3 +123,115 @@ describe("index.html — 解析の宣言と実装がそろっている", () => {
     expect(INDEX).toContain("FIREBASE_CONFIG.measurementId");
   });
 });
+
+// --- 10/11 03:48便で足した分 -------------------------------------------
+//
+// 科目10本の URL は、すべて同じ index.html が返る (firebase.json の rewrites)。
+// 10/11 02:48 に本番の /sap を読んだら、題も説明もトップと同一、canonical は
+// 無しだった。head 冒頭の known を slug から 題と説明 の表に変えて直した。
+// 見張るのは2つ。表がレジストリとそろっていること。そして題と説明に問題数と
+// 金額を書かないこと (請求額は master の件数から動く。subject-content-urls
+// の前書きを見よ。静的な字面に写すと検索結果だけが古い数字を言い続ける)。
+// 正規表現は使わない。すべて indexOf と slice で読む。
+//
+const DIGITS = "0123456789" + String.fromCharCode(0xff10, 0xff11, 0xff12, 0xff13, 0xff14, 0xff15, 0xff16, 0xff17, 0xff18, 0xff19);
+const YENS = String.fromCharCode(0xa5) + String.fromCharCode(0xffe5);
+
+function hasDrifty(s) {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charAt(i);
+    if (DIGITS.indexOf(c) >= 0) return true;
+    if (YENS.indexOf(c) >= 0) return true;
+  }
+  return s.indexOf("円") >= 0;
+}
+
+// head 冒頭の known を [{ id, title, desc }] に読む。1行1科目を前提にする。
+function knownEntries() {
+  const at = INDEX.indexOf("var known = {");
+  if (at < 0) return null;
+  const end = INDEX.indexOf("};", at);
+  if (end < 0) return null;
+  const out = [];
+  for (const line of INDEX.slice(at, end).split("\n")) {
+    const lb = line.indexOf('["');
+    const colon = line.indexOf(":");
+    const rb = line.lastIndexOf('"]');
+    if (lb < 0 || colon < 0 || rb < 0) continue;
+    if (colon > lb) continue;
+    let key = line.slice(0, colon).trim();
+    if (key.charAt(0) === '"') key = key.slice(1, key.length - 1);
+    const inner = line.slice(lb + 2, rb);
+    const sep = inner.indexOf('", "');
+    if (sep < 0) continue;
+    out.push({ id: key, title: inner.slice(0, sep), desc: inner.slice(sep + 4) });
+  }
+  return out;
+}
+
+describe("index.html — 科目パスの題と説明がそろっている", () => {
+  test("known が 題と説明 の表として読める", () => {
+    // 直し方: known の1行は slug: 題と説明の2要素配列 を1行に収める。
+    expect(knownEntries()).not.toBe(null);
+    expect((knownEntries() || []).length).toBe(registryIds().length);
+  });
+
+  test("レジストリの科目すべてに題と説明が在り、余りが無い", () => {
+    const ids = (knownEntries() || []).map((e) => e.id);
+    expect(registryIds().filter((id) => ids.indexOf(id) < 0).join(",")).toBe("");
+    expect(ids.filter((id) => registryIds().indexOf(id) < 0).join(",")).toBe("");
+  });
+
+  test("題も説明も空でない", () => {
+    const empty = (knownEntries() || [])
+      .filter((e) => e.title.length < 4 || e.desc.length < 10)
+      .map((e) => e.id);
+    expect(empty.join(",")).toBe("");
+  });
+
+  test("題と説明が10本とも互いに違う", () => {
+    // 重なっていると、その2本は検索エンジンに同じページとして見える。
+    const got = knownEntries() || [];
+    const t = [];
+    const d = [];
+    got.forEach((e) => {
+      if (t.indexOf(e.title) < 0) t.push(e.title);
+      if (d.indexOf(e.desc) < 0) d.push(e.desc);
+    });
+    expect(t.length).toBe(got.length);
+    expect(d.length).toBe(got.length);
+  });
+
+  test("題と説明に問題数と金額を書いていない", () => {
+    // 直し方: 数字と金額はここに書かない。言いたいなら、値段の出どころが
+    //   pricing である画面側 (js) で出すこと。
+    const bad = (knownEntries() || [])
+      .filter((e) => hasDrifty(e.title) || hasDrifty(e.desc))
+      .map((e) => e.id);
+    expect(bad.join(",")).toBe("");
+  });
+
+  test("差し替える先の meta タグが head に在る", () => {
+    // 差し替え先が無いと setMeta は黙って何もしない。
+    expect(INDEX).toContain('meta name="description"');
+    expect(INDEX).toContain('meta property="og:title"');
+    expect(INDEX).toContain('meta property="og:description"');
+  });
+
+  test("科目パスのときに題・説明・og を差し替えている", () => {
+    expect(INDEX).toContain("document.title = hit[0]");
+    expect(INDEX).toContain('meta[name="description"]');
+    expect(INDEX).toContain('meta[property="og:title"]');
+    expect(INDEX).toContain('meta[property="og:description"]');
+  });
+
+  test("canonical を1本だけ作って head に付けている", () => {
+    // rewrites のせいで、どんなパスでもトップの複製が 200 で返る。
+    // 知らないパスはトップへ寄せ、科目パスは自分自身を正典にする。
+    expect(INDEX).toContain('setAttribute("rel", "canonical")');
+    expect(INDEX).toContain("location.origin");
+    expect(INDEX).toContain("document.head.appendChild(canonical)");
+    // 静的な canonical タグを別に置かないこと (2本出ると無視される)。
+    expect(INDEX.indexOf('rel="canonical"')).toBe(-1);
+  });
+});
