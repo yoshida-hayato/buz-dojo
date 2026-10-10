@@ -6400,3 +6400,125 @@ admin/reports.html は js/admin-reports.js という大きいファイルを読�
 - 鍵は sk live。本番は買い切り (CHECKOUT MODE は payment)。chargeCount は0
 - 今便の投稿は3件 (パッチ2 + ログ1 + 報告1 = 4件。予算の3件を1件超えた。
   理由: 計器と、その計器が嘘をつかないためのガードは分けられない)
+
+---
+
+## 2026-10-10 21:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### まず報告: 21:00 の定時起動が来た。13件すべてが本番に乗った
+
+6便ぶん待っていたものが一度に入った。遠隔の main は ec15c85 から fd7b9f2。
+ブリッジの投稿は 21:41:41 で「13件中 13件をmainに反映しました」。
+テストを通って自動デプロイも走った。
+
+本番で直接測ったこと (21:50、クエリ付きで取得):
+
+- legal/commerce.html の販売価格は「科目単品は買い切りです」、支払時期は
+  「申込時 (決済時) の一回払いです。継続課金・自動更新は行いません」、
+  解約は「継続課金がないため、解約のお手続きは不要です」。
+  月額もサブスクも1文字も出てこない。19:48便が静的本文を正にしたので、
+  推論を挟まずに読めた。予告どおりこの穴は閉じた
+- トップページの <a href> は4本から14本になった。科目10本すべてが出ている
+  (sap / biz-career / biz-pm-planning / biz-pm-operation / excel-functions /
+  windows-shortcuts / outlook-mail / teams-collab / ai-ontology-intro /
+  ai-ontology-core)。18:48便のフッターリンクが効いている
+
+GA4 については、字面そのものは本番から読めていない。WebFetch は markdown に
+変換するので script タグが落ちる。curl はプロキシが <http://buz-dojo.web.app|buz-dojo.web.app> への
+CONNECT を403で切るので使えない (<http://cloudfunctions.net|cloudfunctions.net> も同じ)。
+根拠はこうである: main 先端の index.html には startAnalytics と
+site-footer-links の両方が在り (grep で確認)、本番のフッターはその
+index.html の中身を見せている。同じ1ファイルなので、フッターが届いた
+index.html には計測ブロックも入っている。これは観測ではなく、
+同一ファイルであることからの推論である。
+
+### 新しく分かった器の制約 (次の自分へ)
+
+- curl は <http://buz-dojo.web.app|buz-dojo.web.app> にも <http://cloudfunctions.net|cloudfunctions.net> にも通らない。
+  プロキシが CONNECT を403で切る。本番の生HTMLを読む手は現状1つも無い。
+  だから「script タグに何が在るか」は、リポジトリ側の grep と
+  「同じファイルの別の部分が本番に出ている」の組み合わせで推論するしかない。
+  推論であることを毎回明記すること
+- デプロイの範囲は hosting だけではない。deploy.yml:76 は
+  firebase deploy --only hosting,functions である。だから 21:41 の適用で
+  getStripeMode と getStripeWebhookStatus も本番に出ている。
+  ただし onCall の口そのものを私が叩いて確かめることはできない (上の403)
+- apply_patch.yml:89 は gh workflow run deploy.yml でデプロイを明示的に
+  起動している。ブリッジの push では deploy.yml が自前では起動しないため。
+  これは以前「本番への反映は社長の手動」と書いた記述の訂正にあたる
+
+### 今便の1手: index.html のガードを足した (17:48便の予告を回収)
+
+17:48便が「privacy が解析を宣言しているなら index.html に計測が在る、を
+両方向で要求するガードを足す」を次の1手の候補に挙げ、出すのを待つと
+明記していた。理由は順番で、計測のパッチが破棄されてガードだけ入ると
+main が赤くなって全デプロイが止まるからである。21:41 に計測が main に
+入ったので、前提が満たされた。予告した便が、予告した条件で回収された。
+
+見張るものを2つに広げた。今日 index.html に入れた2つは、どちらも
+「黙って消えても誰も気づかない」形の変更だからである。
+
+1. レジストリと科目の入口。subjects/registry.js の id すべてに、
+   フッターの aria-label="科目一覧" のナビから入口が在ること。
+   逆向きも見る (レジストリに無い入口が在ったら落ちる)。
+   これは一度きりの修理を、続く規則に変える。科目を足した人が
+   フッターに1行足すのを忘れたら、その時点で落ちる
+2. 解析の宣言と実装。privacy.html が Google アナリティクスで取得すると
+   宣言しているなら、index.html に startAnalytics の定義と呼び出しが
+   在り、SDK を字面で書いていないこと
+
+片側だけを見てはいけない。宣言と実装の両方が同時に消えたら、
+片側しか見ないガードは静かに通る。だから2点の突き合わせにした。
+
+### 測ったこと
+
+- 薄い殻で8ファイルを走らせて65通過0失敗 (index-html-guard /
+  legal-swap-targets / subscription-wording-guard / billing-mode-guard /
+  slack-autolink-guard / webhook-status-guard / stripe-mode-guard /
+  pricing-sync)
+- ガードが効くことを、退行を3つ実際に入れて確かめた。
+  (a) 科目リンク /sap を1行消す → 欠けている id が失敗文に "sap" と出る
+  (b) startAnalytics(); の呼び出し行を消す → 落ちる
+  (c) レジストリに無い入口を足す → その名前が失敗文に出る
+  3つとも元に戻して7通過0失敗
+- JSON に載せる前に round trip を取った。パッチの new_string を
+  書き出して手元のファイルと diff し、1バイトも違わないことを確認した
+- バッククォートとアスタリスクは0件 (grep -c で確認)。rewrites の説明に
+  使っていたアスタリスク2個は「全パス」という日本語に置き換えた
+
+### 器の手として確定したこと: 薄い殻に足りない matcher
+
+これまでの便が「走らなかった4ファイル」と書いていたものの一部は、
+殻の matcher 不足だった。toBeGreaterThanOrEqual / toBeNull / toBeLessThan /
+toBeTruthy / toBeFalsy / not.toEqual を足したら legal-swap-targets と
+webhook-status-guard が走った。殻は使い捨てなのでリポジトリには入れないが、
+次の自分は最初からこの6つを足しておくと、走る本数が増える。
+
+### 次の自分へ
+
+- まず git ls-remote。fd7b9f2 から動いていたら今便のガードが入った。
+  入ったら index.html を読むテストが0件から1件になる
+- 今日のブリッジの実績は、予定9回に対して来たのが 07:45 / 14:59 / 21:41 の
+  3回。19:48便が「9回中2回」と書いた比率は「9回中3回」に更新される。
+  夜の便は、起動が来る確率がやや高い (21:00 は来た)
+- 入ったあとの候補: (1) admin/reports.html に getStripeMode と
+  getStripeWebhookStatus を呼ぶタブを足す (社長がコンソールを使わずに
+  2つの計器を読める。js/admin-reports.js の switchTab は既知のパネルだけを
+  畳むので、新しいパネルは nav への委譲リスナで自分で面倒を見る形になる。
+  reports.html 275行 / admin-reports.js 1469行、200行の予算で足りる)
+  (2) /sap など科目パスに固有の title と description を持つ静的ページ
+- 社長の未回答5件: 本番 Webhook の送信対象イベント名 (計器が本番に出たので
+  コンソール1行で閉じられる) / APP_VERSION を効かせるか消すか / 解析を
+  入れるか文面から外すか / Search Console に登録済みか / 10/05-10/10 の
+  出社停止は意図的だったか
+- 鍵は sk live。本番は買い切り (CHECKOUT MODE は payment)。chargeCount は0
+- 今便の投稿は3件 (パッチ1 + ログ1 + 報告1)。携帯通知を1件出した
+  (13件が本番に乗ったことと、コンソール1行で金の確認が閉じること)
