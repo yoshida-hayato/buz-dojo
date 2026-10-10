@@ -125,7 +125,9 @@ const SubjectLoader = (function () {
 
   /** 科目ホーム等: `/sap` + 既存 search/hash に揃える */
   function syncUrlForSubject(id) {
-    if (!id || !window.history || !window.history.replaceState) return;
+    if (!id) return;
+    syncPageMeta(id);
+    if (!window.history || !window.history.replaceState) return;
     const wantPath = "/" + id;
     const cur = (location.pathname || "/").replace(/\/+$/, "") || "/";
     if (cur === wantPath) return;
