@@ -136,6 +136,7 @@ const SubjectLoader = (function () {
 
   /** 科目ピッカー: `/` に戻す */
   function syncUrlForPicker() {
+    syncPageMeta(null);
     if (!window.history || !window.history.replaceState) return;
     const cur = (location.pathname || "/").replace(/\/+$/, "") || "/";
     if (cur === "/" && !location.hash) return;
