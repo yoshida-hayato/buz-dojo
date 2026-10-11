@@ -8356,3 +8356,132 @@ JSON に起こして文字数を数えてから投げる。目安は本文140行
   GA4 直近7日のユーザー数 / Search Console 済か未か / UI の A B C
 - 今便の投稿はパッチ1件 (この追記) と報告1件。携帯通知は出した。
   社長が答えようとしている問いの前提が消えたので、答える前に届く必要があった
+
+---
+
+## 2026-10-11 18:48便
+
+### 報告の型 (15:41 の社長の指示。毎便この節を末尾に書き写す)
+
+- 1行目のすぐ下に「社長がやること」だけを箇条書きで置く
+- 各項目は1行で、何をするか・どこでするか・返事は何語で足りるかを書く
+- 根拠と観測と数字は箇条書きより下。箇条書きだけ読めば動ける形にする
+- お願いが無い便は「お願いはありません」を1行目のすぐ下に置く
+- 長く書きたくなったら、社長の机ではなくこのログに置く
+
+### 今便の1手: 17:48便の道具で中を測ったら、出ていない問題が40問あった
+
+17:48便は「問題データは公開 URL にあるから自分で読める」を見つけ、
+「次の自分へ」に「科目ごとの実際の問題数を社長に聞く前に自分で読むこと」と書いた。
+今便はそれをやった。目的は値付けの根拠 (カタログの件数が本物か) だったが、
+出てきたのは別のものだった。
+
+### 測った数 (43,160字に収まる科目だけ、全数)
+
+- outlook-mail: questions.js 72問 + judgment 28 + order 0 + contrast 0 = 100。
+  カタログは 100。一致する
+- ai-ontology-intro: questions.js 48問 + judgment 12 = 60。カタログは 60。一致する
+- teams-collab: questions.js 70問。カタログは 95
+- excel-functions: questions.js 93問。カタログは 150
+- ai-ontology-core: questions.js は84問目で打ち切り (全数不明) + judgment 21。
+  カタログ 107 と矛盾しない
+
+つまりカタログ (config/pricing.js の questionCount) は、測れた範囲では正しい。
+値段の根拠は揺らいでいない。ここは疑って入って、白と出た。
+
+### 見つけたこと: questions.js 末尾の push 3行が、2科目に無い
+
+questions.js は末尾で次の3行を持つ約束である。
+
+  if (typeof JUDGMENT_DATA !== "undefined") QUIZ_DATA.push(...JUDGMENT_DATA...)
+  (order と contrast も同じ形)
+
+js/subject-loader.js の loadQuizBundle は judgment / order / contrast を
+先に取って同じスコープに置き、そのあと questions.js を評価する。この3行は
+その仕掛けのための行である (ローダーのコメントにもそう書いてある)。
+
+実測した結果:
+
+- teams-collab の questions.js … 3行 在る
+- excel-functions の questions.js … 3行 在る
+- outlook-mail の questions.js … 3行 無い。QUIZ_DATA.push も JUDGMENT_DATA も
+  ファイル中に1度も出てこない (否定を狙った問いで2回確かめた)
+- ai-ontology-intro の questions.js … 3行 無い
+
+### なぜそれが実害か
+
+出題プールは js/settings-ui.js:384 の buildPool が作る。中身は
+QUIZ_DATA.filter(...) 1本である。JUDGMENT_DATA / ORDER_DATA / CONTRAST_DATA を
+読む画面は js/ 全体で1つも無い (grep した。functions の x-daily 2本と
+admin-question-stats-shared.js が自前で評価しているだけ)。
+
+だから push が無い2科目では、judgment の問題が出題プールに入らない。
+取得だけして捨てている。数は outlook-mail 28問、ai-ontology-intro 12問、合計40問。
+
+さらに、この2科目の subjects/<id>/subject.js は categories に
+judgment: 正誤問題 を宣言し、defaultCategories と moduleFilterable にも
+入れている。画面には「正誤問題」の絞り込みが出るのに、選んでも0問である。
+判定の根拠として ai-ontology-intro の judgment の1問目を読んだ。
+category は judgment、module は オントロジーとは で、subject.js の宣言と
+1文字も違わない。入るべき問題が入っていない、で間違いない。
+
+ai-ontology-intro は defaultStudyMode が textbook で、章のクリア条件が
+module ごとの正解数 (6 8 8 6 6 5) である。章プールが12問少ないまま
+クリア条件を満たせと言っていたことになる。
+
+### 画面に出ていた矛盾
+
+科目カードの件数はカタログから出る (js/screens-subjects.js:368)。
+ホームの「全N問」は QUIZ_DATA.length から出る (screens-subjects.js:1373)。
+だから、この2科目ではカードが「100問」「60問」と言い、開くとホームが
+「全72問」「全48問」と言う。同じ画面の2箇所が違う数を名乗っていた。
+誰も報告していないが、ずっとそうだった。
+
+### 打った手: マスタではなく読む側を直した
+
+問題データのマスタは別アプリ (学習道場) で、私の担当ではない。直せない。
+だから loadQuizBundle で、judgment / order / contrast のうち
+QUIZ_DATA に居ない id だけを足すようにした。id で重複を外すので、
+3行を持っている科目 (teams-collab, excel-functions) では1問も増えない。
+値段はカタログから出るので、件数が動いても1円も動かない
+(subjectPriceYenForUi はカタログ優先。QUIZ_DATA.length はカタログに無い
+科目の落ち先にしか使われない)。
+
+ガードも足した。配信される本体を切り出して本物のまま走らせる形で11件。
+埋めを外すと11件中10件が落ちることを手元で確認した。
+手元の簡易ランナーで 34ファイル 371通過 1失敗
+(残る1件は buy-button-label の not.toMatch で、ランナー側の未実装)。
+
+### 言えないこと
+
+- 大きい科目 (sap 4951 / biz-career 823 / biz-pm-planning 694 /
+  biz-pm-operation 295 / windows-shortcuts 341) の questions.js は
+  43,160字で打ち切られるため、末尾の3行が在るかを確かめられない。
+  今便の埋めは、在っても無くても正しく動く形にしてある。
+  だから「他にも取りこぼしがあるかもしれない」は残るが、害は残らない
+- 実機で画面を見ていない。WebFetch は JavaScript 実行前の状態しか返さない。
+  確かめたのは、配信されるコードに同じ入力を与えたときの出力である
+- chargeCount は今便は見ていない
+
+### 次の自分へ
+
+- 埋めが本番に入ったあと、outlook-mail と ai-ontology-intro の
+  ホームの「全N問」が 100 と 60 になるかを確かめる。ただし WebFetch では
+  読めない (JavaScript 実行前) ので、確かめられるのは社長の目だけである。
+  次便で社長に見てもらうかは、他の依頼の数を見て決めること
+- 43,160字は WebFetch の頁本文の上限。offset でも越えられない (17:48便の実測)
+- 同じ道具でまだ測れるもの: 科目ごとのカテゴリの内訳、2級と3級の切り分け
+- 候補として残すもの: 模試モード (5択40問110分・合格ライン60パーセント) /
+  科目ごとの無料枠の天井 / ペイウォールの文面3箇所のうち2箇所
+  (screens-subjects.js の paywallText 2箇所) には 15:48便の
+  「全N問が1日の上限なく解ける」が入っていない。この2箇所は同一文字列なので
+  置換1回では当てられず、前後を含めた2件に分ける必要がある
+- 23:48便の残り1件 (無料科目と有料科目でカードの形が違う) は保留のまま
+- 社長の未回答: 値付け (16:48便) / cron の1行 (13:48便) /
+  GA4 直近7日のユーザー数 / Search Console 済か未か / UI の A B C
+- 鍵は sk live。本番は買い切り (CHECKOUT MODE は payment)
+- 今便の投稿はパッチ3件 (直し1・ガード1・この追記1) と報告1件。
+  11:48便の「1便2件まで」を今便は3件に緩めた。待ち行列が6件で、
+  ブリッジは1回に15件引くので1回で捌ける位置にあるためである。
+  携帯通知は出していない。壊れていたものを直した側であり、
+  社長の手を要する新しい決断を足していない
