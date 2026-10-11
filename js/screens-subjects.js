@@ -1571,6 +1571,32 @@ function updateStartQuotaGate(exhausted, priceLabel) {
   if (buySubject) {
     buySubject.textContent = label ? `この問題集を購入（${label}）` : "この問題集を購入";
   }
+  // 買う側がここで決める材料は、金額だけではなく「いくらで・何問が・
+  // どこまで」の3つである。金額とパックの存在は前からあったが、
+  // 「全何問か」と「1日の上限が消える」ことは一度も書いていなかった。
+  // 無料で1,000問を開けている競合と並ぶ申込窓 (10/05-12/04) では、
+  // 「続きを学習できます」は、その隣で何も約束していない文面である。
+  //
+  // 件数は catalog から出す。読込済みの QUIZ_DATA.length は科目切替の最中・
+  // 部分読込・古いキャッシュで catalog より少なくなるので、これを使うと
+  // 「全120問」と書いて実際は295問という嘘になる。金額を catalog 優先に
+  // 寄せたのと同じ理由 (quota-gate-price-source.test.js) で出どころを揃え、
+  // catalog が読めないときは件数の節を足さない (黙るほうが、少ない数を
+  // 名乗るより良い)。無料科目の 0円 ラベルのときも足さない。
+  const catalogTotal =
+    typeof SubjectCatalog !== "undefined" &&
+    SubjectCatalog &&
+    typeof SubjectCatalog.getQuestionCountSync === "function" &&
+    CURRENT_SUBJECT
+      ? Number(SubjectCatalog.getQuestionCountSync(CURRENT_SUBJECT.id)) || 0
+      : 0;
+  const priced =
+    Boolean(label) &&
+    (typeof Entitlement === "undefined" || label !== Entitlement.formatPrice(0));
+  if (textEl && catalogTotal > 0 && priced) {
+    textEl.textContent +=
+      "購入すると全" + catalogTotal + "問が、1日の上限なく解けるようになります。";
+  }
   gate.classList.remove("hidden");
   if (startBtn) startBtn.disabled = true;
 }
