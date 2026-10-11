@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "predeploy": ["python3 _dev/gen-seo.py"],
     "public": ".",
     "ignore": [
       "firebase.json",
