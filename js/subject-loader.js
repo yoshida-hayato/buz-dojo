@@ -271,10 +271,35 @@ const SubjectLoader = (function () {
     if (!quiz.length) {
       throw new Error("問題データが空です: " + contentBase);
     }
+    const judgment = Array.isArray(bundle.judgment) ? bundle.judgment : [];
+    const order = Array.isArray(bundle.order) ? bundle.order : [];
+    const contrast = Array.isArray(bundle.contrast) ? bundle.contrast : [];
+
+    // questions.js の末尾は judgment / order / contrast を QUIZ_DATA に push する
+    // 約束だが、その3行が無い科目がある (2026-10-11 実測: outlook-mail は
+    // 本体72問 + 正誤28問、ai-ontology-intro は 本体48問 + 正誤12問。
+    // teams-collab と excel-functions には3行がある)。
+    // 出題プールは settings-ui.js の buildPool が QUIZ_DATA だけを見て作るので、
+    // push が無い科目では「正誤問題」が1問も出ない。科目カードはカタログの
+    // 件数 (100問 / 60問) を出すのに、ホームは「全72問」「全48問」と書く。
+    // 取りこぼしをここで埋める。id で重複を外すので、既に push している科目では
+    // 1問も増えない。問題データ側を直せない (別アプリのマスタ) ため読む側で揃える。
+    const seenIds = new Set();
+    for (const q of quiz) {
+      if (q && q.id) seenIds.add(q.id);
+    }
+    for (const extra of [judgment, order, contrast]) {
+      for (const q of extra) {
+        if (!q || !q.id || seenIds.has(q.id)) continue;
+        seenIds.add(q.id);
+        quiz.push(q);
+      }
+    }
+
     window.QUIZ_DATA = quiz;
-    window.JUDGMENT_DATA = Array.isArray(bundle.judgment) ? bundle.judgment : [];
-    window.ORDER_DATA = Array.isArray(bundle.order) ? bundle.order : [];
-    window.CONTRAST_DATA = Array.isArray(bundle.contrast) ? bundle.contrast : [];
+    window.JUDGMENT_DATA = judgment;
+    window.ORDER_DATA = order;
+    window.CONTRAST_DATA = contrast;
   }
 
   /** Tコード／構文など科目追加データ（ホーム表示後に呼ぶ） */
