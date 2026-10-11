@@ -1660,6 +1660,8 @@ function showFreeQuotaExhaustedAtStart() {
       `本日の無料${Entitlement.FREE_DAILY}問を使い切りました。単品 ${priceLabel}、またはプレミアムパックで続きを学習できます。翌日になると無料枠がリセットされます。`;
   }
 
+  if (paywallText) appendPaywallWholeSentence(paywallText, priceLabel);
+
   const gate = $("start-quota-gate") || $("start-btn");
   if (gate && typeof gate.scrollIntoView === "function") {
     gate.scrollIntoView({ behavior: "smooth", block: "center" });
