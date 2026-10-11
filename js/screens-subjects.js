@@ -1507,8 +1507,41 @@ function updateHomeNote() {
     paywallText.textContent =
       `本日の無料${Entitlement.FREE_DAILY}問を使い切りました。単品 ${priceLabel}、またはプレミアムパックで続きを学習できます。翌日になると無料枠がリセットされます。`;
   }
+  if (paywallText && exhausted) appendPaywallWholeSentence(paywallText, priceLabel);
   updateBillingManageVisibility();
   updateStartQuotaGate(exhausted, priceLabel);
+}
+
+// ペイウォールの文面に「買うと何が変わるか」の1文を足す。
+//
+// 15:48便で開始位置の案内 (updateStartQuotaGate) にだけこの1文を足したが、
+// ホームのカードの文面 (plan-paywall-text) は2箇所とも古いままだった。
+// 同じ画面の中で、下の案内は件数と上限を名乗り、上のカードは
+// 「続きを学習できます」しか言っていない状態だった。
+//
+// 件数は catalog から出す。読込済みの QUIZ_DATA.length は科目切替の最中・
+// 部分読込・古いキャッシュで catalog より少なくなるので、それを名乗ると
+// 「全120問」と書いて実際は295問という嘘になる (quota-gate-price-source と
+// 同じ壊れ方)。catalog が読めないとき・無料科目の 0円 ラベルのときは
+// 足さない (黙るほうが、少ない数を名乗るより良い)。
+// 何度描き直しても1文しか足さない。
+function appendPaywallWholeSentence(el, priceLabel) {
+  if (!el || typeof Entitlement === "undefined" || !CURRENT_SUBJECT) return;
+  if (!priceLabel || priceLabel === Entitlement.formatPrice(0)) return;
+  const total =
+    typeof SubjectCatalog !== "undefined" &&
+    SubjectCatalog &&
+    typeof SubjectCatalog.getQuestionCountSync === "function"
+      ? Number(SubjectCatalog.getQuestionCountSync(CURRENT_SUBJECT.id)) || 0
+      : 0;
+  if (total <= 0) return;
+  const sentence = "購入すると全" + total + "問が、1日の上限なく解けるようになります。";
+  const cur = String(el.textContent || "");
+  if (cur.indexOf(sentence) >= 0) return;
+  // 「翌日になると無料枠がリセットされます」より前に置く (読む順を崩さない)
+  const at = cur.indexOf("翌日になると");
+  el.textContent =
+    at >= 0 ? cur.slice(0, at) + sentence + cur.slice(at) : cur + sentence;
 }
 
 /** 無料枠0か（開始ボタン制御用） */
