@@ -1,2 +1,2 @@
 /** 互換シム — 本体は config/version.js */
-const APP_VERSION = "2026-10-10-v1";
+const APP_VERSION = "2026-10-11-v1";
