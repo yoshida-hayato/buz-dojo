@@ -30,6 +30,12 @@
   js/billing.js の startCheckout に begin_checkout と checkout_failed を足した。
   これで「誰も押していない」と「押したが落ちている」を分けて読める。
   イベント数は設定なしで見えるが、科目別の内訳はGA4側でカスタム定義の登録が要る
+- 09:48便で js/screens-subjects.js の showFreeQuotaExhaustedAtStart に
+  paywall view を足した。これで funnel は3段になる。page view (頁を見た) から
+  paywall view (無料20問を使い切って壁に当たった) から begin checkout
+  (購入ボタンを押した)。paywall view が0なら打つ手は集客、paywall view だけ
+  立つなら値付けと文面、begin checkout が立って checkout failed も立つなら
+  バグである。price yen が0の paywall view は、無料科目が壁を出している異常
 - 単品の実価格 (10/17 08:48便に node で算出): sap 1980 / biz-career 710 /
   biz-pm-planning 640 / biz-pm-operation 400 / windows-shortcuts 430 /
   excel-functions 320 / ai-ontology-core 290。無料は outlook-mail と
