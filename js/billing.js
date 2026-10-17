@@ -261,6 +261,12 @@ const Billing = (function () {
     if (!checkout) return;
 
     if (checkout === "success") {
+      // 決済の最後の1段。paywall_view と begin_checkout は入口を数えるが、
+      // Stripe から戻ったかは1件も残っていなかった。戻りは入金の確定では
+      // ない (付与は webhook) ので purchase とは名乗らない。
+      logFunnelWhenReady('checkout_success_return', {
+        session_id_present: params.get("session_id") ? 1 : 0,
+      });
       window.setTimeout(() => {
         const oneTime =
           typeof Entitlement !== "undefined" && Entitlement.isOneTime && Entitlement.isOneTime();
