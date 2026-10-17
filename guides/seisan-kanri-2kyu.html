@@ -109,6 +109,53 @@
       <p>ただし、3科目すべてが必要な受験者はいません。JAVADAが区分ごとに公開している出題範囲(プランニング2級 hani_041A01、オペレーション2級 hani_042A01)は、どちらも専門知識と共通知識の2部構成で、共通知識の大項目は両区分とも品質管理・原価管理・納期管理・安全衛生管理・環境管理の5つで同じです。</p>
       <p>必要なのは、共通知識と、自分が受ける区分の専門知識の2科目です。プランニング2級なら共通知識823問とプランニング専門694問で1,517問、オペレーション2級なら共通知識823問とオペレーション専門295問で1,118問が練習範囲になります。もう一方の区分の専門知識は、その試験では出題されません。</p>
 
+      <div role="heading" aria-level="2" class="legal-h2">料金</div>
+      <p id="guide-price-lead">購入前に1日20問まで無料で解けます。金額は科目の問題数に応じて決まります。</p>
+      <ul id="guide-price-list">
+        <li>生産管理（共通知識）、プランニング専門、オペレーション専門は、それぞれ単品で購入できます。</li>
+        <li>プレミアムパックは全科目に加えて、今後追加する科目も使えます。</li>
+      </ul>
+      <p id="guide-price-note">最新の金額は各科目のページでご確認ください。</p>
+      <script src='config/pricing.js'></script>
+      <script>
+      (function () {
+        try {
+          if (typeof PricingConfig === "undefined") { return; }
+          var P = PricingConfig;
+          var yen = function (n) { return n.toLocaleString("ja-JP") + "円"; };
+          var oneTime = P.CHECKOUT_MODE === "payment";
+          var suffix = oneTime ? "（買い切り）" : "（月額）";
+          var rows = [
+            ["biz-career", "生産管理（共通知識）"],
+            ["biz-pm-planning", "プランニング専門"],
+            ["biz-pm-operation", "オペレーション専門"]
+          ];
+          var price = {};
+          var html = "";
+          for (var i = 0; i < rows.length; i++) {
+            var yenAmount = P.getSubjectPriceYen(rows[i][0]);
+            if (typeof yenAmount !== "number" || yenAmount <= 0) { return; }
+            price[rows[i][0]] = yenAmount;
+            html += "<li>" + rows[i][1] + " — " + yen(yenAmount) + suffix + "</li>";
+          }
+          html += "<li>" + P.PACK_TITLE + " — " + yen(P.PACK_PRICE_YEN) + suffix.slice(0, -1) + "。全科目と、今後追加する科目も使えます）</li>";
+          var list = document.getElementById("guide-price-list");
+          if (!list) { return; }
+          list.innerHTML = html;
+          var lead = document.getElementById("guide-price-lead");
+          if (lead && oneTime) {
+            lead.textContent = "ビジネス道場は買い切りです。一度購入すればその科目はずっと使えます。月額課金も自動更新もありません。購入前に1日20問まで無料で解けます。";
+          }
+          var note = document.getElementById("guide-price-note");
+          if (note) {
+            var plan = price["biz-career"] + price["biz-pm-planning"];
+            var oper = price["biz-career"] + price["biz-pm-operation"];
+            note.textContent = "受験に必要なのは共通知識と、自分が受ける区分の専門知識の2科目です。プランニング2級なら" + yen(plan) + "、オペレーション2級なら" + yen(oper) + "。参考までに2級の受験料は8,800円です。金額は問題数に応じて決まるため、問題が増えると変わることがあります。";
+          }
+        } catch (e) {}
+      })();
+      </script>
+
       <div role="heading" aria-level="2" class="legal-h2">よくある質問</div>
       <p><strong>2級と3級は何が違いますか。</strong></p>
       <p>出題数40問・試験時間110分・合格ライン概ね60パーセントは2級と3級で同じです。違いは選択肢の数で、3級が4肢択一、2級が5肢択一です。受験資格については公式サイトの記載をご確認ください。</p>
