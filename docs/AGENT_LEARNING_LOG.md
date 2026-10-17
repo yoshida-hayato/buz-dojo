@@ -10427,3 +10427,73 @@ checkout_canceled は多くて1件、例外0件、成功の枝は変化なし。
 - 社長がやること: deploy.yml の checkout に ref main、両ジョブに
   timeout-minutes 20、Actions の Deploy to Firebase を手動実行
 - 残っている小さな1件: legal の3頁が無計測
+
+---
+
+## 2026-10-18 01:48便
+
+### 社長がやること
+
+- Actions の Deploy to Firebase で Run workflow (main)。これで本番は main の先端になる
+- apply patch と deploy の両ジョブに timeout-minutes 20 (パッチ不可領域)
+- 値付けの回答 (MARKET SEISAN KANRI と MARKET SAP の2枚)
+- 取り下げ: deploy の checkout に ref main を足す依頼。理由は下記
+
+### 23:48便 と 00:48便 が出した ref main の依頼は、前提が誤っていた
+
+ワークフローの中身を読んだ。3つ確定した。
+
+1. ブリッジは push を1回しかしない。apply_patch.py は commit だけで push せず
+   (ファイル冒頭にそう書いてある)、ワークフローの Push commit (if any) が
+   base と HEAD を比べて1回だけ push する。21:17 の13コミットは1 push である。
+   23:48便 の 95秒で13 push は誤りだった。
+2. その push では deploy は起動しない。GITHUB_TOKEN による push では on push の
+   ワークフローが走らないというGitHubの仕様で、apply_patch.yml のコメント自身が
+   そう書いている。だから同ファイルの末尾が gh workflow run deploy.yml --ref main
+   を明示的に呼んでいる (actions write の権限はそのために付いている)。
+3. workflow_dispatch は ref の先端を取る。だから checkout に ref main を足しても
+   何も変わらない。concurrency で途中のコミットが配られるという筋も、push が1回で
+   dispatch も1回なので成立しない。
+
+恒久対策として3便続けて社長に出していた1行は、効かない。先に取り下げる。
+
+### 残る候補は3つ。どれも私からは見えない
+
+- dispatch された deploy の回が落ちた (test ジョブか deploy ジョブ)
+- gh workflow run 自体が落ちた (push の後の最終ステップなので、落ちても push は残る)
+- group deploy-production に張り付いた回が居て、後続が待ち続けている
+  (cancel-in-progress は false。GitHub の既定の打ち切りは6時間)
+
+Actions が読めないので、ここは社長の目が1回だけ必要である。今便、鍵なしで2つ
+試して両方だめだった。badge の画像はサーバ側のエラーで返らず、Actions の頁は
+半年前の古い3件を返して状態の語を含まなかった。この2つは次の便も試さなくてよい。
+
+### 説明できていない観測を1つ残す
+
+本番は 68f483b (ガイド頁の料金の節、12:15:49) を持っているのに、c25d51e
+(利用規約 第2条、12:17:15) を持っていない。両方とも 21:17 の同じ1 push の中に在る。
+dispatch が1回で先端を取るなら、この状態は作れないはずである。legal は no-cache
+なので古く見えているのではなく、配信側の保存は内容を新しくはできないのでガイド頁が
+新しく見えている方も本物である。筋は立てない。次の便へ渡す。
+
+### 本番に出たかを1回で測る物差し
+
+firebase.json の rewrites は ** を index.html に送る catch-all 1本だけである。
+だから新しく作った静的な頁は二値の物差しになる。その URL を取ってトップ頁が
+返ってきたら、その頁はまだ本番に居ない。いま使えるのは 22:48便 が作ったSAPの
+ガイド頁で、01:50 時点ではトップ頁が返った。version.js の指紋より速くて曖昧さが
+無い (指紋は legal と guides と index.html を見ない)。
+
+注意: headers に /guides/** の欄が無い。legal は no-cache だがガイド頁は既定の
+ままなので、ガイド頁で古いが出たときは配信側の保存を疑う余地が残る。新しいが
+出たときだけ断定できる、片側だけの物差しである。
+
+### 次の自分へ
+
+- 未適用は 00:48便 の2件と今便の1件で計3件。01:17 の枠は 01:50 時点で未着
+  (先端は 64427d2)。23:17 の枠は87分遅れて 00:44 に着いた。git log で数え直す (18度目)
+- 本番は 01:55 時点で 利用規約 第2条 第5条 第6条 第10条 が全部まだ月額の字面。
+  main には4件とも入っている。JS が動く相手には差し替えが当たるので害は無いまま
+- 社長の携帯と受信箱に届く通知の口がある (スケジュール実行の PushNotification)。
+  今便はじめて使った。Slack に3便積んでも動かない塞がりは、こちらで1回鳴らす。
+  何も変化の無い便では鳴らさないこと
