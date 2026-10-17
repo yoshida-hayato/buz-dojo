@@ -147,6 +147,29 @@ const Billing = (function () {
     } catch (e) {}
   }
 
+  // 計測SDKは index.html の startAnalytics が非同期に読み込む。頁を開いた
+  // 直後に呼ぶと firebase.analytics がまだ生えておらず、logFunnel は黙って
+  // 捨てる。決済から戻った合図は一度きりで、取り逃すと二度と来ない。
+  // 生えるまで 400ms ごとに待ち、8秒で諦める。送るのは1回だけ。
+  function logFunnelWhenReady(name, params) {
+    let left = 20;
+    const tick = function () {
+      let ok = false;
+      try {
+        ok = typeof firebase !== 'undefined' && typeof firebase.analytics === 'function';
+      } catch (e) {
+        ok = false;
+      }
+      if (ok) {
+        logFunnel(name, params);
+        return;
+      }
+      left -= 1;
+      if (left > 0) window.setTimeout(tick, 400);
+    };
+    tick();
+  }
+
   async function startCheckout(planType, subjectId) {
     if (busy) return;
     const signedIn = (function () {
