@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang='ja'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <meta name='robots' content='index,follow'>
+  <base href='/'>
+  <title>SAPの練習問題 — Tコード・用語・モジュール別に解く — ビジネス道場</title>
+  <meta name='description' content='SAPのTコード、用語、略称、実践シナリオ、正誤問題を4,951問。FI・CO・MM・SD・PP・HR・BASIS・ABAPのモジュール別に絞って解けます。1日20問まで無料。'>
+  <link rel='canonical' href='/guides/sap-quiz.html'>
+  <meta property='og:type' content='article'>
+  <meta property='og:site_name' content='ビジネス道場'>
+  <meta property='og:title' content='SAPの練習問題 — Tコード・用語・モジュール別に解く'>
+  <link rel='icon' href='assets/favicon.svg' type='image/svg+xml' sizes='any'>
+  <link rel='stylesheet' href='css/base.css'>
+  <link rel='stylesheet' href='css/legal.css'>
+  <script src='config/firebase-config.js'></script>
+  <script>
+  (function () {
+    try {
+      if (typeof FIREBASE_CONFIG === 'undefined') { return; }
+      var id = FIREBASE_CONFIG.measurementId;
+      if (!id) { return; }
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', id);
+      var host = ['www', 'googletagmanager', 'com'].join('.');
+      var tag = document.createElement('script');
+      tag.async = true;
+      tag.src = 'https://' + host + '/gtag/js?id=' + encodeURIComponent(id);
+      document.head.appendChild(tag);
+    } catch (e) {}
+  })();
+  </script>
+</head>
+<body class='legal-body'>
+  <div class='legal-wrap'>
+    <a class='legal-brand' href='/'>ビジネス道場</a>
+    <article class='legal-card'>
+      <div role='heading' aria-level='1' class='legal-h1'>SAPの練習問題 — Tコード・用語・モジュール別に解く</div>
+      <p class='legal-updated'>最終更新日: 2026年10月17日</p>
+
+      <p>実務で使うSAPの操作と用語を、問題の形で確かめるための科目です。2026年10月時点で4,951問あり、ビジネス道場の有料科目のうち最も問題数が多い科目です。</p>
+
+      <div role='heading' aria-level='2' class='legal-h2'>出題の形は8種類</div>
+      <ul>
+        <li>トランザクションコード — Tコードを自分で打ち込む入力式です。選択肢から選びません。</li>
+        <li>ショートカット・コマンド — 操作に使うキー操作とコマンド。</li>
+        <li>SAP用語 — 伝票、マスタ、組織単位など、画面と帳票に出てくる言葉。</li>
+        <li>略称・正式名称 — FI、CO、MM、WBS、BOMなどが何の略で、何を指すか。</li>
+        <li>実践・シナリオ — ある業務を、どの順でどの機能を使って進めるか。</li>
+        <li>正誤問題 — 短い記述が正しいかどうかを判断します。</li>
+        <li>手順の並べ替え — 業務の流れを正しい順に並べます。</li>
+        <li>穴埋め — 文中の空欄を候補から選んで埋めます。</li>
+      </ul>
+
+      <div role='heading' aria-level='2' class='legal-h2'>モジュール別に絞って解ける</div>
+      <p>担当しているモジュールだけに絞って解けます。</p>
+      <ul>
+        <li>FI(財務会計)、CO(管理会計)</li>
+        <li>MM(購買・在庫)、SD(販売)、PP(生産)</li>
+        <li>HR(人事)、BASIS(基盤・技術)、ABAP(開発)</li>
+        <li>モジュールをまたぐ共通の知識、および略称全般</li>
+      </ul>
+      <p>絞り込みは上の8種類すべてで使えます。1つのモジュールを、用語から正誤判断まで通して練習できます。</p>
+
+      <div role='heading' aria-level='2' class='legal-h2'>料金と無料で解ける範囲</div>
+      <p id='guide-price-lead'>有料科目は1日20問まで無料で解けます。21問目から先に進むには購入が必要です。金額は科目の問題数に応じて決まります。</p>
+      <ul id='guide-price-list'>
+        <li>SAPは単品で購入できます。</li>
+        <li>プレミアムパックは全科目に加えて、今後追加する科目も使えます。</li>
+      </ul>
+      <script src='config/pricing.js'></script>
+      <script>
+      (function () {
+        try {
+          if (typeof PricingConfig === 'undefined') { return; }
+          var P = PricingConfig;
+          var yen = function (n) { return n.toLocaleString('ja-JP') + '円'; };
+          var oneTime = P.CHECKOUT_MODE === 'payment';
+          var suffix = oneTime ? '(買い切り)' : '(月額)';
+          var sap = P.getSubjectPriceYen('sap');
+          var pack = P.PACK_PRICE_YEN;
+          var list = document.getElementById('guide-price-list');
+          if (!list) { return; }
+          if (typeof sap !== 'number' || sap <= 0) { return; }
+          if (typeof pack !== 'number' || pack <= 0) { return; }
+          list.innerHTML =
+            '<li>SAP単品 — ' + yen(sap) + suffix + '</li>' +
+            '<li>' + P.PACK_TITLE + ' — ' + yen(pack) + suffix + '。SAPを含む全科目と、今後追加する科目も使えます</li>';
+        } catch (e) {}
+      })();
+      </script>
+
+      <div role='heading' aria-level='2' class='legal-h2'>よくある質問</div>
+      <p>SAP認定資格の対策になりますか。 — 資格コード単位の問題集にはしていません。出題は実務で使う操作と用語が中心で、特定の認定試験の範囲に沿って並べたものではありません。資格対策には、その試験に対応した教材とあわせてお使いください。</p>
+      <p>どのリリース向けですか。 — 特定のリリースに限定していません。Tコードと業務の流れには、ECCとS/4HANAに共通する部分が多くあります。SAP ERP 6.0の標準保守は2027年末で終了し、2030年末までが延長保守にあたると国内のITメディア各社が報じています。</p>
+      <p>問題は増えますか。 — 追加しています。問題数が増えると単品の金額も変わります。プレミアムパックは購入後に追加される科目も対象です。</p>
+
+      <nav class='legal-nav' aria-label='関連ページ'>
+        <a href='/sap'>SAPを解く</a>
+        <a href='/guides/seisan-kanri-2kyu.html'>生産管理2級のガイド</a>
+        <a href='/'>トップへ戻る</a>
+      </nav>
+    </article>
+  </div>
+</body>
+</html>
