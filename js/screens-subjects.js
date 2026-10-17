@@ -1637,17 +1637,34 @@ function updateStartQuotaGate(exhausted, priceLabel) {
 /** 開始押下時: alertせず開始位置に案内を出しスクロール */
 function showFreeQuotaExhaustedAtStart() {
   let priceLabel = "";
+  let priceYen = 0;
   if (typeof Entitlement !== "undefined" && CURRENT_SUBJECT) {
     // updateStartQuotaGate と同じ理由で、subjectPriceYenForUi に通す
-    priceLabel = Entitlement.formatPrice(
-      subjectPriceYenForUi(
-        CURRENT_SUBJECT.id,
-        typeof QUIZ_DATA !== "undefined" && Array.isArray(QUIZ_DATA)
-          ? QUIZ_DATA.length
-          : 0
-      )
+    priceYen = subjectPriceYenForUi(
+      CURRENT_SUBJECT.id,
+      typeof QUIZ_DATA !== "undefined" && Array.isArray(QUIZ_DATA)
+        ? QUIZ_DATA.length
+        : 0
     );
+    priceLabel = Entitlement.formatPrice(priceYen);
   }
+  // 無料枠切れの壁に当たった回数を GA4 に残す。
+  // 10/17 08:48便 で js/billing.js の startCheckout に begin_checkout を足したが、
+  // それだけでは begin_checkout が0のときに、壁まで来た人が居ないのか、
+  // 壁までは来たが金額の前で帰ったのかが分かれない。打つ手は前者が集客、
+  // 後者が値付けと文面で、正反対である。
+  // この関数の呼び出し元は3つ (開始ボタン / ホームの次を始める / startQuizAsync) で、
+  // どれも押下由来なので、再描画でこの数が増えることはない。
+  // 金額は上と同じ priceYen なので、画面の文面に出る金額と必ず一致する。
+  // 計測が使えない環境 (テストの vm を含む) では黙って何もしない。
+  try {
+    if (typeof firebase !== "undefined" && typeof firebase.analytics === "function") {
+      firebase.analytics().logEvent("paywall_view", {
+        subject_id: (CURRENT_SUBJECT && CURRENT_SUBJECT.id) || "",
+        price_yen: Number(priceYen) || 0,
+      });
+    }
+  } catch (e) {}
   updateStartQuotaGate(true, priceLabel);
 
   const paywallNotice = $("plan-paywall-notice");
