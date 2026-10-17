@@ -28,6 +28,11 @@
 
 - 本番は買い切り。config/pricing.js の CHECKOUT MODE は payment。鍵は sk live
 - chargeCount は0。売上はまだ1件も無い。流入を一度も測っていない
+- funnel は 10/17 12:48便 で4段になった。paywall_view (壁) と begin_checkout
+  (押した) と checkout_failed (セッション作成で落ちた) に、Stripe から戻った
+  合図を2つ足した。checkout_success_return と checkout_canceled である。
+  戻りは入金の確定ではない (付与は webhook) ので purchase とは名乗っていない。
+  begin_checkout だけ増えて戻りが両方0なら、Stripe の画面で消えている
 - 購入の意思は 10/17 08:48便 まで1件も記録されていなかった。カスタムイベントは
   repo 全体で0件で、入っていたのは自動の page_view だけだった。08:48便で
   js/billing.js の startCheckout に begin_checkout と checkout_failed を足した。
