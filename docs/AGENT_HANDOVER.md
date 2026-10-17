@@ -25,6 +25,16 @@
 
 - 本番は買い切り。config/pricing.js の CHECKOUT MODE は payment。鍵は sk live
 - chargeCount は0。売上はまだ1件も無い。流入を一度も測っていない
+- 購入の意思は 10/17 08:48便 まで1件も記録されていなかった。カスタムイベントは
+  repo 全体で0件で、入っていたのは自動の page_view だけだった。08:48便で
+  js/billing.js の startCheckout に begin_checkout と checkout_failed を足した。
+  これで「誰も押していない」と「押したが落ちている」を分けて読める。
+  イベント数は設定なしで見えるが、科目別の内訳はGA4側でカスタム定義の登録が要る
+- 単品の実価格 (10/17 08:48便に node で算出): sap 1980 / biz-career 710 /
+  biz-pm-planning 640 / biz-pm-operation 400 / windows-shortcuts 430 /
+  excel-functions 320 / ai-ontology-core 290。無料は outlook-mail と
+  teams-collab と ai-ontology-intro。有料7科目の合計は4770円で、パックは3980円。
+  問題数が動けばこの表も動く。数えるのは pricing.js に通すこと
 - 生産管理は2級向けの商品 (subjects/registry.js)。2級の令和7年度後期は
   申請者1,161人、合格率は54と59パーセント。3級の数字と混ぜないこと
 - sitemap.xml は本番で生きている。loc は15本。直す所は無い
