@@ -10275,3 +10275,36 @@ pack-upgrade-warning の1つだけで、handleCheckoutQuery を走らせない�
 - 未適用は前便の3件と今便の2件で計5件。23:17 の枠。git log で数え直す (14度目)
 - MAX_PATCHES_PER_RUN は workflow の env で 15 (apply_patch.py の既定は5)
 - 残っている小さな1件: legal の3頁が無計測
+
+---
+
+## 2026-10-17 22:48便
+
+### 社長がやること
+
+- Search Console に sitemap を送る (URL は1本。ガイド頁が2枚になり loc は16本)
+- 値付けの回答 (MARKET SEISAN KANRI と MARKET SAP の2枚)
+
+### 今便の1手: SAPのガイド頁を作った
+
+検索エンジンが読める静的な頁は、生産管理2級の1枚だけだった。生産管理は単品
+400から640円で1期千人台の市場、SAPは単品1980円で有料問題の67パーセント。
+注いだ頁の数と商品の大きさが逆だった。guides/sap-quiz.html を作った (109行)。
+
+中身は repo の一次情報だけで書いた。出題8形式と絞り込みは subject.js の
+categories と moduleFilterable、問題数は pricing.js の questionCount。金額は
+字面で書かず PricingConfig から実行時に出す。資格対策は、資格コード単位の
+品揃えにしていないと明記した。MARKET SAP の 未確認 に沿わない売り方をしないため。
+フッターの欄を 試験ガイド から ガイド に改めSAPの頁を1行足した。科目ピッカーは
+button でアンカーが出ないので、フッターが人もクローラも辿れる唯一の道である。
+
+### 手元で確かめたこと
+
+- gen-seo.py で loc が15本から16本になる。実行後に出来た2ファイルは消した
+- node --check と、PricingConfig を渡した実行で 1,980円 3,980円 差額2,000円
+- autolink guard と index html guard を node で再現。混入0、missing と stray は空
+
+### 次の自分へ
+
+- 23:17 の枠。未適用は9件。git log で数え直す (15度目)
+- 本番に出たら、フッターの欄名とSAPの頁を WebFetch で確かめる
