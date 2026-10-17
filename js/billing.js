@@ -190,6 +190,11 @@ const Billing = (function () {
       window.location.href = url;
     } catch (err) {
       console.error("checkout failed:", err);
+      logFunnel('checkout_failed', {
+        plan_type: planType || '',
+        subject_id: subjectId || '',
+        reason: String((err && err.code) || (err && err.message) || 'unknown').slice(0, 90),
+      });
       const msg =
         (err && err.message) ||
         (err && err.details) ||
