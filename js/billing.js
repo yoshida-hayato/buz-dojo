@@ -134,8 +134,33 @@ const Billing = (function () {
     void startCheckout(action.planType, action.subjectId);
   }
 
+  // GA4 の計測は index.html の startAnalytics が firebase-analytics-compat を
+  // 読んだあとに生きる。自動で入るのは page_view だけなので、購入の意思は
+  // これまで1件も記録されていなかった。chargeCount が0のとき、誰も押して
+  // いないのか、押したあとで落ちているのかを区別できるようにする。
+  // 計測が無い環境でも本体を止めないよう、失敗は黙って捨てる。
+  function logFunnel(name, params) {
+    try {
+      if (typeof firebase === 'undefined') return;
+      if (typeof firebase.analytics !== 'function') return;
+      firebase.analytics().logEvent(name, params || {});
+    } catch (e) {}
+  }
+
   async function startCheckout(planType, subjectId) {
     if (busy) return;
+    const signedIn = (function () {
+      try {
+        return currentUser() ? 1 : 0;
+      } catch (e) {
+        return 0;
+      }
+    })();
+    logFunnel('begin_checkout', {
+      plan_type: planType || '',
+      subject_id: subjectId || '',
+      signed_in: signedIn,
+    });
     if (!currentUser()) {
       pendingAction = {
         kind: "checkout",
