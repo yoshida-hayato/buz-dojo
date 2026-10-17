@@ -9880,3 +9880,56 @@ functions で jest を入れようとしたが、プロキシ設定を入れて�
   11:17 の枠はまだ来ていない (11:49 時点の先端は 42af985)。git log で数え直す (9度目)
 - 市場メモの中で未確認のまま残っているもの: 無料競合に解説が付くか、
   過去問題集 (雇用問題研究会) の価格
+
+---
+
+## 2026-10-17 12:48便
+
+### 社長がやること
+
+- お願いはありません (値付け・頻度・sitemap・GA4 は回答待ちのまま)
+
+### 今便の1手: funnel の最後の1段を足した
+
+08:48便が begin_checkout と checkout_failed を、09:48便が paywall_view を
+足した。しかし Stripe から戻った側は、成功も取り消しも1件も残っていなかった。
+handleCheckoutQuery は success で alert を出すだけ、cancel は <http://console.info|console.info> だけ
+である。だから「押したあと決済画面で消えた」と「戻ってきて取り消した」を
+分けられず、chargeCount は入金しか言わない。
+
+checkout_success_return と checkout_canceled を足した。purchase とは
+名乗っていない。success_url に戻ることは入金の確定ではなく、付与を決めるのは
+webhook のほうだからである。GA4 の購買レポートに出どころの違う数字を
+流し込まない。名前を2つに分けたのは、カスタム定義の登録なしでも
+イベント一覧で件数が読めるようにするためである。
+
+### 落とし穴: 頁を開いた直後の logFunnel は黙って捨てられる
+
+計測SDKは index.html の startAnalytics が loadScript で非同期に読み込む。
+handleCheckoutQuery は DOMContentLoaded で走る。つまり素朴に logFunnel を
+呼ぶと firebase.analytics がまだ無く、logFunnel の中の早期 return で
+何も起きない。足したつもりで0件、という形になる。
+
+400ms ごとに20回まで待ってから1回だけ送る台 (logFunnelWhenReady) を先に
+入れた。vm の台で6通り確認した。1.2秒後に生える / 3.0秒後に生える /
+最後まで生えない / checkout の引数が無い / 最初から生えている /
+session id が無い。どの場合もイベントは多くて1件で、重複も取りこぼしも無い。
+
+次の自分へ: 頁の読み込み時に動く場所へ計測を足すときは、SDKの到着を
+待つこと。1クリックの中で動く場所 (startCheckout など) は logFunnel のままでよい。
+
+### テストは通ることを手元で確かめた
+
+js/billing.js を読むテストは1つある (functions/__tests__/pack-upgrade-warning)。
+これは document.readyState を loading にして handleCheckoutQuery を
+走らせない作りなので、今回の追加は評価されない。21件すべて手元で通した。
+node --check も通る。npm は この箱から registry に届かないので、
+jest 本体ではなく同等の shim で走らせた結果である。
+
+### 次の自分へ
+
+- 未適用は今便の5件を入れて15件。11:17 の枠は 12:49 時点で未着 (先端は 42af985)。
+  窓は50件なので崖は遠い。git log で数え直す (10度目)
+- イベントが本番で出ているかはこの箱から見えない。GA4 は社長だけが見られる
+- legal の3頁はいまも無計測。小さな1件として残っている
+- config/pricing.js の冒頭コメントがサブスク時代のまま (04:48便の指摘)。未着手
