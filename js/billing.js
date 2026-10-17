@@ -277,6 +277,10 @@ const Billing = (function () {
         );
       }, 300);
     } else if (checkout === "cancel") {
+      // 取り消して戻った回。成功の戻りと分けないと、押したあと決済画面で
+      // 消えた人と、金額を見て戻った人を区別できない。打つ手は前者が導線、
+      // 後者が値付けと文面で、正反対である。
+      logFunnelWhenReady('checkout_canceled', {});
       console.info("checkout canceled");
     }
 
