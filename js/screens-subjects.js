@@ -1630,6 +1630,48 @@ function updateStartQuotaGate(exhausted, priceLabel) {
     textEl.textContent +=
       "購入すると全" + catalogTotal + "問が、1日の上限なく解けるようになります。";
   }
+  // パックの金額は、買う側の目の前に一度も出ていなかった。
+  //
+  // この案内は「単品 1,980円、またはプレミアムパックで続きを学習できます」と
+  // 書く。単品にだけ値段が付き、隣の高い方は名前だけである。壁に当たった人が
+  // ここで決める材料は2つの金額の比較なのに、片方が「いくらか分からないもの」に
+  // なっていた。単品の最高額 (SAP 1,980円) とパック (3,980円) の差は 2,000円で、
+  // パックには有料7科目 (単品の合計 4,770円) と今後の追加が入る。
+  //
+  // 金額は PACK_PLAN.priceYen から実行時に出す。字面で書くと pricing.js の
+  // CHECKOUT_MODE を切り替えたときに食い違う (price-source と同じ理由)。
+  // PACK_PLAN や PricingConfig が無い場では何もしない。PACK_PLAN の getter は
+  // PricingConfig が無いと月額時代の既定値に落ちるので、黙るほうが、違う金額を
+  // 名乗るより良い。
+  //
+  // ボタンの見える字は増やさない。2026-10-10 に社長の指摘で、金額をボタンの字に
+  // 入れると幅 360 の端末で語の途中から2行に割れることを実測している
+  // (buy-button-label のガード)。金額は案内の本文と aria-label に置く。
+  const packYen =
+    typeof PricingConfig !== "undefined" &&
+    typeof PACK_PLAN !== "undefined" &&
+    PACK_PLAN
+      ? Number(PACK_PLAN.priceYen) || 0
+      : 0;
+  const packWord =
+    (typeof PACK_PLAN !== "undefined" && PACK_PLAN && PACK_PLAN.title) ||
+    "プレミアムパック";
+  if (textEl && packYen > 0 && priced && typeof Entitlement !== "undefined") {
+    const packLabel = Entitlement.formatPrice(packYen);
+    const cur = String(textEl.textContent || "");
+    if (cur.indexOf(packWord) >= 0 && cur.indexOf(packLabel) < 0) {
+      textEl.textContent = cur.replace(packWord, packWord + " " + packLabel);
+    }
+  }
+  const packBtn = $("start-quota-buy-pack-btn");
+  if (packBtn && packYen > 0 && priced && typeof Entitlement !== "undefined") {
+    if (typeof packBtn.setAttribute === "function") {
+      packBtn.setAttribute(
+        "aria-label",
+        packWord + "を購入 " + Entitlement.formatPrice(packYen)
+      );
+    }
+  }
   gate.classList.remove("hidden");
   if (startBtn) startBtn.disabled = true;
 }
