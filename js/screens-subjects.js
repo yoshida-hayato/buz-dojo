@@ -623,6 +623,20 @@ function paintSubjectPickerCards(box, rows, packOn) {
       heading.className = "subject-tier-heading";
       heading.textContent = tierHeadingLabel(tier);
       box.appendChild(heading);
+      // 試験の注記は帯に1本だけ出す。以前は3枚のカードが同じ1文を繰り返しており、
+      // 1枚35px、3枚で105pxを使っていた (2026-10-18 の実測)。帯の先頭の科目から
+      // 取るので、3科目の注記が同じ文であることが前提になる。そこは
+      // catalog-exam-note のテストで見張る。注記の無い帯では空文字が返るだけ
+      const bandNote =
+        typeof subjectExamCountdownNote === "function"
+          ? subjectExamCountdownNote(s["id"])
+          : "";
+      if (bandNote) {
+        const noteEl = document.createElement("div");
+        noteEl.className = "subject-band-note";
+        noteEl.textContent = bandNote;
+        box.appendChild(noteEl);
+      }
       lastTier = tier;
     }
     const card = document.createElement("div");
