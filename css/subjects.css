@@ -805,3 +805,11 @@ html.boot-resume-subject #subject-loading-overlay.hidden {
 
 .subject-pick-card > #subjects-pick-hint { display: none; }
 .subject-pick-card > .site-notice-quality { display: none; }
+
+.subject-band-note {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.45;
+}
