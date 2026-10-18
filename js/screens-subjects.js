@@ -740,7 +740,15 @@ function paintSubjectPickerCards(box, rows, packOn) {
     const opsFreeEntry = freeSubject && tier === "tools";
     const rawEyebrow = (s.cardEyebrow || "").trim();
     const showRegistryEyebrow = rawEyebrow && rawEyebrow !== tierLabel;
-    const eyebrow = showRegistryEyebrow
+    // 札は出さない。10枚の札 (応用・判断 / 専門知識 / 設計の判断 / 操作 ほか) は
+    // どれも題と説明文に無い事実を1つも足しておらず、社長が 2026-10-18 21:40 に
+    // わからないと言った分類の語づかいと同じ軸だった。カードの状態は丸い札
+    // (subject-card-access) が全科目ぶん持っている。390px で1枚 204px から 175px。
+    // 下の eyebrowLegacy は旧判定。テンプレート文字列を含む行はパッチ経路で
+    // 消せない (JSON にバッククォートを入れられない) ので名前だけ変えて残す。
+    // 画面には出ない。手で触れる機会があれば、この代入ごと消してよい
+    const eyebrow = "";
+    const eyebrowLegacy = showRegistryEyebrow
       ? `<div class="subject-card-eyebrow">${escapeHtml(rawEyebrow)}</div>`
       : opsFreeEntry
         ? `<div class="subject-card-eyebrow is-free">無料で始められる</div>`
