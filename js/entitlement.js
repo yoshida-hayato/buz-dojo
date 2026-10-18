@@ -274,6 +274,12 @@ const Entitlement = (function () {
 
   function startSync(uid) {
     stopSync();
+    // 回線が無い・最初のスナップショットが着く前でも、前回の購読状態で判定する
+    const cached = loadCachedEntitlements(uid);
+    if (cached) {
+      cloudEntitlements = cached;
+      notifyEntitlementsChanged();
+    }
     if (
       !uid ||
       typeof firebase === "undefined" ||
