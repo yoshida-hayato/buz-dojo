@@ -738,6 +738,7 @@
 .answer-input:disabled { opacity: 0.85; }
 
 /* ===== フィードバック ===== */
+.feedback-card { scroll-margin-top: 80px; }
 .feedback-card { border-top: 4px solid var(--border); }
 .feedback-card.is-correct { border-top-color: var(--green); }
 .feedback-card.is-wrong { border-top-color: var(--red); }
