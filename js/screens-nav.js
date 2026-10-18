@@ -9,6 +9,9 @@ function updateHeaderChrome(screenName) {
   const chromeLite = onSubjects || onMyPage || onContact || onPremium;
   document.body.classList.toggle("subjects-screen-active", onSubjects);
   document.body.classList.toggle("premium-screen-active", onPremium);
+  // 出題中はサイト共通のフッターを隠す (学習に無関係な回遊リンクを視界から外す)。
+  // markup は触らないので、JS を実行しないクローラには今までどおり届く。
+  document.body.classList.toggle("quiz-screen-active", screenName === "quiz");
 
   const navHome = $("nav-home") || document.querySelector('.nav-btn[data-nav="home"]');
   const navStats = $("nav-stats");
