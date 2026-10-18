@@ -690,7 +690,9 @@ function paintSubjectPickerCards(box, rows, packOn) {
         freeSubject = priceYen <= 0;
         hasAccess = Entitlement.hasAccess(s.id);
         const rem = Entitlement.remainingFree(s.id);
-        const accessLabel = freeSubject
+        const accessLabel = !freeSubject && !hasAccess
+          ? freeQuotaLabel(rem, Entitlement.FREE_DAILY)
+          : freeSubject
           ? "全問無料"
           : hasAccess
             ? packOn
