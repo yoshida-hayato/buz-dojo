@@ -1544,6 +1544,40 @@ function appendPaywallWholeSentence(el, priceLabel) {
     at >= 0 ? cur.slice(0, at) + sentence + cur.slice(at) : cur + sentence;
 }
 
+// パックの金額を案内の本文に足す。壁の案内は3箇所 (開始位置の案内と、ホームの
+// カードの2経路) にあるので、同じことを言わせるために1つの関数に寄せる。
+//
+// 03:48便 は開始位置の案内にだけパックの金額を足し、ホームのカードは2箇所とも
+// 名前だけのままだった。15:48便 が件数で作った食い違いと同じ形で、
+// paywall-copy-consistency のガードの前書きがその理由を書いている。同じ画面で
+// 下の案内は金額を2つ並べ、上のカードは安い方だけに値段が付く状態だった。
+//
+// 件数の節 (appendPaywallWholeSentence) とは別の関数にしてある。パックの金額は
+// catalog を見ないので、catalog が読めないときに件数と一緒に黙る必要が無い。
+//
+// 金額は PACK_PLAN の priceYen から実行時に出す。字面で書くと pricing.js の
+// CHECKOUT_MODE を切り替えたときに食い違う (price-source と同じ理由)。
+// PACK_PLAN や PricingConfig が無い場では何もしない。PACK_PLAN の getter は
+// PricingConfig が無いと月額時代の既定値に落ちるので、黙るほうが、違う金額を
+// 名乗るより良い。無料科目の 0円 ラベルのときも足さない。
+// 何度描き直しても金額は1つしか出ない。
+function appendPaywallPackPrice(el, priceLabel) {
+  if (!el || typeof Entitlement === "undefined") return;
+  if (!priceLabel || priceLabel === Entitlement.formatPrice(0)) return;
+  const packYen =
+    typeof PricingConfig !== "undefined" &&
+    typeof PACK_PLAN !== "undefined" &&
+    PACK_PLAN
+      ? Number(PACK_PLAN.priceYen) || 0
+      : 0;
+  if (packYen <= 0) return;
+  const packWord = PACK_PLAN.title || "プレミアムパック";
+  const packLabel = Entitlement.formatPrice(packYen);
+  const cur = String(el.textContent || "");
+  if (cur.indexOf(packWord) < 0 || cur.indexOf(packLabel) >= 0) return;
+  el.textContent = cur.replace(packWord, packWord + " " + packLabel);
+}
+
 /** 無料枠0か（開始ボタン制御用） */
 function isFreeQuotaExhausted() {
   if (!CURRENT_SUBJECT || typeof Entitlement === "undefined") return false;
