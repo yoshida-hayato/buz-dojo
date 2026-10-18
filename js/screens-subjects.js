@@ -327,10 +327,57 @@ let _pickerRefreshGen = 0;
 /** 直近描画の指紋（ちらつき抑制） */
 let _pickerPaintFingerprint = "";
 
+// 科目を一覧の帯に割り振る表。
+// 社長の指摘 (2026-10-18 21:40): じっくり学ぶ / すぐ使える の分類がわからない。
+// 学習内容の抽象度ではなく、何を相手にする科目かで分ける。
+// 他社12件を調べて、難易度や思考の深さを帯の見出しに使っていた例は0件だった。
+// 性質の違う商品を混ぜるときは商品種別で分けていた (docs/UI_REFERENCE_TOP_PAGE.md)。
+// 並びは既定の帯順。資格の帯だけは、申込受付中か試験が近いあいだ先頭へ上がる
+// (下の examBandLifted)。買えない時期に資格を先頭に置かない、という
+// bizcareer-application-lift の要求をそのまま帯の単位に移したもの
+const CATALOG_GROUPS = [
+  { key: "tools", label: "Office とパソコン操作" },
+  { key: "system", label: "業務システムと AI" },
+  { key: "exam", label: "資格・検定の対策" },
+];
+const CATALOG_GROUP_OF = {
+  "biz-career": "exam",
+  "biz-pm-planning": "exam",
+  "biz-pm-operation": "exam",
+  "excel-functions": "tools",
+  "windows-shortcuts": "tools",
+  "outlook-mail": "tools",
+  "teams-collab": "tools",
+  sap: "system",
+  "ai-ontology-intro": "system",
+  "ai-ontology-core": "system",
+};
+// 表に無い科目 (新設した直後など) は registry の depthTier から寄せる。
+// 落とさないことを優先する。depthTier はこの既定値のためだけに残っている
+function catalogGroupOf(s) {
+  const g = CATALOG_GROUP_OF[s["id"]];
+  if (g) return g;
+  return s.depthTier === "ops" ? "tools" : "system";
+}
+function catalogGroupRank(s) {
+  const k = catalogGroupOf(s);
+  for (let i = 0; i < CATALOG_GROUPS.length; i++) {
+    if (CATALOG_GROUPS[i].key === k) return i;
+  }
+  return CATALOG_GROUPS.length;
+}
+function catalogGroupLabel(key) {
+  for (const g of CATALOG_GROUPS) {
+    if (g.key === key) return g.label;
+  }
+  return "";
+}
+
 function enabledSubjectsSorted() {
   if (typeof SUBJECT_REGISTRY === "undefined") return [];
-  // じっくり学ぶ（応用・判断）を上、すぐ使える（操作）を下。同帯内は homeFeatured → レジストリ順
-  const tierRank = (s) => (s.depthTier === "depth" ? 0 : 1);
+  // 帯を第一の軸にする。帯をまたぐ並べ替えをすると、同じ帯の見出しが
+  // 一覧の中に2度出てしまう。同帯内は 試験が近い → homeFeatured → レジストリ順
+  const tierRank = (s) => catalogGroupRank(s);
   // 申込受付期間中、または試験が EXAM_LIFT_DAYS 日以内の科目は最上段へ。
   // 期間が終われば自動で元の並びに戻る
   const EXAM_LIFT_DAYS = 14;
@@ -341,13 +388,21 @@ function enabledSubjectsSorted() {
     const d = bizCareerExamDaysLeft(s.id);
     return d !== null && d <= EXAM_LIFT_DAYS ? 0 : 1;
   };
-  return SUBJECT_REGISTRY.filter((s) => s.enabled)
+  // 資格の帯は、中の1科目でも窓が開いていれば帯ごと先頭へ出す。
+  // カード単位で持ち上げると帯をまたぎ、見出しが2度出る
+  const liveSubjects = SUBJECT_REGISTRY.filter((s) => s.enabled);
+  const examBandLifted = liveSubjects.some(
+    (s) => catalogGroupOf(s) === "exam" && examRank(s) === 0
+  );
+  const bandRank = (s) =>
+    examBandLifted && catalogGroupOf(s) === "exam" ? -1 : tierRank(s);
+  return liveSubjects
     .slice()
     .sort((a, b) => {
+      const td = bandRank(a) - bandRank(b);
+      if (td !== 0) return td;
       const ed = examRank(a) - examRank(b);
       if (ed !== 0) return ed;
-      const td = tierRank(a) - tierRank(b);
-      if (td !== 0) return td;
       const af = a.homeFeatured ? 1 : 0;
       const bf = b.homeFeatured ? 1 : 0;
       return bf - af;
