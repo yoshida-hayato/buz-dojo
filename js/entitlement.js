@@ -318,6 +318,7 @@ const Entitlement = (function () {
       unsubscribe = ref.onSnapshot(
         (snap) => {
           cloudEntitlements = snap.exists ? snap.data() : { pack: false, subjects: {} };
+          saveCachedEntitlements(uid, cloudEntitlements);
           if (first) {
             first = false;
             resolve(getEntitlements());
