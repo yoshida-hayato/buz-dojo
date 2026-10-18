@@ -100,6 +100,8 @@ body {
 .danger-zone { text-align: center; }
 
 /* ===== フッター ===== */
+/* 出題中だけフッターを畳む。markup は残るのでクローラと JS 無効には届く */
+body.quiz-screen-active .site-footer { display: none; }
 .site-footer {
   margin-top: 48px;
   padding: 34px 0 40px;
