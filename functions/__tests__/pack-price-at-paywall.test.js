@@ -141,3 +141,50 @@ describe("金額を約束できないときは黙る", () => {
     expect(s.packBtn().getAttribute("aria-label")).toBe(null);
   });
 });
+
+// ホームのカードの文面 (plan-paywall-text) も同じ金額を名乗ること。
+//
+// 03:48便 はパックの金額を開始位置の案内にだけ足し、ホームのカードは2箇所とも
+// 名前だけで残った。15:48便 が件数で作った食い違いと同じ形である
+// (paywall-copy-consistency の前書き)。差し込みを1つの関数に寄せたうえで、
+// ここで両方を見張る。
+describe("ホームのカードも同じ金額を名乗る", () => {
+  const card = (s) => String(s.ctx.$("plan-paywall-text").textContent || "");
+
+  test("ホームのカードにもパックの金額が入る", () => {
+    const s = loadScreens(paid());
+    s.ctx.showFreeQuotaExhaustedAtStart();
+    const packLabel = s.ctx.Entitlement.formatPrice(pricing.PACK_PRICE_YEN);
+    expect(card(s)).toContain(PACK_WORD + " " + packLabel);
+    expect(card(s)).toContain("使い切りました");
+  });
+
+  test("何度描き直してもホームのカードの金額は1つだけ", () => {
+    const s = loadScreens(paid());
+    s.ctx.showFreeQuotaExhaustedAtStart();
+    s.ctx.showFreeQuotaExhaustedAtStart();
+    s.ctx.showFreeQuotaExhaustedAtStart();
+    const packLabel = s.ctx.Entitlement.formatPrice(pricing.PACK_PRICE_YEN);
+    expect(card(s).split(packLabel).length - 1).toBe(1);
+  });
+
+  test("catalog が読めなくてもパックの金額は出る (件数とは別の判断)", () => {
+    const s = loadScreens({ counts: {}, openSubject: PAID, quizLength: PAID_COUNT });
+    s.ctx.showFreeQuotaExhaustedAtStart();
+    const packLabel = s.ctx.Entitlement.formatPrice(pricing.PACK_PRICE_YEN);
+    expect(card(s)).toContain(packLabel);
+    expect(card(s)).not.toContain("購入すると全");
+  });
+
+  test("無料科目ではホームのカードにも足さない", () => {
+    const s = loadScreens({ counts: { [FREE]: 60 }, openSubject: FREE, quizLength: 60 });
+    s.ctx.showFreeQuotaExhaustedAtStart();
+    expect(card(s)).not.toContain("3,980");
+  });
+
+  test("差し込みを書いている所は repo に1つだけ", () => {
+    const src = fs.readFileSync(SCREENS_SRC, "utf8");
+    expect(src.split("replace(packWord").length - 1).toBe(1);
+    expect(src.split("appendPaywallPackPrice(").length - 1).toBe(4);
+  });
+});
