@@ -1508,6 +1508,7 @@ function updateHomeNote() {
       `本日の無料${Entitlement.FREE_DAILY}問を使い切りました。単品 ${priceLabel}、またはプレミアムパックで続きを学習できます。翌日になると無料枠がリセットされます。`;
   }
   if (paywallText && exhausted) appendPaywallWholeSentence(paywallText, priceLabel);
+  if (paywallText && exhausted) appendPaywallPackPrice(paywallText, priceLabel);
   updateBillingManageVisibility();
   updateStartQuotaGate(exhausted, priceLabel);
 }
