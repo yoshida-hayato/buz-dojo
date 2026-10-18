@@ -1600,7 +1600,7 @@ function updateHomeNote() {
       (totalQ > 0 ? `　·　全 ${totalQ}問` : "");
   }
   setStartQuotaSummary(
-    `本日あと <strong>${rem}</strong> / ${Entitlement.FREE_DAILY}問` +
+    "<strong>" + freeQuotaLabel(rem, Entitlement.FREE_DAILY) + "</strong>" +
       (totalQ > 0 ? `　·　全 ${totalQ}問` : "") +
       `　·　単品 ${escapeHtml(priceLabel)}`
   );
