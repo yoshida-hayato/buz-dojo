@@ -610,11 +610,14 @@ function paintSubjectPickerCards(box, rows, packOn) {
   box.innerHTML = "";
 
   let lastTier = null;
-  const tierHeadingLabel = (tier) =>
-    tier === "depth" ? "じっくり学ぶ（応用・判断）" : "すぐ使える（操作）";
+  // 帯の表は別のパッチで入る。片方だけ main に入ったときに画面が落ちないよう、
+  // 表がまだ無いあいだは帯を1本に畳んで見出しを出さない (落とすより薄く出す)。
+  // 両方入ったあとは常に true なので、次にこの辺を触る自分が外してよい
+  const hasGroups = typeof catalogGroupLabel === "function";
+  const tierHeadingLabel = (tier) => (hasGroups ? catalogGroupLabel(tier) : "");
 
   for (const { s, rank, mastered, total, answered, err } of rows) {
-    const tier = s.depthTier === "depth" ? "depth" : "ops";
+    const tier = hasGroups ? catalogGroupOf(s) : "tools";
     if (tier !== lastTier) {
       const heading = document.createElement("h3");
       heading.className = "subject-tier-heading";
