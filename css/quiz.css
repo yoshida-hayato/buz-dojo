@@ -885,6 +885,19 @@
 }
 .result-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
 
+@media (max-width: 799px) {
+  .result-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+  .result-actions .primary-btn,
+  .result-actions .secondary-btn {
+    width: 100%;
+    max-width: 420px;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 .wrong-count-badge {
   display: inline-block;
   font-size: 13px;
