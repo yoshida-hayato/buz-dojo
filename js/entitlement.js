@@ -131,6 +131,51 @@ const Entitlement = (function () {
     return false;
   }
 
+  // --- 購読状態のローカル控え -------------------------------------------
+  // cloudEntitlements は Firestore の onSnapshot だけが書く。だから起動から
+  // 最初のスナップショットが着くまでの間、買った人も cloudEntitlements が
+  // null で、hasAccess は false を返す (1日20問の壁が出る)。回線が無い間は
+  // スナップショットが永久に来ないので、買った人がずっと未購入のまま扱われる。
+  // 直前の値を uid ごとに控え、起動直後と圏外ではそれを使う。控えはクラウドが
+  // 着いた時点で必ず上書きされる。古い控えで永久に通さないよう期限を切る。
+  const ENTITLEMENTS_CACHE_KEY = "biz_dojo_entitlements_v1";
+  const ENTITLEMENTS_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+  function loadCachedEntitlements(uid) {
+    if (!uid) return null;
+    try {
+      const raw = JSON.parse(localStorage.getItem(ENTITLEMENTS_CACHE_KEY) || "null");
+      if (!raw || raw.uid !== uid) return null;
+      if (!raw.e || typeof raw.e !== "object") return null;
+      const savedAt = Number(raw.savedAt) || 0;
+      if (!savedAt) return null;
+      if (Date.now() - savedAt > ENTITLEMENTS_CACHE_MAX_AGE_MS) return null;
+      return raw.e;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveCachedEntitlements(uid, value) {
+    if (!uid || !value || typeof value !== "object") return;
+    try {
+      localStorage.setItem(
+        ENTITLEMENTS_CACHE_KEY,
+        JSON.stringify({ uid: uid, e: value, savedAt: Date.now() })
+      );
+    } catch (e) {
+      /* 控えられなくても動作は変えない */
+    }
+  }
+
+  function notifyEntitlementsChanged() {
+    if (typeof AppBridge !== "undefined" && AppBridge.notifyEntitlementsChanged) {
+      AppBridge.notifyEntitlementsChanged(getEntitlements());
+    } else if (typeof window.onEntitlementsChanged === "function") {
+      window.onEntitlementsChanged(getEntitlements());
+    }
+  }
+
   function loadUsage() {
     try {
       const raw = JSON.parse(localStorage.getItem(USAGE_KEY) || "{}");
