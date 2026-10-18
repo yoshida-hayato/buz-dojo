@@ -651,7 +651,25 @@ function finishAnswer(isCorrect, givenText) {
   card.dataset.forQuestion = questionId;
   card.classList.remove("hidden", "is-correct", "is-wrong");
   card.classList.add(isCorrect ? "is-correct" : "is-wrong");
+  revealFeedbackCard(card);
   scheduleNextBtnFocus();
+}
+
+// 解説カードを視界に入れる。
+// これまで回答後のスクロールは next-btn への focus() の副作用だった。
+// ブラウザはフォーカスした要素を見せるので、解説が長いほど下へ送られ、
+// 正解・不正解の行と解説の冒頭が画面の上に消えていた。
+// 実測 (390x844): 解説 476px で解説の頭が画面 y=-92、1461px で y=-1078。
+// block を nearest にすると、カードが画面に収まるときは下端合わせになるので、
+// 自分が選んだ選択肢の色を残したまま解説が読める。収まらないときは頭合わせで、
+// scroll-margin-top が追従ヘッダーのぶんを空ける。
+function revealFeedbackCard(card) {
+  if (!card || typeof card.scrollIntoView !== "function") return;
+  try {
+    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (e) {
+    card.scrollIntoView(false);
+  }
 }
 
 /** scheduleNextBtnFocus の解除（次問へ進む／重ね掛け防止） */
