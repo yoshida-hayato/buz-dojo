@@ -1595,7 +1595,7 @@ function updateHomeNote() {
   const rem = Entitlement.remainingFree(sid);
   if (quotaEl) {
     quotaEl.innerHTML =
-      `本日の無料枠: <strong>あと ${rem} / ${Entitlement.FREE_DAILY}問</strong>` +
+      "<strong>" + freeQuotaLabel(rem, Entitlement.FREE_DAILY) + "</strong>" +
       `　·　単品 ${escapeHtml(priceLabel)}` +
       (totalQ > 0 ? `　·　全 ${totalQ}問` : "");
   }
