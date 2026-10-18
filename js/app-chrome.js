@@ -275,8 +275,16 @@ async function clearAppCaches() {
   }
   if ("caches" in window) {
     try {
+      // オフラインで持たせる控えの名前の接頭辞。この名前で始まる入れ物だけが、
+      // アプリの版が上がっても消されずに残る。同じ字面が
+      // docs/OFFLINE_DESIGN.md にも在り、ガードが両者を突き合わせる。
+      const OFFLINE_CACHE_PREFIX = "bizdojo-offline-";
       const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
+      // 版を上げるたびにここが走る。買った科目の問題データを端末に持たせる
+      // 設計では、配信物の控えと問題データの控えを分けないと、更新のたびに
+      // 利用者が数MBを取り直すことになる。
+      const stale = keys.filter((k) => k.indexOf(OFFLINE_CACHE_PREFIX) !== 0);
+      await Promise.all(stale.map((k) => caches.delete(k)));
     } catch (_) { /* 非対応 */ }
   }
 }
