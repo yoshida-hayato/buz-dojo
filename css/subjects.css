@@ -774,3 +774,31 @@ html.boot-resume-subject #subject-loading-overlay.hidden {
 }
 .subject-card-eyebrow.is-free { background: #e4f7ec; color: #047857; }
 .pack-card { border-radius: 14px; }
+
+.subjects-intro {
+  margin: 12px 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 0 14px;
+}
+.subjects-intro summary {
+  cursor: pointer;
+  padding: 11px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sap-blue-dark);
+  list-style: none;
+  user-select: none;
+}
+.subjects-intro summary::-webkit-details-marker { display: none; }
+.subjects-intro summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 7px;
+  transition: transform 0.15s;
+}
+.subjects-intro[open] summary::before { transform: rotate(90deg); }
+.subjects-intro[open] summary { border-bottom: 1px solid #e2e8f0; }
+.subjects-intro .setting-hint { margin-top: 10px; }
+.subjects-intro .site-notice-quality { margin-bottom: 12px; }
