@@ -359,6 +359,17 @@ function catalogGroupOf(s) {
   if (g) return g;
   return s.depthTier === "ops" ? "tools" : "system";
 }
+// 無料枠の残りを、初見の訪問者にも読める字で返す。
+// 2026-10-19 06:48便 まで 本日あと20/20 と出していた。単位が無く、20/20 が
+// 何の20なのか読み取れない (390px で 710円 と 全823問 と並び、数字が3つ続く)。
+function freeQuotaLabel(rem, limit) {
+  const n = Number(limit);
+  const r = Number(rem);
+  if (!(n > 0)) return "";
+  if (!(r > 0)) return "本日の無料ぶんは終了";
+  if (r >= n) return "本日あと" + n + "問";
+  return "本日あと" + r + "問";
+}
 function catalogGroupRank(s) {
   const k = catalogGroupOf(s);
   for (let i = 0; i < CATALOG_GROUPS.length; i++) {
