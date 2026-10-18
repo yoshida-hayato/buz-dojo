@@ -699,7 +699,9 @@ function scheduleNextBtnFocus() {
       !$("screen-quiz").classList.contains("hidden") &&
       !$("feedback-card").classList.contains("hidden")
     ) {
-      btn.focus();
+      // スクロールは revealFeedbackCard が済ませている。
+      // ここで送り直すと解説の冒頭が画面の上に消える
+      btn.focus({ preventScroll: true });
     }
   };
   // Enter 回答の keyup とぶつからないよう余裕を持たせる
