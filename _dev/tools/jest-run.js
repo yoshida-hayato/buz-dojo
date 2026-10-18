@@ -72,8 +72,14 @@ const TABLE = {
   toBe: [function (g, w) { return g === w; }, "to be"],
   toEqual: [same, "to equal"],
   toContain: [function (g, w) { return g != null && g.indexOf(w) >= 0; }, "to contain"],
+  toMatch: [function (g, w) {
+    if (g == null) return false;
+    if (w instanceof RegExp) return String(g).match(w) !== null;
+    return String(g).indexOf(String(w)) >= 0;
+  }, "to match"],
   toBeGreaterThan: [function (g, w) { return g > w; }, "to be above"],
   toBeGreaterThanOrEqual: [function (g, w) { return g >= w; }, "to be at least"],
+  toBeLessThan: [function (g, w) { return g < w; }, "to be below"],
   toBeLessThanOrEqual: [function (g, w) { return g <= w; }, "to be at most"],
   toBeUndefined: [function (g) { return g === undefined; }, "to be undefined"],
   toBeDefined: [function (g) { return g !== undefined; }, "to be defined"],
