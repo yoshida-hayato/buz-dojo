@@ -707,9 +707,10 @@ function paintSubjectPickerCards(box, rows, packOn) {
     const playLabel = freeSubject || hasAccess ? "学習する" : "無料で学習";
     const displayTitle = s.shortTitle || s.title;
     // 帯見出しと同文言の eyebrow は出さない（Teams等の差分 eyebrow は残す）
-    // FREE_ENTRY: 「無料で始められる」緑帯は操作帯のみ。じっくり帯の無料（入門）は操作入口と見せない
+    // FREE_ENTRY: 「無料で始められる」緑帯は Office とパソコン操作の帯のみ。
+    // 業務システムと AI の帯の無料（入門）は操作入口と見せない
     const tierLabel = tierHeadingLabel(tier);
-    const opsFreeEntry = freeSubject && tier === "ops";
+    const opsFreeEntry = freeSubject && tier === "tools";
     const rawEyebrow = (s.cardEyebrow || "").trim();
     const showRegistryEyebrow = rawEyebrow && rawEyebrow !== tierLabel;
     const eyebrow = showRegistryEyebrow
