@@ -815,7 +815,7 @@ function updateSubjectPickerNotices(packOn) {
   if (pickHint) {
     pickHint.innerHTML = packOn
       ? "プレミアムパック会員の方は、すべての科目を<strong>制限なく</strong>学習できます。科目ごとの成績は分かれます。"
-      : "操作だけなら下の「すぐ使える（操作）」帯からで大丈夫です。オントロジーは知識の置き方を学ぶ科目で、操作の代わりではありません。科目ごとの成績は分かれます。100問以下は<strong>全問無料</strong>、それ以外は<strong>1日20問まで無料</strong>です。";
+      : "操作だけなら下の「Office とパソコン操作」の帯からで大丈夫です。オントロジーは知識の置き方を学ぶ科目で、操作の代わりではありません。科目ごとの成績は分かれます。100問以下は<strong>全問無料</strong>、それ以外は<strong>1日20問まで無料</strong>です。";
   }
   const supportNotice = $("subjects-support-notice");
   const thanksNotice = $("subjects-thanks-notice");
