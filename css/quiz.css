@@ -1011,3 +1011,11 @@
 }
 .all-correct { text-align: center; color: var(--green); font-weight: 700; padding: 10px; }
 
+
+/* 携帯では開始ボタンを横いっぱいにする。
+   2026-10-18 11:48便 実測: 390px 幅で開始ボタンは 186px しかなく、
+   その下に並ぶ購入ボタン2つ (322px) のほうが太かった。主たる操作が
+   従より細い状態だったので、幅と高さを主に戻す。文面は変えない。 */
+@media (max-width: 560px) {
+  .start-area #start-btn { width: 100%; min-height: 52px; }
+}
