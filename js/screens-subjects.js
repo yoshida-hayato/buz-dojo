@@ -742,9 +742,7 @@ function paintSubjectPickerCards(box, rows, packOn) {
     card.innerHTML =
       eyebrow +
       `<div class="subject-card-title">${escapeHtml(displayTitle)}</div>` +
-      (typeof subjectExamCountdownHtml === "function"
-        ? subjectExamCountdownHtml(s.id)
-        : "") +
+      // 試験の注記は帯の見出しの下に1本だけ出す。カードは抱えない
       (s.description
         ? `<div class="subject-card-desc">${escapeHtml(s.description)}</div>`
         : "") +
