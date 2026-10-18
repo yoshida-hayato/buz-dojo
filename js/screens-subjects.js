@@ -730,7 +730,28 @@ function paintSubjectPickerCards(box, rows, packOn) {
   updateBillingManageVisibility();
 }
 
+// 説明2つを畳む入れ物を組み立てる。index.html に直接書けない。
+// Slack 経由のパッチでは、送信時に HTML が Markdown に変換され、
+// 開閉タグとその見出しのタグが消える (2026-10-18 18:48便 に実測)。
+// だからここで DOM として作る。文面は1文字も変えない。
+function foldSubjectsIntro() {
+  if (document.getElementById("subjects-intro")) return;
+  const hint = $("subjects-pick-hint");
+  if (!hint || !hint.parentNode) return;
+  const quality = hint.parentNode.querySelector(".site-notice-quality");
+  const box = document.createElement("details");
+  box.id = "subjects-intro";
+  box.className = "subjects-intro";
+  const head = document.createElement("summary");
+  head.textContent = "はじめての方へ（無料の範囲・AI）";
+  box.appendChild(head);
+  hint.parentNode.insertBefore(box, hint);
+  box.appendChild(hint);
+  if (quality) box.appendChild(quality);
+}
+
 function updateSubjectPickerNotices(packOn) {
+  foldSubjectsIntro();
   const pickHint = $("subjects-pick-hint");
   if (pickHint) {
     pickHint.innerHTML = packOn
