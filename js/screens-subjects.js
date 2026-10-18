@@ -1755,6 +1755,7 @@ function showFreeQuotaExhaustedAtStart() {
   }
 
   if (paywallText) appendPaywallWholeSentence(paywallText, priceLabel);
+  if (paywallText) appendPaywallPackPrice(paywallText, priceLabel);
 
   const gate = $("start-quota-gate") || $("start-btn");
   if (gate && typeof gate.scrollIntoView === "function") {
