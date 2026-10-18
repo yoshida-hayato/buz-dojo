@@ -62,3 +62,16 @@
   color: var(--text-sub);
 }
 
+
+/* 携帯では段位バナーを1行に畳む。
+   2026-10-18 11:48便 実測: 390x844 でホームの最初の1画面は
+   段位バナー273px + 保存先の注記38px + 科目の説明82px で埋まり、
+   「クイズを開始する」は top 891px — 画面の外に出ていた。
+   丸い段位章を縦に積むのが高さの主因なので、横1行に戻す。
+   成績・段位の画面の同じバナーにも効く (248px -> 108px)。 */
+@media (max-width: 560px) {
+  .rank-banner { flex-direction: row; align-items: center; gap: 12px; }
+  .rank-badge { align-self: auto; min-width: 54px; height: 54px; font-size: 16px; }
+  .rank-info { width: auto; text-align: left; }
+  .rank-info .rank-label { display: none; }
+}
