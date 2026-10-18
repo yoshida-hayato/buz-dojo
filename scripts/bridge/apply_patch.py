@@ -105,7 +105,7 @@ def last_processed_ts() -> float:
 
 def fetch_pending_patches(since_ts: float) -> list[dict]:
     """since_ts より新しい PATCH_V1 を、古い順に返す。"""
-    body = slack_get("conversations.history", {"channel": CHANNEL_ID, "limit": "50"})
+    body = slack_get("conversations.history", {"channel": CHANNEL_ID, "limit": "300"})
     if not body.get("ok"):
         raise RuntimeError(f"Slack読み取りに失敗しました: {body.get('error')}")
 
