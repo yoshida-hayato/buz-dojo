@@ -802,3 +802,6 @@ html.boot-resume-subject #subject-loading-overlay.hidden {
 .subjects-intro[open] summary { border-bottom: 1px solid #e2e8f0; }
 .subjects-intro .setting-hint { margin-top: 10px; }
 .subjects-intro .site-notice-quality { margin-bottom: 12px; }
+
+.subject-pick-card > #subjects-pick-hint { display: none; }
+.subject-pick-card > .site-notice-quality { display: none; }
