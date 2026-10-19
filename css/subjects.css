@@ -582,8 +582,7 @@ body.subjects-screen-active .site-title {
   padding: 14px 16px;
   background: linear-gradient(180deg, #eff6ff 0%, #fff 55%);
 }
-.pack-card-eyebrow,
-.subject-card-eyebrow {
+.pack-card-eyebrow {
   display: inline-block;
   font-size: 11px;
   font-weight: 800;
@@ -593,10 +592,6 @@ body.subjects-screen-active .site-title {
   border-radius: 999px;
   padding: 2px 8px;
   margin-bottom: 6px;
-}
-.subject-card-eyebrow.is-free {
-  color: #065f46;
-  background: #d1fae5;
 }
 .subject-card.is-featured {
   border-color: #7dd3fc;
