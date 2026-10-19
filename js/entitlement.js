@@ -236,6 +236,20 @@ const Entitlement = (function () {
     return Math.max(0, FREE_DAILY - usedToday(subjectId));
   }
 
+  // 無料枠の残りを、初見の訪問者にも読める字で返す。
+  // 2026-10-19 まで 本日あと20/20 と 本日あと 20 / 20問 の2とおりの字面が
+  // カード・科目ホーム・マイページに散らばっていた。単位の無い比の形は
+  // 390px で 710円 と 全823問 と並んで数字が3つ続き、どれが何の数か読めない。
+  // 画面をまたいで同じ数字を同じ字で出すため、実装はこの1つだけにする
+  function freeQuotaLabel(rem, limit) {
+    const n = Number(limit === undefined ? FREE_DAILY : limit);
+    const r = Number(rem);
+    if (!(n > 0)) return "";
+    if (!(r > 0)) return "本日の無料ぶんは終了";
+    if (r >= n) return "本日あと" + n + "問";
+    return "本日あと" + r + "問";
+  }
+
   function canStart(subjectId, wantCount) {
     if (hasAccess(subjectId)) return { ok: true, remaining: Infinity };
     const rem = remainingFree(subjectId);
