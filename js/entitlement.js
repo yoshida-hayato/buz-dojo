@@ -370,6 +370,7 @@ const Entitlement = (function () {
     hasAnySubscription,
     usedToday,
     remainingFree,
+    freeQuotaLabel,
     canStart,
     recordAnswer,
     formatPrice,
