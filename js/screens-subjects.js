@@ -696,7 +696,7 @@ function paintSubjectPickerCards(box, rows, packOn) {
               : Entitlement.ownedLabel
                 ? Entitlement.ownedLabel()
                 : "購読中"
-            : `本日あと${rem}/${Entitlement.FREE_DAILY}`;
+            : "";
         if (!freeSubject && !hasAccess) {
           metaParts.push(
             `<span class="subject-card-price">${escapeHtml(Entitlement.formatPrice(priceYen))}</span>`
