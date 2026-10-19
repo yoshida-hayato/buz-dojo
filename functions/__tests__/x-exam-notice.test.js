@@ -75,11 +75,10 @@ describe("公式日程との突き合わせ (X側)", () => {
 });
 
 describe("サイトとXが同じ日程を言う (写しの照合)", () => {
-  test("試験日の定数が2ファイルで一致する", () => {
-    expect(datesInConst(NOTICE_SRC, "EXAM_DATES")).toEqual(
-      datesInConst(SCREENS_SRC, "BIZCAREER_EXAM_DATES")
-    );
-  });
+  // 試験日の2ファイル突き合わせは
+  // bizcareer-schedule-table.test.js に移した。表を延ばすときに
+  // 2ファイルを同じパッチで直せず、途中の1手で必ず落ちるため。
+  // 移した先では公式の表の写しと両方を突き合わせている
 
   test("申込受付期間の定数が2ファイルで一致する", () => {
     expect(datesInConst(NOTICE_SRC, "APPLICATION_PERIODS")).toEqual(
