@@ -51,7 +51,11 @@ const FORMER = "次回ビジキャリは10/4、申込は7/10まで";
 
 describe("公式日程との突き合わせ (X側)", () => {
   test("試験日が公式と一致する", () => {
-    expect(datesInConst(NOTICE_SRC, "EXAM_DATES")).toEqual(["2026-10-04", "2027-02-14"]);
+    // 表は先へ延びる。先頭2期ぶんが公式と一致することと、空でないことを見張る。
+    // 表の全体を1文字ずつ見張るのは bizcareer-schedule-table.test.js の役目
+    const ds = datesInConst(NOTICE_SRC, "EXAM_DATES");
+    expect(ds.slice(0, 2)).toEqual(["2026-10-04", "2027-02-14"]);
+    expect(ds.length).toBeGreaterThan(1);
   });
 
   test("申込受付期間が公式と一致する", () => {
