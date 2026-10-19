@@ -4,7 +4,9 @@
 // 判定は JST の暦日。依存なし・副作用なし。詳しい経緯は docs/AGENT_LEARNING_LOG.md。
 //
 
-const EXAM_DATES = ["2026-10-04", "2027-02-14"];
+// 令和9年度(2027年度)の2日は 2026-10-13 に主催者が公表したもの (2026-10-19 確認)。
+// 受付期間は「後日ご案内」で未公表なので APPLICATION_PERIODS には足していない
+const EXAM_DATES = ["2026-10-04", "2027-02-14", "2027-10-03", "2028-02-13"];
 
 // from と to は両端を含む
 const APPLICATION_PERIODS = [
