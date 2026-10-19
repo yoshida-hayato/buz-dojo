@@ -222,7 +222,9 @@ function paintMyPageBilling(billingEl, rows) {
       statusHtml =
         `<span class="mypage-badge is-off">無料枠</span>` +
         (rem != null
-          ? ` 本日あと <strong>${rem}</strong> / ${Entitlement.FREE_DAILY}問`
+          ? " <strong>" +
+            escapeHtml(Entitlement.freeQuotaLabel(rem, Entitlement.FREE_DAILY)) +
+            "</strong>"
           : "");
     }
 
