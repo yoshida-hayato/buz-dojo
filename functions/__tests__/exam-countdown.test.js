@@ -66,8 +66,10 @@ describe("bizCareerExamDaysLeft (JST の残り日数)", () => {
     }
   });
 
-  test("最後の試験日を過ぎたら null (定数を足し忘れたら気づける)", () => {
-    expect(loadAt("2027-02-15T09:00:00+09:00").bizCareerExamDaysLeft("biz-career")).toBe(null);
+  test("表の最後の試験日を過ぎたら null", () => {
+    // 表の末尾そのものは bizcareer-schedule-table.test.js が1文字ずつ見張る。
+    // ここは「表が切れたら落ちずに黙る」ことだけを見る。どの年度の表でも真
+    expect(loadAt("2030-01-01T09:00:00+09:00").bizCareerExamDaysLeft("biz-career")).toBe(null);
   });
 
   test("生産管理系の3科目だけが対象", () => {
