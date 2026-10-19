@@ -733,35 +733,17 @@ function paintSubjectPickerCards(box, rows, packOn) {
 
     const playLabel = freeSubject || hasAccess ? "学習する" : "無料で学習";
     const displayTitle = s.shortTitle || s.title;
-    // 帯見出しと同文言の eyebrow は出さない（Teams等の差分 eyebrow は残す）
     // FREE_ENTRY: 「無料で始められる」緑帯は Office とパソコン操作の帯のみ。
     // 業務システムと AI の帯の無料（入門）は操作入口と見せない
-    const tierLabel = tierHeadingLabel(tier);
+    // 科目カードの札 (eyebrow) は 2026-10-19 に廃止した。
+    // 10枚とも題と説明文に無い事実を 1つも足していなかった。
+    // カードの状態は丸い札 (subject-card-access) が全科目ぶん持っている。
+    // 戻したくなったときは subject-card-eyebrow.test.js の理由を先に読むこと
     const opsFreeEntry = freeSubject && tier === "tools";
-    const rawEyebrow = (s.cardEyebrow || "").trim();
-    const showRegistryEyebrow = rawEyebrow && rawEyebrow !== tierLabel;
-    // 札は出さない。10枚の札 (応用・判断 / 専門知識 / 設計の判断 / 操作 ほか) は
-    // どれも題と説明文に無い事実を1つも足しておらず、社長が 2026-10-18 21:40 に
-    // わからないと言った分類の語づかいと同じ軸だった。カードの状態は丸い札
-    // (subject-card-access) が全科目ぶん持っている。390px で1枚 204px から 175px。
-    // 下の eyebrowLegacy は旧判定。テンプレート文字列を含む行はパッチ経路で
-    // 消せない (JSON にバッククォートを入れられない) ので名前だけ変えて残す。
-    // 画面には出ない。手で触れる機会があれば、この代入ごと消してよい
-    const eyebrow = "";
-    const eyebrowLegacy = showRegistryEyebrow
-      ? `<div class="subject-card-eyebrow">${escapeHtml(rawEyebrow)}</div>`
-      : opsFreeEntry
-        ? `<div class="subject-card-eyebrow is-free">無料で始められる</div>`
-        : freeSubject
-          ? ""
-          : !err && total > 0
-            ? `<div class="subject-card-eyebrow">1日20問まで無料</div>`
-            : "";
     if (s.homeFeatured) card.classList.add("is-featured");
     if (opsFreeEntry) card.classList.add("is-free-entry");
     else if (!err && total > 0 && !freeSubject) card.classList.add("is-paid-entry");
     card.innerHTML =
-      eyebrow +
       `<div class="subject-card-title">${escapeHtml(displayTitle)}</div>` +
       // 試験の注記は帯の見出しの下に1本だけ出す。カードは抱えない
       (s.description
