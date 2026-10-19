@@ -508,7 +508,9 @@ function buildPickerRows(subjects, catalogCounts, allSummaries, summariesLoaded)
 }
 
 // ビジキャリ試験(生産管理系3科目)の試験日カウントダウン。JST基準、60日前から表示
-const BIZCAREER_EXAM_DATES = ['2026-10-04', '2027-02-14'];
+// 令和9年度(2027年度)の2日は 2026-10-13 に主催者が公表したもの (2026-10-19 確認)。
+// 受付期間は未公表なので BIZCAREER_APPLICATION_PERIODS は2期のまま
+const BIZCAREER_EXAM_DATES = ['2026-10-04', '2027-02-14', '2027-10-03', '2028-02-13'];
 const BIZCAREER_EXAM_SUBJECTS = ['biz-career', 'biz-pm-planning', 'biz-pm-operation'];
 
 function bizCareerExamDaysLeft(subjectId) {
