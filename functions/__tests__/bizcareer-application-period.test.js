@@ -76,16 +76,19 @@ describe("公式の日程と定数が一致している", () => {
     ]);
   });
 
-  test("試験日の定数が公式の2期ぶんと一致する", () => {
-    expect(datesInConst("BIZCAREER_EXAM_DATES")).toEqual([
-      "2026-10-04", "2027-02-14",
-    ]);
+  test("試験日の定数の先頭2期ぶんが公式と一致する", () => {
+    // 表は先へ延びる。全体を1文字ずつ見張るのは bizcareer-schedule-table.test.js
+    const ds = datesInConst("BIZCAREER_EXAM_DATES");
+    expect(ds.slice(0, 2)).toEqual(["2026-10-04", "2027-02-14"]);
+    expect(ds.length).toBeGreaterThan(1);
   });
 
   test("2つの定数が同じ試験日を指している", () => {
     const periods = datesInConst("BIZCAREER_APPLICATION_PERIODS");
     const examOf = [periods[2], periods[5]];
-    expect(datesInConst("BIZCAREER_EXAM_DATES")).toEqual(examOf);
+    // 受付期間が入っている期は、試験日の表の先頭から同じ順で並んでいること。
+    // 受付期間が未公表の期は試験日だけ先に入るので、長さは一致しない
+    expect(datesInConst("BIZCAREER_EXAM_DATES").slice(0, 2)).toEqual(examOf);
   });
 
   test("どの期間も開始が終了より前で、終了が試験日より前", () => {
