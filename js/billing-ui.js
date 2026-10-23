@@ -39,6 +39,35 @@ function initBillingUI() {
       Billing.startCheckout("subject", CURRENT_SUBJECT.id);
     };
   }
+  // 結果画面の購入導線。startCheckout が begin_checkout を立てるので、
+  // 押された事実はそこで数えられる。ただし begin_checkout には押した場所が
+  // 入っていないので、この面だけの押下を別名で1つ残す。
+  const resultBuySubject = $("result-buy-subject-btn");
+  const resultBuyPack = $("result-buy-pack-btn");
+  function logResultUpsellClick(planType) {
+    try {
+      if (typeof firebase !== "undefined" && typeof firebase.analytics === "function") {
+        firebase.analytics().logEvent("result_upsell_click", {
+          plan_type: planType,
+          subject_id: (CURRENT_SUBJECT && CURRENT_SUBJECT.id) || "",
+        });
+      }
+    } catch (e) {}
+  }
+  if (resultBuySubject) {
+    resultBuySubject.onclick = () => {
+      if (!CURRENT_SUBJECT || typeof Billing === "undefined") return;
+      logResultUpsellClick("subject");
+      Billing.startCheckout("subject", CURRENT_SUBJECT.id);
+    };
+  }
+  if (resultBuyPack) {
+    resultBuyPack.onclick = () => {
+      if (typeof Billing === "undefined") return;
+      logResultUpsellClick("pack");
+      Billing.startCheckout("pack");
+    };
+  }
   updateBillingManageVisibility();
 }
 
