@@ -9,9 +9,10 @@
  *
  * 単品料金 (金額の数字はここに書かない。CHECKOUT_MODE で変わるので、
  * 下の定数宣言が唯一の正本である):
- * - 問題数 ≤ 100 → 無料（¥0）
- * - 101〜2999 → ¥290〜¥980 を問題数に応じて按分（10円単位）
- * - 問題数 ≥ 3000 → 上限 ¥980
+ * - 問題数 ≤ FREE_SUBJECT_MAX_COUNT → 無料（¥0）
+ * - その上から PRICE_CAP_COUNT 未満 → PRICE_MIN〜PRICE_MAX を問題数に応じて
+ *   按分（10円単位）
+ * - 問題数 ≥ PRICE_CAP_COUNT → 上限 PRICE_MAX
  */
 (function (root, factory) {
   const api = factory();
