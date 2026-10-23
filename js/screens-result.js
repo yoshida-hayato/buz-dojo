@@ -47,6 +47,8 @@ function renderResult() {
     }
   }
 
+  renderResultUpsell();
+
   // 間違えた問題の一覧
   const wrongCard = $("wrong-list-card");
   const wrongBadge = $("wrong-count-badge");
