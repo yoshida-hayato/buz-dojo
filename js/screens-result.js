@@ -68,6 +68,82 @@ function renderResult() {
 }
 
 /**
+ * 結果画面の購入導線。
+ *
+ * なぜ要るか: 解き終わった直後は、その科目を続けるかどうかを決める場所である。
+ * ところが 2026-10-24 時点のこの画面には、金額・残りの無料枠・パックに触れる
+ * 要素が1つも無かった (11語を grep して全部0件)。しかも壁
+ * (showFreeQuotaExhaustedAtStart) は「開始しようとした時」にしか出ないので、
+ * 最後の無料枠を今のセットで使い切った人は、この画面では何も知らされず、
+ * 次に もう一度 を押して初めて止まる。
+ *
+ * 出す条件は1つだけ: hasAccess が偽であること。
+ * 無料科目・単品購入済み・パック所有は hasAccess が真なので、何も出ない。
+ * 金額が取れないときは「¥0（買い切り）」を出すより黙る。
+ */
+function renderResultUpsell() {
+  const box = $("result-upsell");
+  if (!box) return;
+  const quotaEl = $("result-upsell-quota");
+  const textEl = $("result-upsell-text");
+  // 隠すときは字も消す。見えない所に前の科目の金額が残らないようにする
+  const hide = () => {
+    box.classList.add("hidden");
+    if (quotaEl) quotaEl.textContent = "";
+    if (textEl) textEl.textContent = "";
+  };
+  if (
+    typeof Entitlement === "undefined" ||
+    typeof CURRENT_SUBJECT === "undefined" ||
+    !CURRENT_SUBJECT ||
+    Entitlement.hasAccess(CURRENT_SUBJECT.id)
+  ) {
+    hide();
+    return;
+  }
+  const loaded =
+    typeof QUIZ_DATA !== "undefined" && Array.isArray(QUIZ_DATA) ? QUIZ_DATA.length : 0;
+  const priceYen =
+    typeof subjectPriceYenForUi === "function"
+      ? subjectPriceYenForUi(CURRENT_SUBJECT.id, loaded)
+      : 0;
+  if (!(Number(priceYen) > 0)) {
+    hide();
+    return;
+  }
+  const priceLabel = Entitlement.formatPrice(priceYen);
+  const packYen =
+    typeof PricingConfig !== "undefined" ? Number(PricingConfig.PACK_PRICE_YEN) || 0 : 0;
+  const packPart =
+    packYen > 0
+      ? "プレミアムパックは " + Entitlement.formatPrice(packYen) + " で、今後追加する科目も含みます。"
+      : "";
+  const rem = Entitlement.remainingFree(CURRENT_SUBJECT.id);
+  const exhausted = !(Number(rem) > 0);
+  if (quotaEl) quotaEl.textContent = Entitlement.freeQuotaLabel(rem);
+  if (textEl) {
+    textEl.textContent = exhausted
+      ? "翌朝（日本時間0時）に無料枠がリセットされます。単品 " +
+        priceLabel +
+        " なら、いますぐ続けられます。" +
+        packPart
+      : "単品 " + priceLabel + " で、この科目の続きをいつでも解けます。" + packPart;
+  }
+  box.classList.remove("hidden");
+  // この導線を見た回数。壁 (paywall_view) とは別の名前にして、
+  // どちらの面が効いているかを分けて読めるようにする。
+  try {
+    if (typeof firebase !== "undefined" && typeof firebase.analytics === "function") {
+      firebase.analytics().logEvent("result_upsell_view", {
+        subject_id: CURRENT_SUBJECT.id || "",
+        price_yen: Number(priceYen) || 0,
+        exhausted: exhausted ? 1 : 0,
+      });
+    }
+  } catch (e) {}
+}
+
+/**
  * 今回のセットの誤答から、復習優先スコアが最も高い1問を返す。
  * StatsAnalysis.reviewScore と同じ式（未読込時は同式をローカル計算）。
  */
