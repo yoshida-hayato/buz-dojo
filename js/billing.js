@@ -454,6 +454,12 @@ const Billing = (function () {
             : "お支払いありがとうございます。購読が反映されるまで数十秒かかることがあります。"
         );
       }, 300);
+      // 見張りで投げても、戻りの後始末 (問い合わせ文字列の掃除) は進める。
+      try {
+        watchGrant(loadPendingGrant());
+      } catch (e) {
+        console.warn("grant watch unavailable:", e);
+      }
     } else if (checkout === "cancel") {
       // 取り消して戻った回。成功の戻りと分けないと、押したあと決済画面で
       // 消えた人と、金額を見て戻った人を区別できない。打つ手は前者が導線、
