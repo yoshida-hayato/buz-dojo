@@ -9,6 +9,25 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/legal.css">
+  <script src="config/firebase-config.js"></script>
+  <script>
+  (function () {
+    try {
+      if (typeof FIREBASE_CONFIG === 'undefined') { return; }
+      var id = FIREBASE_CONFIG.measurementId;
+      if (!id) { return; }
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', id);
+      var host = ['www', 'googletagmanager', 'com'].join('.');
+      var tag = document.createElement('script');
+      tag.async = true;
+      tag.src = 'https://' + host + '/gtag/js?id=' + encodeURIComponent(id);
+      document.head.appendChild(tag);
+    } catch (e) {}
+  })();
+  </script>
 </head>
 <body class="legal-body">
   <div class="legal-wrap">
