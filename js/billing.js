@@ -381,6 +381,13 @@ const Billing = (function () {
       const res = await fn(payload);
       const url = res.data && res.data.url;
       if (!url) throw new Error("Checkout URL を取得できませんでした");
+      // 控えが取れなくても決済は止めない。ここで投げると購入そのものが
+      // 進まなくなる (控えは反映の見張りにしか使わない)。
+      try {
+        savePendingGrant(planType, subjectId);
+      } catch (e) {
+        console.warn("pending grant not saved:", e);
+      }
       window.location.href = url;
     } catch (err) {
       console.error("checkout failed:", err);
