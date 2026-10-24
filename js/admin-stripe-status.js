@@ -81,7 +81,7 @@
       ? "全イベント"
       : (ep.enabledEvents || []).join(" / ") || "なし";
     return '<div class="card">' +
-      '### ' + esc(ep.url || "(url 不明)") + "" +
+      '<h3 class="card-subtitle" >' + esc(ep.url || "(url 不明)") + "</h3 >" +
       head + rest +
       '<div class="analytics-stat-grid">' +
       stat("状態", ep.status || "不明", "Stripe 側の enabled / disabled") +
