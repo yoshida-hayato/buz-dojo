@@ -107,7 +107,9 @@ describe("applyOneTimePurchase — 付与する場合", () => {
 });
 
 describe("applyOneTimePurchase — 付与してはいけない場合", () => {
-  test("payment_status が paid 以外なら付与しない", async () => {
+  // 入金待ち (コンビニ・銀行振込) の回。付与は
+  // checkout.session.async_payment_succeeded が来たときにやる。
+  test("payment_status が unpaid なら付与しない (入金待ち)", async () => {
     const { applyOneTimePurchase } = load();
     const res = await applyOneTimePurchase(
       "uid-5",
@@ -116,6 +118,23 @@ describe("applyOneTimePurchase — 付与してはいけない場合", () => {
     expect(res.ok).toBe(false);
     expect(res.reason).toBe("not_paid");
     expect(store["uid-5"]).toBeUndefined();
+  });
+
+  // 100%割引のプロモコードを使った回は no_payment_required で届く。
+  // 請求額は0でも決済は完了しているので、付与しないと払う必要が無かった人に
+  // 権利が付かない。allow_promotion_codes は立っているので起こり得る。
+  test("payment_status が no_payment_required なら付与する (全額割引)", async () => {
+    const { applyOneTimePurchase } = load();
+    const res = await applyOneTimePurchase(
+      "uid-free",
+      session({
+        payment_status: "no_payment_required",
+        amount_total: 0,
+        metadata: { planType: "subject", subjectId: "sap" },
+      })
+    );
+    expect(res.ok).toBe(true);
+    expect(clientSeesActive(store["uid-free"], "sap")).toBe(true);
   });
 
   test("planType が不正、または uid が空なら付与しない", async () => {
