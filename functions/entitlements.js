@@ -207,7 +207,16 @@ async function applyOneTimePurchase(uid, session) {
   const meta = session.metadata || {};
   const planType = meta.planType || "";
   const subjectId = meta.subjectId || "";
-  if (session.payment_status && session.payment_status !== "paid") {
+  // 100%割引のプロモコードで買った回は、Stripe の payment_status が
+  // no_payment_required で届く (決済は完了していて、請求額が0である)。
+  // paid だけを通していたので、この回は not_paid で弾かれ、権利が永久に
+  // 付かなかった。index.js は ok:false でも 200 を返すので Stripe は再送せず、
+  // ログの1行しか残らない。createCheckoutSession は allow_promotion_codes を
+  // 立てているので、コードを1本作った時点で起きる。
+  // コンビニ・銀行振込の unpaid は従来どおり弾く (入金は
+  // checkout.session.async_payment_succeeded 側で付与する)。
+  const PAID_STATUSES = ["paid", "no_payment_required"];
+  if (session.payment_status && PAID_STATUSES.indexOf(session.payment_status) < 0) {
     return { ok: false, reason: "not_paid" };
   }
   const payload = {
