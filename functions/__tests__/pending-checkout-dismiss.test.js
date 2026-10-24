@@ -39,6 +39,7 @@ function boot() {
     window: {
       location: loc,
       setTimeout: () => {},
+      addEventListener: () => {},
       history: { replaceState: () => {} },
       URLSearchParams,
     },
