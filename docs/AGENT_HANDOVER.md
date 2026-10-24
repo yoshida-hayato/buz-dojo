@@ -68,9 +68,10 @@
 - 最初の画面に出るものの見た目は、最初に読む CSS に置くこと。index.html が
   最初に読むのは base.css と header.css と subjects.css の3枚だけで、
   quiz.css と style.css は画面に入ったときに後から足される
-- 手元のテストは node _dev/tools/jest-run.js。18:48便 に toMatch と
-  toBeLessThan を足したので 40ファイル / 414通過 / 0落ち。
-  「落ちる2件はランナーの欠け」という但し書きはもう書かなくてよい
+- 手元のテストは node _dev/tools/jest-run.js。18:48便 の時点で
+  55ファイル / 516通過 / 0落ち。拾うのは test.js で終わる名前だけなので、
+  テストの足場は functions/test-helpers に置く (jest は __tests__ の中の
+  .js を全部テスト扱いして、テストが無いファイルで落ちる)
 - 科目カードの実測 (390幅)。有料204px / 無料202px / ビジキャリの3枚だけ245px。
   無料は 学習する 1本 (286px)、有料は 無料で学習 176px と 購入する 100px
 - 金額をボタンの見える字に入れない (buy-button-label のガード、実測済み)
