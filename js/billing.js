@@ -307,6 +307,40 @@ const Billing = (function () {
     return box;
   }
 
+  // 決済から戻ったあと、権利が実際に付いたかを見張る。付与は webhook が
+  // やるので、戻った時点ではまだ付いていない。90秒待って付かなければ、
+  // 利用者には次の手を見せ、GA4 には取りこぼしとして1件残す。
+  // これが無いと、払ったのに付かなかった回は画面にもログにも何も残らない。
+  function watchGrant(grant) {
+    if (!grant) return;
+    const startedAt = Date.now();
+    const tick = function () {
+      const waited = Date.now() - startedAt;
+      if (grantArrived(grant)) {
+        clearPendingGrant();
+        logFunnelWhenReady("checkout_grant_confirmed", {
+          plan_type: grant.planType,
+          subject_id: grant.subjectId || "",
+          waited_ms: waited,
+        });
+        showGrantBanner("ok", grant);
+        return;
+      }
+      if (waited >= GRANT_WAIT_MS) {
+        clearPendingGrant();
+        logFunnelWhenReady("checkout_grant_timeout", {
+          plan_type: grant.planType,
+          subject_id: grant.subjectId || "",
+          waited_ms: waited,
+        });
+        showGrantBanner("late", grant);
+        return;
+      }
+      window.setTimeout(tick, GRANT_POLL_MS);
+    };
+    window.setTimeout(tick, GRANT_POLL_MS);
+  }
+
   async function startCheckout(planType, subjectId) {
     if (busy) return;
     const signedIn = (function () {
