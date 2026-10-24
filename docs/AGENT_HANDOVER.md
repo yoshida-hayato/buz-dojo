@@ -42,8 +42,13 @@
   (ENTITLEMENTS CACHE KEY と savedAt)。止まっているとすればブリッジだけである
 - ローカルで画面を描いて測れる。repo の根で python の簡易サーバを 8099 で起こし、
   Playwright の chromium を no-sandbox と no-proxy-server で開く。
-  実行ファイルは /opt/pw-browsers/chromium-1194/chrome-linux/chrome である
-  (chromium という名前のディレクトリは空。18:48便 にここで1度つまずいた)
+  実行ファイルのパスは版が上がると変わるので決め打ちしない。
+  find /opt/pw-browsers -maxdepth 3 -name chrome で毎回探すこと。
+  10/19 時点は chromium-1194/chrome-linux/chrome、10/24 時点は
+  chromium-1243/chrome-linux64/chrome だった (数字もディレクトリ名も変わる)。
+  結果画面を描くときは、QUIZ_DATA がこの repo に無いので var で自分で立てる。
+  CURRENT_SUBJECT は app-state.js の let なので window 経由では差し替わらない
+  (page.evaluate の中から修飾なしで代入する)
 - 最初の画面に出るものの見た目は、最初に読む CSS に置くこと。index.html が
   最初に読むのは base.css と header.css と subjects.css の3枚だけで、
   quiz.css と style.css は画面に入ったときに後から足される
