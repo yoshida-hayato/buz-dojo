@@ -65,7 +65,7 @@
   最初に読むのは base.css と header.css と subjects.css の3枚だけで、
   quiz.css と style.css は画面に入ったときに後から足される
 - 手元のテストは node _dev/tools/jest-run.js。00:48便 の時点で
-  57ファイル / 535通過 / 0落ち。拾うのは test.js で終わる名前だけなので、
+  59ファイル / 546通過 / 0落ち。拾うのは test.js で終わる名前だけなので、
   テストの足場は functions/test-helpers に置く (jest は __tests__ の中の
   .js を全部テスト扱いして、テストが無いファイルで落ちる)
 - 科目カードの実測 (390幅)。有料204px / 無料202px / ビジキャリの3枚だけ245px。
