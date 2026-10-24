@@ -170,6 +170,65 @@ const Billing = (function () {
     tick();
   }
 
+  // 決済から戻ったときに「何を買ったか」を知るための控え。Stripe の戻り先は
+  // 問い合わせ文字列が checkout=success と session_id だけで、買った品は
+  // 入っていない。同じタブで Stripe へ出て戻るので sessionStorage は残る。
+  const PENDING_GRANT_KEY = "biz_dojo_pending_grant_v1";
+  const GRANT_WAIT_MS = 90000;
+  const GRANT_POLL_MS = 2000;
+
+  function savePendingGrant(planType, subjectId) {
+    try {
+      sessionStorage.setItem(
+        PENDING_GRANT_KEY,
+        JSON.stringify({
+          planType: planType || "",
+          subjectId: subjectId || "",
+          at: Date.now(),
+        })
+      );
+    } catch (e) {
+      /* 控えられなくても決済は続ける */
+    }
+  }
+
+  function loadPendingGrant() {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(PENDING_GRANT_KEY) || "null");
+      if (!raw || typeof raw !== "object" || !raw.planType) return null;
+      return raw;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearPendingGrant() {
+    try {
+      sessionStorage.removeItem(PENDING_GRANT_KEY);
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  // 買った1件だけを見る。hasAnySubscription では、すでに別の科目を持つ人が
+  // 何も付与されなくても「付いた」と読めてしまう。
+  // 管理者 (無償パック) は pack が常に真なので、パックの購入はすぐ確認済みに
+  // なる。社長の試し買いの回だけ待ち時間が0に寄るが、実害は無い。
+  function grantArrived(grant) {
+    if (!grant || typeof Entitlement === "undefined") return false;
+    const e = Entitlement.getEntitlements ? Entitlement.getEntitlements() : null;
+    if (!e) return false;
+    if (grant.planType === "pack") return e.pack === true;
+    if (grant.planType === "subject" && grant.subjectId) {
+      const row = (e.subjects || {})[grant.subjectId];
+      if (!row) return false;
+      if (row === true) return true;
+      const st = row.status || "";
+      return st === "active" || st === "trialing";
+    }
+    return false;
+  }
+
   async function startCheckout(planType, subjectId) {
     if (busy) return;
     const signedIn = (function () {
