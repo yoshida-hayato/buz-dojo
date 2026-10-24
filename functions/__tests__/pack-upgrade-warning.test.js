@@ -31,7 +31,7 @@ function load(extra) {
       readyState: "loading",
       addEventListener: function () {},
     },
-    window: { location: { search: "", href: "" } },
+    window: { location: { search: "", href: "" }, addEventListener: () => {} },
   };
   const ctx = vm.createContext(Object.assign(base, extra || {}));
   ctx.window.document = ctx.document;
