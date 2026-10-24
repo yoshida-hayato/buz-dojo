@@ -120,8 +120,13 @@
   呼んで毎回書き出す。loc は18本 (トップ + 科目10 + guides4 + legal3)。
   guides と legal はディレクトリ走査なので、頁を足せば自動で載る
 - GA4 (測定ID は config/firebase-config.js の中) は index.html にしか入っていなかった。
-  SPA の中は計れるが、ガイド頁は 10/17 07:48便 まで無計測で、legal の3頁はいまも無い。
-  だから GA4 の過去の数字に、検索の着地頁の閲覧は1件も入っていない
+  SPA の中は計れるが、ガイド頁は 10/17 07:48便 まで、legal の3頁は
+  10/25 00:48便 まで無計測だった。だから GA4 の過去の数字に、
+  検索の着地頁の閲覧は1件も入っていない。いまは sitemap に載る頁すべてに
+  付いており、analytics-coverage が漏れを見張る。
+  取り付け方は2通りで、どちらも意図された形である (混ぜないこと):
+  index.html は Firebase Analytics の SDK を既存のタグから作り、
+  guides と legal は gtag を自分で読み込む。admin には付けない
 - X の垢 (seisan 2 quiz) の実際の画面は見えない。X のサイトは robots で拒否される。
   社長の目だけが一次情報
 - 実機の操作感は見えない (WebFetch は JavaScript 実行前の姿しか返さない)
