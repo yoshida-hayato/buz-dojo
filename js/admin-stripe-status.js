@@ -49,7 +49,7 @@
     if (!mode) return "";
     var kind = mode.stripeMode === "live" ? "本番 (live)" : "テスト (test)";
     return '<div class="card">' +
-      '### 鍵のモード' +
+      '<h3 class="card-subtitle" >鍵のモード</h3 >' +
       '<div class="analytics-stat-grid">' +
       stat("いま動いている鍵", kind, "Stripe が返す livemode の値") +
       stat("直近の課金", String(mode.chargeCount) + " 件", "最新10件まで") +
