@@ -482,6 +482,13 @@ const Billing = (function () {
     handleCheckoutQuery();
   }
 
+  // busy は決済画面へ飛ぶ直前に立てたまま返らない。頁が生き残ったまま戻ると
+  // (履歴の戻る・bfcache)、購入ボタンが二度と反応しない。復帰のたびに落とす。
+  // 飛ぶ処理は await の先で頁が差し替わるので、戻った時点で走っているものは無い。
+  window.addEventListener("pageshow", function () {
+    busy = false;
+  });
+
   return {
     init,
     ensureReady,
