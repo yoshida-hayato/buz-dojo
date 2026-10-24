@@ -69,3 +69,64 @@
       </ul>
       <p>共通知識は823問で、生産管理3科目のうち最も問題数の多い科目です。専門知識より先に、ここを一度通しておくと土台になります。</p>
 
+      <div role='heading' aria-level='2' class='legal-h2'>出題の形は6種類</div>
+      <ul>
+        <li>用語 — 言葉の意味を正しく選びます。</li>
+        <li>シナリオ — ある状況で、どう判断するかを選びます。</li>
+        <li>正誤問題 — 短い記述が正しいかどうかを判断します。</li>
+        <li>並べ替え — 手順や流れを正しい順に並べます。</li>
+        <li>対比 — 似ている2つを取り違えないか確かめます。</li>
+        <li>略称・正式名称 — 略語が何の略で、何を指すか。</li>
+      </ul>
+      <p>6種類すべてで分野の絞り込みが使えます。たとえば生産システムだけを、用語から正誤判断まで通して練習できます。</p>
+
+      <div role='heading' aria-level='2' class='legal-h2'>料金と無料で解ける範囲</div>
+      <p id='guide-price-lead'>有料科目は1日20問まで無料で解けます。21問目から先に進むには購入が必要です。金額は科目の問題数に応じて決まります。</p>
+      <ul id='guide-price-list'>
+        <li>生産管理プランニング専門と生産管理（共通知識）は、それぞれ単品で購入できます。</li>
+        <li>プレミアムパックは全科目に加えて、今後追加する科目も使えます。</li>
+      </ul>
+      <script src='config/pricing.js'></script>
+      <script>
+      (function () {
+        try {
+          if (typeof PricingConfig === 'undefined') { return; }
+          var P = PricingConfig;
+          var yen = function (n) { return n.toLocaleString('ja-JP') + '円'; };
+          var oneTime = P.CHECKOUT_MODE === 'payment';
+          var suffix = oneTime ? '(買い切り)' : '(月額)';
+          var plan = P.getSubjectPriceYen('biz-pm-planning');
+          var common = P.getSubjectPriceYen('biz-career');
+          var pack = P.PACK_PRICE_YEN;
+          var list = document.getElementById('guide-price-list');
+          if (!list) { return; }
+          if (typeof plan !== 'number' || plan <= 0) { return; }
+          if (typeof common !== 'number' || common <= 0) { return; }
+          if (typeof pack !== 'number' || pack <= 0) { return; }
+          list.innerHTML =
+            '<li>生産管理プランニング専門 — ' + yen(plan) + suffix + '</li>' +
+            '<li>生産管理(共通知識) — ' + yen(common) + suffix + '</li>' +
+            '<li>プランニング2級に要る2科目で ' + yen(plan + common) + suffix + '</li>' +
+            '<li>' + P.PACK_TITLE + ' — ' + yen(pack) + suffix + '。この2科目を含む全科目と、今後追加する科目も使えます</li>';
+        } catch (e) {}
+      })();
+      </script>
+
+      <div role='heading' aria-level='2' class='legal-h2'>よくある質問</div>
+      <p>オペレーション専門も買う必要がありますか。 — プランニング2級を受けるなら不要です。出題されるのは専門知識（プランニング）と共通知識の2部で、オペレーション専門はその試験には出ません。両方の区分を受ける場合だけ、両方の専門知識が範囲に入ります。</p>
+      <p>過去問ですか。 — 違います。公表されている試験範囲に沿って作成した練習問題です。過去問の本文は使っていません。</p>
+      <p>プランニングとオペレーションのどちらを受けるか決まっていません。 — プランニングは生産計画・製品企画など計画側、オペレーションは現場の作業の管理側です。担当業務に近い側から決めるのが一般的です。同じ試験日に2試験を申請することもできます。</p>
+      <p>問題は増えますか。 — 追加しています。問題数が増えると単品の金額も変わります。プレミアムパックは購入後に追加される分も対象です。</p>
+      <p>試験の日程や受験料を知りたい。 — <a href='/guides/seisan-kanri-2kyu.html'>生産管理2級のガイド</a>に、出題数・試験時間・合格ライン・受験料・令和8年度の日程・直近の実施結果をまとめています。</p>
+
+      <nav class='legal-nav' aria-label='関連ページ'>
+        <a href='/biz-pm-planning'>プランニング専門を解く</a>
+        <a href='/biz-career'>共通知識を解く</a>
+        <a href='/guides/seisan-kanri-2kyu.html'>生産管理2級のガイド</a>
+        <a href='/guides/seisan-kanri-operation-2kyu.html'>オペレーション2級のガイド</a>
+        <a href='/'>トップへ戻る</a>
+      </nav>
+    </article>
+  </div>
+</body>
+</html>
