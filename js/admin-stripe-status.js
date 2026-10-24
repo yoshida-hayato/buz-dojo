@@ -19,12 +19,14 @@
 
   var busy = false;
 
+  // dom-util.js の escapeHtml に委ねる。reports.html は CORE で dom-util を
+  // このファイルより先に読む (bridge-unescape-damage がその順序を見張る)。
+  //
+  // 自前で書き直さないこと。ここは 10/24 まで無効なエスケープだった。
+  // 実体参照を字面で書くと、ブリッジが html.unescape を1回かけるので
+  // ファイルには素の & と < と > が入り、同じ字への置換になって黙って効かなくなる。
   function esc(s) {
-    return String(s === null || s === undefined ? "" : s)
-      .replace(/&/g, "&")
-      .replace(/</g, "<")
-      .replace(/>/g, ">")
-      .replace(/"/g, "&quot;");
+    return escapeHtml(s === null || s === undefined ? "" : s);
   }
 
   function callFn(name) {
