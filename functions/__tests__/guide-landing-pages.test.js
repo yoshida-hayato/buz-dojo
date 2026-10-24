@@ -86,3 +86,64 @@ describe("guides — 生産管理の3枚が互いを指している", () => {
   });
 });
 
+describe("プランニング2級の頁 — 中身が科目の定義とずれていない", () => {
+  const PAGE = read("guides/" + PLANNING);
+  const SUBJECT = read("subjects/biz-pm-planning/subject.js");
+
+  // subject.js の modules の鍵を素朴に切り出す (量指定子なし)
+  const moduleNames = (() => {
+    const start = SUBJECT.indexOf("modules: {");
+    const end = SUBJECT.indexOf("inputCategories");
+    const body = SUBJECT.slice(start, end);
+    const out = [];
+    body.split("\n").forEach((line) => {
+      const colon = line.lastIndexOf(":");
+      if (colon < 0) { return; }
+      let key = line.slice(0, colon).trim();
+      if (!key || key === "modules") { return; }
+      if (key.charAt(0) === '"') { key = key.slice(1, key.length - 1); }
+      out.push(key);
+    });
+    return out;
+  })();
+
+  test("subject.js から7分野を読めている (切り出しの自己検査)", () => {
+    expect(moduleNames.length).toBe(7);
+    expect(moduleNames.indexOf("製品企画") >= 0).toBe(true);
+  });
+
+  test("7分野すべてが本文の箇条書きの頭に在る", () => {
+    // 字面がどこかに在るだけでは通さない。説明文 (meta description) にも
+    // 同じ7語が並んでいるので、本文の分野名を書き替えても素通りしてしまう。
+    // 実測: 最初に書いた緩い形は、設計工程管理 を別の字に変えても落ちなかった。
+    moduleNames.forEach((name) => {
+      const want = "<li>" + name + " \u2014 ";
+      expect([name, PAGE.indexOf(want) >= 0]).toEqual([name, true]);
+    });
+  });
+
+  test("金額は pricing.js に尋ねる (字面で書かない)", () => {
+    expect(PAGE.indexOf("getSubjectPriceYen('biz-pm-planning')") >= 0).toBe(true);
+    expect(PAGE.indexOf("getSubjectPriceYen('biz-career')") >= 0).toBe(true);
+    expect(PAGE.indexOf("PACK_PRICE_YEN") >= 0).toBe(true);
+    // 買い切りと月額のどちらで動いているかは pricing.js を見て決める
+    expect(PAGE.indexOf("CHECKOUT_MODE") >= 0).toBe(true);
+  });
+
+  test("もう一方の区分は出題されないと書いてある (買わせすぎない)", () => {
+    expect(PAGE.indexOf("オペレーション専門は、この試験では出題されません") >= 0).toBe(true);
+  });
+
+  test("過去問ではないと書いてある", () => {
+    expect(PAGE.indexOf("過去問の本文は使っていません") >= 0).toBe(true);
+  });
+});
+
+describe("gen-seo — 新しいガイドが sitemap に自動で入る", () => {
+  const GEN = read("_dev/gen-seo.py");
+
+  test("台本は guides のディレクトリを走査する (1枚ごとに台本を直さない)", () => {
+    expect(GEN.indexOf('for folder in ("guides", "legal")') >= 0).toBe(true);
+    expect(GEN.indexOf('name.endswith(".html")') >= 0).toBe(true);
+  });
+});
