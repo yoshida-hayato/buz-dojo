@@ -114,7 +114,11 @@
   2つの定数がこれと1文字でも違えば落ちる
 - 生産管理は2級向けの商品 (subjects/registry.js)。2級の令和7年度後期は
   申請者1,161人、合格率は54と59パーセント。3級の数字と混ぜないこと
-- sitemap.xml は本番で生きている。loc は15本。直す所は無い
+- sitemap.xml と robots.txt は本番で生きている (00:48便 に WebFetch で
+  robots を実測。Allow と Disallow /admin/ と Sitemap の3つが出た)。
+  どちらも repo には無く、firebase.json の predeploy が _dev/gen-seo.py を
+  呼んで毎回書き出す。loc は18本 (トップ + 科目10 + guides4 + legal3)。
+  guides と legal はディレクトリ走査なので、頁を足せば自動で載る
 - GA4 (測定ID は config/firebase-config.js の中) は index.html にしか入っていなかった。
   SPA の中は計れるが、ガイド頁は 10/17 07:48便 まで無計測で、legal の3頁はいまも無い。
   だから GA4 の過去の数字に、検索の着地頁の閲覧は1件も入っていない
