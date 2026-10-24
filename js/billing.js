@@ -229,6 +229,84 @@ const Billing = (function () {
     return false;
   }
 
+  // 反映の帯。器を字面で送れない (Slack が HTML を Markdown に変える) ので
+  // createElement で組む。装飾は css/base.css の grant-banner にある。
+  function showGrantBanner(kind, grant) {
+    const doc = document;
+    if (!doc || !doc.body || !doc.createElement) return null;
+    const old = doc.getElementById("grant-banner");
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+
+    const box = doc.createElement("div");
+    box.id = "grant-banner";
+    box.className = "grant-banner" + (kind === "late" ? " is-late" : " is-ok");
+    box.setAttribute("role", "status");
+    box.setAttribute("aria-live", "polite");
+
+    const msg = doc.createElement("p");
+    msg.className = "grant-banner-text";
+    if (kind === "late") {
+      msg.textContent =
+        "ご購入の反映がまだ確認できていません。お支払いが完了していれば、" +
+        "数分以内に反映されます。二重払いになるので、もう一度購入しないで" +
+        "ください。変わらないときは、お問い合わせからご連絡ください。";
+    } else if (grant && grant.planType === "pack") {
+      msg.textContent = "プレミアムパックが反映されました。全科目が無制限になりました。";
+    } else {
+      msg.textContent = "ご購入が反映されました。この科目は無制限で学習できます。";
+    }
+    box.appendChild(msg);
+
+    const row = doc.createElement("div");
+    row.className = "grant-banner-actions";
+    if (kind === "late") {
+      const reload = doc.createElement("button");
+      reload.type = "button";
+      reload.className = "primary-btn grant-banner-btn";
+      reload.textContent = "再読み込み";
+      reload.addEventListener("click", function () {
+        try {
+          window.location.reload();
+        } catch (e) {
+          /* ignore */
+        }
+      });
+      row.appendChild(reload);
+
+      const ask = doc.createElement("button");
+      ask.type = "button";
+      ask.className = "secondary-btn grant-banner-btn";
+      ask.textContent = "お問い合わせ";
+      ask.addEventListener("click", function () {
+        box.parentNode && box.parentNode.removeChild(box);
+        if (typeof openContactScreen === "function") {
+          openContactScreen();
+          return;
+        }
+        const nav = doc.getElementById("nav-contact");
+        if (nav) nav.click();
+      });
+      row.appendChild(ask);
+    }
+    const close = doc.createElement("button");
+    close.type = "button";
+    close.className = "link-btn grant-banner-btn";
+    close.textContent = "閉じる";
+    close.addEventListener("click", function () {
+      box.parentNode && box.parentNode.removeChild(box);
+    });
+    row.appendChild(close);
+    box.appendChild(row);
+
+    doc.body.appendChild(box);
+    if (kind !== "late") {
+      window.setTimeout(function () {
+        box.parentNode && box.parentNode.removeChild(box);
+      }, 12000);
+    }
+    return box;
+  }
+
   async function startCheckout(planType, subjectId) {
     if (busy) return;
     const signedIn = (function () {
