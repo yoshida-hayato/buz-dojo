@@ -149,14 +149,26 @@ const AuthUI = {
       messageEl.classList.toggle("is-busy", !!isSuccess && authBusy);
     }
 
+    // 購入ボタンから開いたモーダルを利用者が自分で閉じたときは、保留中の
+    // 購入の意思も一緒に捨てる。捨てないと pendingAction が残り、あとで
+    // 成績の保存など別の用でログインした瞬間に resumePendingCheckout が
+    // 走って、頼んでいない決済画面に飛ばされる。
+    // closeModal そのものには入れない。ログイン成功時にも呼ばれるので
+    // (下の onAuthStateChanged)、そこで捨てると本来の再開が動かなくなる。
+    function dismissModal() {
+      if (typeof Billing !== "undefined" && Billing.clearPendingCheckout) {
+        Billing.clearPendingCheckout();
+      }
+      closeModal();
+    }
     loginBtn.classList.remove("hidden");
     loginBtn.addEventListener("click", openModal);
-    $("login-modal-close").addEventListener("click", closeModal);
+    $("login-modal-close").addEventListener("click", dismissModal);
     modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeModal();
+      if (e.target === modal) dismissModal();
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+      if (e.key === "Escape" && !modal.classList.contains("hidden")) dismissModal();
     });
 
     // --- メール＋パスワード ---
