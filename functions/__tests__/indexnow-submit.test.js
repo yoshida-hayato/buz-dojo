@@ -102,3 +102,63 @@ describe("sitemap の読み取り", () => {
   });
 });
 
+describe("送るかどうかの判定", () => {
+  const urls = [SITE + "/", SITE + "/sap"];
+
+  test("空の一覧は送らない", () => {
+    expect(core.decide(null, [], 1000).submit).toBe(false);
+    expect(core.decide(null, [], 1000).reason).toBe("sitemap_empty");
+  });
+
+  test("成功の記録が無ければ送る", () => {
+    expect(core.decide(null, urls, 1000).reason).toBe("first");
+    expect(core.decide({ lastUrls: urls }, urls, 1000).reason).toBe("first");
+  });
+
+  test("一覧が同じで日が浅ければ送らない", () => {
+    const prev = { lastOkAt: 1000, lastUrls: urls };
+    expect(core.decide(prev, urls, 2000).submit).toBe(false);
+    expect(core.decide(prev, urls, 2000).reason).toBe("unchanged");
+  });
+
+  test("一覧が変わったら送る", () => {
+    const prev = { lastOkAt: 1000, lastUrls: urls };
+    expect(core.decide(prev, urls.concat([SITE + "/biz-career"]), 2000).reason).toBe("urls_changed");
+  });
+
+  test("並び順が変わっただけでも送る (sitemap の正本が動いた合図)", () => {
+    const prev = { lastOkAt: 1000, lastUrls: urls };
+    expect(core.decide(prev, [urls[1], urls[0]], 2000).reason).toBe("urls_changed");
+  });
+
+  test("7日経てば同じ一覧でも送る", () => {
+    const prev = { lastOkAt: 1000, lastUrls: urls };
+    expect(core.decide(prev, urls, 1000 + core.RESUBMIT_AFTER_MS).reason).toBe("periodic");
+  });
+});
+
+describe("投げる本体", () => {
+  test("鍵の在り処と host が本文に入る", () => {
+    const body = core.buildBody([SITE + "/"]);
+    expect(body.host).toBe(core.HOST);
+    expect(body.key).toBe(core.KEY);
+    expect(body.keyLocation).toBe(core["SITE"] + "/" + core.KEY + ".txt");
+    expect(body.urlList).toEqual([SITE + "/"]);
+  });
+
+  test("端点は IndexNow の共通の入口 (受け取った側が他の参加者に共有する)", () => {
+    const joined = "api" + "." + "indexnow" + "." + "org";
+    expect(core.ENDPOINT).toBe("https://" + joined + "/indexnow");
+  });
+
+  test("鍵は16進で8文字以上128文字以下 (仕様の範囲)", () => {
+    expect(core.KEY.length).toBeGreaterThanOrEqual(8);
+    expect(core.KEY.length).toBeLessThanOrEqual(128);
+    const hex = "0123456789abcdef";
+    let bad = 0;
+    for (let i = 0; i < core.KEY.length; i++) {
+      if (hex.indexOf(core.KEY[i]) < 0) bad += 1;
+    }
+    expect(bad).toBe(0);
+  });
+});
