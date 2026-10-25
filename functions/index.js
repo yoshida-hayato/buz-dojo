@@ -426,6 +426,7 @@ exports.stripeWebhook = onRequest(
       );
     } catch (err) {
       console.error("Webhook signature verification failed:", err.message);
+      await recordVerifyResult(admin.firestore(), false, err.message);
       res.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
