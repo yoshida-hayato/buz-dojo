@@ -82,3 +82,64 @@ describe("端点のドメインは部品に割る", () => {
   });
 });
 
+describe("定時の口と押す口", () => {
+  test("index.js が indexnow-run を読んでいる", () => {
+    expect(INDEX.indexOf('require("./indexnow-run")') >= 0).toBe(true);
+  });
+
+  test("定時の口と押す口の両方を export し、奉仕用の口座を渡している", () => {
+    expect(INDEX.indexOf("exports.indexNowSubmit = createIndexNowScheduleExport(SERVICE_ACCOUNT)") >= 0).toBe(true);
+    expect(INDEX.indexOf("exports.runIndexNowSubmit = createRunIndexNowSubmitExport(SERVICE_ACCOUNT)") >= 0).toBe(true);
+  });
+
+  test("定時の口は日に1回で、時刻帯を名乗っている", () => {
+    expect(RUN.indexOf('timeZone: "Asia/Tokyo"') >= 0).toBe(true);
+    expect(RUN.indexOf("schedule: DAILY_0441") >= 0).toBe(true);
+    expect(RUN.indexOf("41 4 ") >= 0).toBe(true);
+  });
+
+  test("口座の字面を indexnow-run.js に持たない (メールに見える字面は運べない)", () => {
+    const mailish = "gserviceaccount" + "." + "com";
+    expect(RUN.indexOf(mailish) < 0).toBe(true);
+    expect(RUN.indexOf("serviceAccount: serviceAccount") >= 0).toBe(true);
+  });
+
+  test("押す口はログインと管理者の2段で絞っている", () => {
+    expect(RUN.indexOf("request.auth") >= 0).toBe(true);
+    expect(RUN.indexOf("COMPLIMENTARY_PACK_EMAILS.includes(who)") >= 0).toBe(true);
+    expect(RUN.indexOf("permission-denied") >= 0).toBe(true);
+  });
+
+  test("鍵そのものは画面の口から返ってよいが、秘密は返さない", () => {
+    // IndexNow の鍵は公開前提 (サイトの根に字面で置く) なので返して構わない。
+    // 取り違え防止のため、Stripe の鍵の名前がここに混ざっていないことを見る。
+    expect(RUN.indexOf("STRIPE") < 0).toBe(true);
+    expect(RUN.indexOf("stripeSecret") < 0).toBe(true);
+  });
+});
+
+describe("管理画面", () => {
+  test("reports.html が管理画面の js を読み込む", () => {
+    expect(REPORTS.indexOf("admin-indexnow.js") >= 0).toBe(true);
+  });
+
+  test("escapeHtml を先に読む並びになっている (自前のエスケープを書かない)", () => {
+    const util = REPORTS.indexOf("dom-util.js");
+    const mine = REPORTS.indexOf("admin-indexnow.js");
+    expect(util).toBeGreaterThan(0);
+    expect(mine).toBeGreaterThan(util);
+    expect(PANEL.indexOf("escapeHtml(") >= 0).toBe(true);
+  });
+
+  test("画面が呼ぶ関数名が、index.js が export した名前と同じ", () => {
+    const called = valueAfter(PANEL, 'var FN = "');
+    expect(called).toBe("runIndexNowSubmit");
+    expect(INDEX.indexOf("exports." + called + " =") >= 0).toBe(true);
+  });
+
+  test("画面は Google も通知先だと書かない (IndexNow に Google は参加していない)", () => {
+    const at = PANEL.indexOf("Google");
+    expect(at).toBeGreaterThan(0);
+    expect(PANEL.indexOf("Google は参加していません") >= 0).toBe(true);
+  });
+});
