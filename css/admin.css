@@ -146,6 +146,7 @@
 .admin-user-line { margin: 0; }
 .admin-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   border-top: 1px solid var(--border);
   padding-top: 12px;
