@@ -150,6 +150,11 @@
   2つの定数がこれと1文字でも違えば落ちる
 - 生産管理は2級向けの商品 (subjects/registry.js)。2級の令和7年度後期は
   申請者1,161人、合格率は54と59パーセント。3級の数字と混ぜないこと
+- firebase.json の headers は、拡張子の無いファイルにも Content-Type を
+  効かせる (00:48便 に本番で実測。対照として、型が XML の sitemap を同じ
+  道具で読むと山かっこが残ることも確かめたので、「道具が何でも HTML として
+  読んでいる」ではない)。公式文書には記述が無い。REST の discovery まで
+  当たっても無かったので、次の自分は探し直さないこと
 - sitemap.xml と robots.txt は本番で生きている (00:48便 に WebFetch で
   robots を実測。Allow と Disallow /admin/ と Sitemap の3つが出た)。
   どちらも repo には無く、firebase.json の predeploy が _dev/gen-seo.py を
