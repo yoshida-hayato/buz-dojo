@@ -92,9 +92,65 @@
       "</div>";
   }
 
+  // 署名検証の台帳。社長がいちばん知りたい1行を、推測ではなく数で出す。
+  // whsec が食い違っていれば constructEvent は必ず落ちるので、
+  // 失敗だけが並んでいたら原因はそれである。
+  var FAIL_LABEL = {
+    signature_mismatch: "署名が合わない (whsec の取り違え)",
+    timestamp_outside_tolerance: "時刻がずれている (時計かリプレイ)",
+    header_missing: "Stripe 以外からの呼び出し",
+    other: "その他",
+  };
+
+  function verifyVerdict(v) {
+    if (v.failCount > 0 && v.okCount === 0) {
+      return {
+        cls: "reports-error",
+        text: "署名検証が " + v.failCount + " 件すべて失敗しています。誰が買っても権利は付きません。原因: " +
+          (FAIL_LABEL[v.lastFailKind] || v.lastFailKind || "不明"),
+      };
+    }
+    if (v.failCount > 0) {
+      return {
+        cls: "reports-error",
+        text: "成功 " + v.okCount + " 件、失敗 " + v.failCount + " 件。最後の失敗の原因: " +
+          (FAIL_LABEL[v.lastFailKind] || v.lastFailKind || "不明"),
+      };
+    }
+    return {
+      cls: "reports-empty",
+      text: "署名検証は " + v.okCount + " 件すべて成功しています。whsec は一致しています。",
+    };
+  }
+
+  function verifyCard(verify) {
+    if (verify === null || verify === undefined) {
+      return '<div class="card"><h3 class="card-subtitle" >署名検証</h3 >' +
+        '<p class="reports-error">台帳を読めませんでした。</p></div>';
+    }
+    if (!verify.recorded) {
+      return '<div class="card"><h3 class="card-subtitle" >署名検証</h3 >' +
+        '<p class="analytics-note">記録はまだ1件もありません。' +
+        "Stripe の Webhook 画面で テストイベントを送信 を1回押すと、ここに成功か失敗が出ます。" +
+        "</p></div>";
+    }
+    var v = verifyVerdict(verify);
+    return '<div class="card"><h3 class="card-subtitle" >署名検証</h3 >' +
+      '<p class="' + v.cls + '">' + esc(v.text) + "</p>" +
+      '<div class="analytics-stat-grid">' +
+      stat("成功", String(verify.okCount) + " 件", verify.lastOkAt || "まだ無い") +
+      stat("失敗", String(verify.failCount) + " 件", verify.lastFailAt || "まだ無い") +
+      "</div>" +
+      (verify.lastFailMessage
+        ? '<p class="analytics-note">最後の失敗: ' + esc(verify.lastFailMessage) + "</p>"
+        : "") +
+      "</div>";
+  }
+
   function render(mode, hook) {
     var out = modeCard(mode);
     if (!hook) return out;
+    out = out + verifyCard(hook.verify);
     var eps = hook.endpoints || [];
     if (!eps.length) {
       return out + '<div class="card"><p class="reports-error">' +
