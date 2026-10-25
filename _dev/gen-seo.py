@@ -214,6 +214,8 @@ def main():
         LT + "title" + GT + "CTPROBE" + LT + "/title" + GT,
         LT + "p" + GT + "CTPROBE OK html" + LT + "/p" + GT,
     ]) + chr(10))
+
+    write_subject_pages()
     return 0
 
 
