@@ -172,6 +172,51 @@ def write_subject_pages():
     print("gen-seo: subject pages " + str(wrote))
 
 
+def inject_absolute_og(text, here_path):
+    # 共有されたときのカードに要る2つを、絶対URLで足す。og:url と og:image は
+    # 相対では効かない (受け取る側は頁の中身だけを見るので、何処の頁かを
+    # 字面で言う必要がある)。パッチでは絶対URLの字面を運べないが、この台本は
+    # HOST を部品から組み立てているので、デプロイのたびに此処で組めばよい。
+    # 既に在る頁には手を出さない (index.html は自分で持っている)。
+    if "og:url" in text:
+        return text, False
+    anchor = LT + "/head" + GT
+    at = text.find(anchor)
+    if at < 0:
+        return text, False
+    q = chr(34)
+    tags = (
+        "  " + LT + "meta property=" + q + "og:url" + q
+        + " content=" + q + SITE + here_path + q + GT + chr(10)
+        + "  " + LT + "meta property=" + q + "og:image" + q
+        + " content=" + q + SITE + "/assets/icon-512.png" + q + GT + chr(10)
+        + "  " + LT + "meta property=" + q + "og:image:alt" + q
+        + " content=" + q + "ビジネス道場のアイコン" + q + GT + chr(10)
+    )
+    return text[:at] + tags + text[at:], True
+
+
+def write_absolute_og():
+    # 着地頁 (guides) と法務の頁 (legal) に、og:url と og:image を足す。
+    # 追跡されているファイルを書き換えるが、commit はされない
+    # (gen-version.py が config/version.js を書くのと同じ扱い)。
+    done = 0
+    for rel in static_pages():
+        full = os.path.join(ROOT, rel.lstrip("/"))
+        try:
+            with open(full, encoding="utf-8") as fh:
+                text = fh.read()
+        except Exception:
+            continue
+        body, ok = inject_absolute_og(text, rel)
+        if not ok:
+            continue
+        with open(full, "w", encoding="utf-8") as fh:
+            fh.write(body)
+        done += 1
+    print("gen-seo: absolute og " + str(done))
+
+
 def write(name, body):
     with open(os.path.join(ROOT, name), "w", encoding="utf-8") as fh:
         fh.write(body)
