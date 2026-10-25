@@ -431,6 +431,8 @@ exports.stripeWebhook = onRequest(
       return;
     }
 
+    await recordVerifyResult(admin.firestore(), true, "");
+
     try {
       switch (event.type) {
         // 遅延通知の支払い方法(コンビニ・銀行振込など)では、決済画面を終えた時点の
