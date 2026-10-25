@@ -212,3 +212,71 @@ describe("1回の走り", () => {
   });
 
 });
+describe("壊れたときに投げないこと", () => {
+  test("sitemap が空なら POST しないし、成功も記録しない", async () => {
+    const db = fakeDb({ exists: false });
+    const f = fakeFetch({ sitemapBody: sitemapOf([]) });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.reason).toBe("sitemap_empty");
+    expect(out.submitted).toBe(false);
+    expect(f.calls.length).toBe(1);
+    expect(sets[0].data.lastOkAt).toBeUndefined();
+  });
+
+  test("sitemap が取れなければ失敗として残す", async () => {
+    const db = fakeDb({ exists: false });
+    const f = fakeFetch({ sitemapStatus: 404 });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.reason).toBe("sitemap_unreachable");
+    expect(out.submitted).toBe(false);
+    expect(f.calls.length).toBe(1);
+    expect(sets[0].data.failCount).toEqual({ kind: "incr", by: 1 });
+  });
+
+  test("429 は失敗として残し、一覧は更新しない (次の日も送り直す)", async () => {
+    const db = fakeDb({ exists: false });
+    const f = fakeFetch({ sitemapBody: sitemapOf([SITE + "/"]), postStatus: 429 });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.submitted).toBe(false);
+    expect(out.status).toBe(429);
+    expect(sets[0].data.lastUrls).toBeUndefined();
+    expect(sets[0].data.failCount).toEqual({ kind: "incr", by: 1 });
+  });
+
+  test("網が落ちても投げない", async () => {
+    const db = fakeDb({ exists: false });
+    const f = fakeFetch({ sitemapThrows: true });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.submitted).toBe(false);
+    expect(out.error).toContain("net boom");
+  });
+
+  test("POST が落ちても投げない", async () => {
+    const db = fakeDb({ exists: false });
+    const f = fakeFetch({ sitemapBody: sitemapOf([SITE + "/"]), postThrows: true });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.submitted).toBe(false);
+    expect(out.error).toContain("post boom");
+  });
+
+  test("台帳が書けなくても投げない", async () => {
+    const db = fakeDb({ exists: false, setThrows: true });
+    const f = fakeFetch({ sitemapBody: sitemapOf([SITE + "/"]), postStatus: 200 });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.submitted).toBe(true);
+  });
+
+  test("台帳が読めなくても投げない (初回として扱う)", async () => {
+    const db = fakeDb({ getThrows: true });
+    const f = fakeFetch({ sitemapBody: sitemapOf([SITE + "/"]), postStatus: 200 });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.reason).toBe("first");
+    expect(out.submitted).toBe(true);
+  });
+
+  test("台帳が無くても (db が null) 投げない", async () => {
+    const f = fakeFetch({ sitemapBody: sitemapOf([SITE + "/"]), postStatus: 200 });
+    const out = await run.runSubmit({ db: null, fetchImpl: f, nowMs: 1000 });
+    expect(out.submitted).toBe(true);
+  });
+});
