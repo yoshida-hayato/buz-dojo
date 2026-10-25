@@ -90,3 +90,66 @@ async function runSubmit(options) {
 
 // 奉仕用の口座の名前は index.js から渡す。字面がメールアドレスに見えるので、
 // パッチの経路に載せるとリンク記法に書き替えられる。既に main に在る定数を使う。
+function createIndexNowScheduleExport(serviceAccount) {
+  return onSchedule(
+    {
+      schedule: DAILY_0441,
+      timeZone: "Asia/Tokyo",
+      region: REGION,
+      serviceAccount: serviceAccount,
+      timeoutSeconds: 120,
+    },
+    async () => {
+      const result = await runSubmit({ db: admin.firestore() });
+      console.log("indexNowSubmit", result);
+      return result;
+    }
+  );
+}
+
+// 社長が1回押せる口。待たずに今すぐ投げたいときのため。
+// force を付けると「変化なし」でも送る。押しすぎると 429 になるので、
+// 既定は定時と同じ判定にしてある。
+function createRunIndexNowSubmitExport(serviceAccount) {
+  return onCall(
+    {
+      region: REGION,
+      cors: true,
+      serviceAccount: serviceAccount,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "ログインが必要です");
+      }
+      const { COMPLIMENTARY_PACK_EMAILS } = require("./entitlements");
+      const token = request.auth.token || {};
+      const who = String(token["email"] || "").trim().toLowerCase();
+      if (!COMPLIMENTARY_PACK_EMAILS.includes(who)) {
+        throw new HttpsError("permission-denied", "対象外のアカウントです");
+      }
+      const data = request.data || {};
+      const db = admin.firestore();
+      const result = await runSubmit({ db, force: data.force === true });
+      const state = await core.readState(db);
+      return {
+        key: core.KEY,
+        keyLocation: core.KEY_LOCATION,
+        sitemapUrl: core.SITEMAP_URL,
+        result,
+        okCount: Number((state && state.okCount) || 0),
+        failCount: Number((state && state.failCount) || 0),
+        lastReason: String((state && state.lastReason) || ""),
+        lastStatus: Number((state && state.lastStatus) || 0),
+        lastError: String((state && state.lastError) || ""),
+        lastUrlCount: Number((state && state.lastUrlCount) || 0),
+      };
+    }
+  );
+}
+
+module.exports = {
+  REGION,
+  runSubmit,
+  createIndexNowScheduleExport,
+  createRunIndexNowSubmitExport,
+};
