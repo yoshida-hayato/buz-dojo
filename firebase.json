@@ -35,6 +35,16 @@
       }
     ],
     "headers": [
+      { "source": "/sap", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/windows-shortcuts", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/biz-career", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/biz-pm-planning", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/biz-pm-operation", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/excel-functions", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/outlook-mail", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/teams-collab", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/ai-ontology-intro", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/ai-ontology-core", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
       {
         "source": "/ctprobe",
         "headers": [
