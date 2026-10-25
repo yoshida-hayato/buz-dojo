@@ -261,6 +261,7 @@ def main():
     ]) + chr(10))
 
     write_subject_pages()
+    write_absolute_og()
     return 0
 
 
