@@ -95,6 +95,9 @@ def main():
         "Sitemap: " + SITE + "/sitemap.xml",
     ]
     write("robots.txt", "\n".join(robots) + "\n")
+
+    # IndexNow の鍵の字面。中身は鍵そのものだけ (改行も付けない)。
+    write(INDEXNOW_KEY + ".txt", INDEXNOW_KEY)
     return 0
 
 
