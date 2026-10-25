@@ -162,3 +162,53 @@ describe("投げる本体", () => {
     expect(bad).toBe(0);
   });
 });
+describe("1回の走り", () => {
+  test("初回は POST まで行き、台帳に成功が残る", async () => {
+    const db = fakeDb({ exists: false });
+    const f = fakeFetch({ sitemapBody: sitemapOf([SITE + "/", SITE + "/sap"]), postStatus: 200 });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.submitted).toBe(true);
+    expect(out.reason).toBe("first");
+    expect(out.urlCount).toBe(2);
+    expect(f.calls.length).toBe(2);
+    expect(String(f.calls[1].url)).toBe(core.ENDPOINT);
+    expect(f.calls[1].init.method).toBe("POST");
+    const sent = JSON.parse(f.calls[1].init.body);
+    expect(sent.urlList.length).toBe(2);
+    expect(sets.length).toBe(1);
+    expect(sets[0].data.okCount).toEqual({ kind: "incr", by: 1 });
+    expect(sets[0].data.lastUrls).toEqual([SITE + "/", SITE + "/sap"]);
+  });
+
+  test("202 も送れたと数える (鍵の確認待ち)", async () => {
+    const db = fakeDb({ exists: false });
+    const f = fakeFetch({ sitemapBody: sitemapOf([SITE + "/"]), postStatus: 202 });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 1000 });
+    expect(out.submitted).toBe(true);
+    expect(out.status).toBe(202);
+  });
+
+  test("変化が無ければ POST しない (429 を避ける)", async () => {
+    const urls = [SITE + "/"];
+    const db = fakeDb({ exists: true, data: { lastOkAt: 1000, lastUrls: urls } });
+    const f = fakeFetch({ sitemapBody: sitemapOf(urls) });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 2000 });
+    expect(out.submitted).toBe(false);
+    expect(out.attempted).toBe(false);
+    expect(out.reason).toBe("unchanged");
+    expect(f.calls.length).toBe(1);
+    expect(sets[0].data.okCount).toBeUndefined();
+    expect(sets[0].data.failCount).toBeUndefined();
+  });
+
+  test("force なら変化が無くても送る", async () => {
+    const urls = [SITE + "/"];
+    const db = fakeDb({ exists: true, data: { lastOkAt: 1000, lastUrls: urls } });
+    const f = fakeFetch({ sitemapBody: sitemapOf(urls) });
+    const out = await run.runSubmit({ db, fetchImpl: f, nowMs: 2000, force: true });
+    expect(out.reason).toBe("forced");
+    expect(out.submitted).toBe(true);
+    expect(f.calls.length).toBe(2);
+  });
+
+});
