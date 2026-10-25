@@ -576,3 +576,11 @@ exports.xDailySeisanQuiz = createXDailySeisanQuizScheduleExport();
 exports.postXDailySeisanQuizNow = createPostXDailySeisanQuizNowExport();
 exports.getXDailySeisanSchedule = createGetXDailySeisanScheduleExport();
 exports.setXDailySeisanScheduleOverride = createSetXDailySeisanScheduleOverrideExport();
+
+// 検索側への通知 (IndexNow)。定時に1日1回と、社長が押す口の2本。
+const {
+  createIndexNowScheduleExport,
+  createRunIndexNowSubmitExport,
+} = require("./indexnow-run");
+exports.indexNowSubmit = createIndexNowScheduleExport(SERVICE_ACCOUNT);
+exports.runIndexNowSubmit = createRunIndexNowSubmitExport(SERVICE_ACCOUNT);
