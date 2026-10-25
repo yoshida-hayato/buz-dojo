@@ -23,6 +23,12 @@ SITE = "https://" + HOST
 LT = chr(60)
 GT = chr(62)
 
+# IndexNow の鍵。サイトの根に鍵と同じ名前の txt を1枚置くと、
+# 検索側がその字面を見て送信元を確かめる (口座も確認も要らない仕組み)。
+# 公開前提の値で、秘密ではない。functions/indexnow.js の KEY と
+# 1文字でも違うと 403 になる。indexnow-wiring のテストが突き合わせている。
+INDEXNOW_KEY = "361b8945e17ec20392b62140dee53cd7"
+
 
 def tag(name, value):
     return LT + name + GT + value + LT + "/" + name + GT
