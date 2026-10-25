@@ -67,3 +67,32 @@ describe("robots.txt と sitemap.xml — 台本と呼び出しの両方が在る
     expect(GEN.indexOf('"Sitemap: " + SITE + "/sitemap.xml"') >= 0).toBe(true);
   });
 });
+
+// --- 10/26 00:48便 で足した分 -------------------------------------------
+//
+// 科目10本の URL (/sap など) は、実ファイルを置ければ rewrites より上位で
+// 返せる (応答の優先順位は公式に明記)。だが拡張子の無い字面にどの Content-Type
+// が付くかは公式文書に記述が無く、推測で10本を賭けると、外れたときに本番の
+// 科目URLが平文として降りてくる。だから誰も踏まない道に1枚だけ置いて、
+// 本番で型を実測する。台本が書くことと、headers が同じ道に型を被せること、
+// どちらが欠けても探りは何も答えない。字面で両方を見張る。
+//
+describe("拡張子の無い道の探り — 台本と headers の両方が在る", () => {
+  test("台本が ctprobe を書く", () => {
+    expect(GEN.indexOf('write("ctprobe"') >= 0).toBe(true);
+  });
+
+  test("firebase.json が同じ道に text/html を被せている", () => {
+    const hit = (FIREBASE.hosting.headers || []).filter((r) => r.source === "/ctprobe");
+    expect(hit.length).toBe(1);
+    const typed = (hit[0].headers || []).filter(
+      (h) => h.key === "Content-Type" && h.value.indexOf("text/html") >= 0
+    );
+    expect(typed.length).toBe(1);
+  });
+
+  test("探りの頁は索引されない (sitemap にも載せない)", () => {
+    expect(GEN.indexOf('"noindex"') >= 0).toBe(true);
+    expect(GEN.indexOf('paths = ["/"]') >= 0).toBe(true);
+  });
+});
