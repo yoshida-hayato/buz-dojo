@@ -243,7 +243,7 @@
     if (refresh) refresh.addEventListener("click", load);
   }
 
-  window.AdminStripeStatus = { render: render, revokeVerdict: revokeVerdict, load: load };
+  window.AdminStripeStatus = { render: render, revokeVerdict: revokeVerdict, verifyVerdict: verifyVerdict, load: load };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", install);
