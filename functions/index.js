@@ -341,11 +341,13 @@ exports.getStripeWebhookStatus = onCall(
       console.error("getStripeWebhookStatus failed:", (err && err.message) || err);
       throw new HttpsError("internal", "Stripe に問い合わせできませんでした");
     }
+    const verify = await readVerifyHealth(admin.firestore());
     return {
       keyMode: livemode ? "live" : "test",
       required: WEBHOOK_EVENTS_REQUIRED,
       endpointCount: endpoints.length,
       endpoints,
+      verify,
     };
   }
 );
