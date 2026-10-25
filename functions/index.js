@@ -18,6 +18,7 @@ const {
   createMergeLegacyQuestionStatsExport,
   createRepairQuestionStatsQuadrupleExport,
 } = require("./question-stats-merge");
+const { recordVerifyResult, readVerifyHealth } = require("./webhook-health");
 
 const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
