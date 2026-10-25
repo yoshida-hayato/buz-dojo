@@ -69,6 +69,109 @@ def static_pages():
     return out
 
 
+def known_titles(index_text):
+    # index.html の head 冒頭にある known (slug から 題と説明 の表) を読む。
+    # 正本をそこに1つだけ置くため、ここでは写さず読み取る。index-html-guard が
+    # レジストリとの揃いを見張っているので、増えた科目も自動で付いてくる。
+    # 量指定子つきの正規表現は使わない。1行1科目を前提にする。
+    at = index_text.find("var known = {")
+    if at < 0:
+        return {}
+    end = index_text.find("};", at)
+    if end < 0:
+        return {}
+    out = {}
+    for line in index_text[at:end].split(chr(10)):
+        lb = line.find('["')
+        colon = line.find(":")
+        rb = line.rfind('"]')
+        if lb < 0 or colon < 0 or rb < 0 or colon > lb:
+            continue
+        key = line[:colon].strip()
+        if key[:1] == '"':
+            key = key[1:-1]
+        inner = line[lb + 2:rb]
+        sep = inner.find('", "')
+        if sep < 0:
+            continue
+        out[key] = (inner[:sep], inner[sep + 4:])
+    return out
+
+
+def swap_attr(text, prefix, value):
+    # prefix で始まるタグの content を差し替える。見つからなければ何もしない
+    # (届かなかったことを呼び元が数えて、その科目の頁を書かない)。
+    i = text.find(prefix)
+    if i < 0:
+        return text, False
+    j = text.find(chr(34), i + len(prefix))
+    if j < 0:
+        return text, False
+    return text[:i + len(prefix)] + value + text[j:], True
+
+
+def subject_page(index_text, sid, title, desc):
+    # index.html をそのまま写し、head の題と説明と正典だけを科目のものに替える。
+    # 本体 (script / css / base) は1文字も変えない。だから利用者の見る画面は
+    # トップと同じ経路で立ち上がり、描画しないクローラだけが違う札を見る。
+    if chr(34) in title or chr(34) in desc:
+        return ""
+    meta = LT + "meta "
+    text = index_text
+    steps = []
+    head = LT + "title" + GT
+    tail = LT + "/title" + GT
+    i = text.find(head)
+    j = text.find(tail, i + len(head)) if i >= 0 else -1
+    if i < 0 or j < 0:
+        return ""
+    text = text[:i + len(head)] + title + text[j:]
+    for prefix, value in (
+        (meta + 'name=' + chr(34) + 'description' + chr(34) + ' content=' + chr(34), desc),
+        (meta + 'property=' + chr(34) + 'og:title' + chr(34) + ' content=' + chr(34), title),
+        (meta + 'property=' + chr(34) + 'og:description' + chr(34) + ' content=' + chr(34), desc),
+    ):
+        text, ok = swap_attr(text, prefix, value)
+        steps.append(ok)
+    if not all(steps):
+        return ""
+    # 正典と og:url を静的に置く。script も同じ値を入れるが、在れば使い回す。
+    anchor = meta + 'property=' + chr(34) + 'og:locale' + chr(34) + ' content=' + chr(34) + 'ja_JP' + chr(34) + GT
+    at = text.find(anchor)
+    if at < 0:
+        return ""
+    here = SITE + "/" + sid
+    added = (
+        chr(10) + "  " + LT + 'link rel=' + chr(34) + 'canonical' + chr(34)
+        + ' id=' + chr(34) + 'canonical-link' + chr(34)
+        + ' href=' + chr(34) + here + chr(34) + GT
+        + chr(10) + "  " + meta + 'property=' + chr(34) + 'og:url' + chr(34)
+        + ' content=' + chr(34) + here + chr(34) + GT
+    )
+    return text[:at + len(anchor)] + added + text[at + len(anchor):]
+
+
+def write_subject_pages():
+    # 科目10本の URL に、拡張子の無い実ファイルを置く。完全一致の静的ファイルは
+    # rewrites より上位なので、これが在れば /sap は自分の札を持った頁を返す。
+    # 無ければ rewrites がトップへ送る (いままでと同じ振る舞い) ので、
+    # 1枚も書けなかった日に壊れる形にはならない。
+    with open(os.path.join(ROOT, "index.html"), encoding="utf-8") as fh:
+        index_text = fh.read()
+    table = known_titles(index_text)
+    wrote = 0
+    for sid in enabled_subject_ids():
+        pair = table.get(sid)
+        if not pair:
+            continue
+        body = subject_page(index_text, sid, pair[0], pair[1])
+        if not body:
+            continue
+        write(sid, body)
+        wrote += 1
+    print("gen-seo: subject pages " + str(wrote))
+
+
 def write(name, body):
     with open(os.path.join(ROOT, name), "w", encoding="utf-8") as fh:
         fh.write(body)
