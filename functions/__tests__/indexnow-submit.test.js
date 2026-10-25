@@ -82,8 +82,13 @@ function fakeFetch(opts) {
 }
 
 describe("sitemap の読み取り", () => {
+  // 他のホストの例は、スキームも部品に割る。18:48便 はスキームと語を1つの
+  // 文字列で書いたので、ドットが無い段階で Slack が自動リンクに書き替え、
+  // main には山かっこつきで入った (テストは通ったが字面は壊れていた)。
+  const OTHER = "http" + "s" + ":" + "//" + "example" + "." + "com";
+
   test("自分のホストの URL だけを拾い、重複は1本にする", () => {
-    const body = sitemapOf([SITE + "/", SITE + "/sap", SITE + "/sap", "<https://example>" + ".com" + "/x"]);
+    const body = sitemapOf([SITE + "/", SITE + "/sap", SITE + "/sap", OTHER + "/x"]);
     expect(core.parseSitemapLocs(body)).toEqual([SITE + "/", SITE + "/sap"]);
   });
 
