@@ -96,3 +96,47 @@ describe("拡張子の無い道の探り — 台本と headers の両方が在�
     expect(GEN.indexOf('paths = ["/"]') >= 0).toBe(true);
   });
 });
+
+// --- 10/26 00:48便 の2つ目 ----------------------------------------------
+//
+// 着地4頁と法務3頁には og:url も og:image も無かった (7頁とも0件)。この2つは
+// 相対では効かない。受け取る側は頁の中身だけを見るので、何処の頁かを絶対URLで
+// 言う必要がある。パッチでは絶対URLの字面を運べない (Slack がリンク記法に
+// 書き替える) が、台本は HOST を部品から組み立てているので、デプロイのたびに
+// 台本で組めばよい。
+//
+// 静かな壊れ方は2つ。台本が呼ばれないこと。そして頁側の差し込み口
+// (head の閉じタグ) が無くなって、黙って1頁も足されなくなること。両方見る。
+//
+describe("共有カードの絶対URL — 台本と差し込み口の両方が在る", () => {
+  test("台本が絶対URLの og を組み、main から呼ばれている", () => {
+    expect(GEN.indexOf("def inject_absolute_og(") >= 0).toBe(true);
+    expect(GEN.indexOf("def write_absolute_og()") >= 0).toBe(true);
+    expect(GEN.indexOf("    write_absolute_og()") >= 0).toBe(true);
+  });
+
+  test("og:url は SITE (絶対) から組む", () => {
+    expect(GEN.indexOf('SITE + here_path') >= 0).toBe(true);
+  });
+
+  test("既に持っている頁には二度足さない", () => {
+    expect(GEN.indexOf('if "og:url" in text:') >= 0).toBe(true);
+  });
+
+  test("着地頁と法務の頁に差し込み口が在る", () => {
+    // 直し方: head の閉じタグを消さない。消すと台本は黙って何もしない。
+    const fs2 = require("fs");
+    const path2 = require("path");
+    const root = path2.join(__dirname, "..", "..");
+    const missing = [];
+    ["guides", "legal"].forEach((folder) => {
+      fs2.readdirSync(path2.join(root, folder)).forEach((name) => {
+        if (name.indexOf(".html") < 0) return;
+        const text = fs2.readFileSync(path2.join(root, folder, name), "utf8");
+        const close = String.fromCharCode(60) + "/head" + String.fromCharCode(62);
+        if (text.split(close).length - 1 !== 1) missing.push(folder + "/" + name);
+      });
+    });
+    expect(missing.join(",")).toBe("");
+  });
+});
