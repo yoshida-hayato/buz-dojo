@@ -98,6 +98,19 @@ def main():
 
     # IndexNow の鍵の字面。中身は鍵そのものだけ (改行も付けない)。
     write(INDEXNOW_KEY + ".txt", INDEXNOW_KEY)
+
+    # 拡張子の無いファイルに Content-Type を被せられるかの探り (10/26 00:48便)。
+    # 科目10本の URL (/sap など) は、実ファイルを置ければ rewrites より上位で
+    # 返せる (優先順位は公式に明記)。だが拡張子の無い字面にどの型が付くかは
+    # 公式文書に記述が無い。誰も踏まない道に1枚置いて本番で型を実測する。
+    # firebase.json の headers に同じ道の Content-Type が要る (片方では効かない)。
+    write("ctprobe", chr(10).join([
+        LT + "!DOCTYPE html" + GT,
+        LT + "meta charset=" + chr(34) + "utf-8" + chr(34) + GT,
+        LT + "meta name=" + chr(34) + "robots" + chr(34) + " content=" + chr(34) + "noindex" + chr(34) + GT,
+        LT + "title" + GT + "CTPROBE" + LT + "/title" + GT,
+        LT + "p" + GT + "CTPROBE OK html" + LT + "/p" + GT,
+    ]) + chr(10))
     return 0
 
 
