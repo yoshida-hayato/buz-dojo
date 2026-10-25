@@ -46,13 +46,6 @@
       { "source": "/ai-ontology-intro", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
       { "source": "/ai-ontology-core", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
       {
-        "source": "/ctprobe",
-        "headers": [
-          { "key": "Content-Type", "value": "text/html; charset=utf-8" },
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-        ]
-      },
-      {
         "source": "/index.html",
         "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
       },
