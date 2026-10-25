@@ -117,3 +117,38 @@ describe("guides — 共有の札がそろっている", () => {
   });
 });
 
+describe("legal — 検索に出す説明文と正典がある", () => {
+  test("3頁すべてが説明文を持ち、中身が空でない", () => {
+    LEGAL.forEach((name) => {
+      const value = (metaMap(read("legal/" + name)).description || "").trim();
+      expect([name, value.length > 0]).toEqual([name, true]);
+    });
+  });
+
+  test("自分自身を正典に名乗る", () => {
+    LEGAL.forEach((name) => {
+      expect([name, canonicalOf(read("legal/" + name))]).toEqual([name, "/legal/" + name]);
+    });
+  });
+});
+
+describe("index.html — 正典は起動時に作る (静的に書かない)", () => {
+  const INDEX = read("index.html");
+
+  test("静的な canonical は置かない", () => {
+    // 全パスが index.html に書き換えられるので、静的に / を名乗ると
+    // sitemap の科目10本が「/ の複製」になる。だから此処は空が正しい。
+    expect(canonicalOf(INDEX)).toBe("");
+  });
+
+  test("起動時の script が canonical-link を作っている", () => {
+    expect(INDEX.indexOf("canonical-link") >= 0).toBe(true);
+  });
+
+  test("共有の札は静的に持つ", () => {
+    const meta = metaMap(INDEX);
+    ["description", "og:title", "og:description", "og:image", "twitter:card"].forEach((key) => {
+      expect([key, (meta[key] || "").trim().length > 0]).toEqual([key, true]);
+    });
+  });
+});
