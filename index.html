@@ -59,11 +59,13 @@
         }
         // 正典のURLを1本だけ置く。知らないパスは全部トップに寄せる
         // (rewrites のせいで、どんなパスでもトップの複製が 200 で返るため)。
-        var canonical = document.createElement("link");
+        // 静的な頁 (gen-seo.py が科目ごとに書き出す) には同じ id の正典が
+        // もう在る。2本出ると無視されるので、在れば使い回す。
+        var canonical = document.getElementById("canonical-link") || document.createElement("link");
         canonical.setAttribute("rel", "canonical");
         canonical.setAttribute("id", "canonical-link");
         canonical.setAttribute("href", location.origin + "/" + (hit ? seg : ""));
-        document.head.appendChild(canonical);
+        if (!canonical.parentNode) document.head.appendChild(canonical);
       } catch (e) { /* ignore */ }
     })();
   </script>
