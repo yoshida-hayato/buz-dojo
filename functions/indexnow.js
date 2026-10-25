@@ -64,3 +64,102 @@ function parseSitemapLocs(xml) {
   return out;
 }
 
+function sameList(a, b) {
+  const x = Array.isArray(a) ? a : [];
+  const y = Array.isArray(b) ? b : [];
+  if (x.length !== y.length) return false;
+  for (let i = 0; i < x.length; i++) {
+    if (String(x[i]) !== String(y[i])) return false;
+  }
+  return true;
+}
+
+function msOf(value) {
+  if (value && typeof value.toDate === "function") {
+    try { return value.toDate().getTime(); } catch (e) { return 0; }
+  }
+  if (typeof value === "number") return value;
+  return 0;
+}
+
+// 送るかどうか。空の一覧は送らない (sitemap の生成が転んだときに
+// 「0本を送った」と記録して、次から変化なしと見える形を避ける)。
+function decide(prev, urls, nowMs) {
+  if (!urls || !urls.length) return { submit: false, reason: "sitemap_empty" };
+  const p = prev || {};
+  const lastOk = msOf(p.lastOkAt);
+  if (!lastOk) return { submit: true, reason: "first" };
+  if (!sameList(p.lastUrls, urls)) return { submit: true, reason: "urls_changed" };
+  if (nowMs - lastOk >= RESUBMIT_AFTER_MS) return { submit: true, reason: "periodic" };
+  return { submit: false, reason: "unchanged" };
+}
+
+function buildBody(urls) {
+  return { host: HOST, key: KEY, keyLocation: KEY_LOCATION, urlList: (urls || []).slice() };
+}
+
+function ref(db) {
+  return db.collection(COLLECTION).doc(DOC_ID);
+}
+
+function fieldValues() {
+  return {
+    stamp: function () { return admin.firestore.FieldValue.serverTimestamp(); },
+    incr: function () { return admin.firestore.FieldValue.increment(1); },
+  };
+}
+
+async function readState(db) {
+  try {
+    if (!db) return null;
+    const snap = await ref(db).get();
+    if (!snap || !snap.exists) return null;
+    return snap.data() || {};
+  } catch (err) {
+    console.warn("indexnow readState failed:", (err && err.message) || err);
+    return null;
+  }
+}
+
+// 台帳に残す。書けなくても投げない。
+async function record(db, out, urls, fv) {
+  try {
+    if (!db) return false;
+    const f = fv || fieldValues();
+    const next = { lastCheckedAt: f.stamp(), lastReason: String(out.reason || ""), lastUrlCount: Number(out.urlCount || 0) };
+    if (out.submitted) {
+      next.lastOkAt = f.stamp();
+      next.lastStatus = Number(out.status || 0);
+      next.lastUrls = (urls || []).slice();
+      next.okCount = f.incr();
+    } else if (out.attempted) {
+      next.lastFailAt = f.stamp();
+      next.lastStatus = Number(out.status || 0);
+      next.lastError = String(out.error || "").slice(0, ERROR_MAX);
+      next.failCount = f.incr();
+    }
+    await ref(db).set(next, { merge: true });
+    return true;
+  } catch (err) {
+    console.warn("indexnow record skipped:", (err && err.message) || err);
+    return false;
+  }
+}
+
+module.exports = {
+  KEY,
+  HOST,
+  SITE,
+  SITEMAP_URL,
+  KEY_LOCATION,
+  ENDPOINT,
+  COLLECTION,
+  DOC_ID,
+  RESUBMIT_AFTER_MS,
+  parseSitemapLocs,
+  sameList,
+  decide,
+  buildBody,
+  readState,
+  record,
+};
