@@ -78,3 +78,97 @@
       "</div>";
   }
 
+  function setNote(text) {
+    var el = document.getElementById("indexnow-note");
+    if (el) el.textContent = text;
+  }
+
+  function load(force) {
+    if (busy) return;
+    busy = true;
+    setNote(force ? "送信中" : "読み込み中");
+    var body = document.getElementById("indexnow-body");
+    callFn(force)
+      .then(function (d) {
+        if (body) body.innerHTML = render(d);
+        setNote("読み込み済み");
+      })
+      .catch(function (err) {
+        if (body) body.innerHTML =
+          '<div class="card"><p class="reports-error">読み込みエラー: ' +
+          esc((err && err.message) || err) + "</p></div>";
+        setNote("エラー");
+      })
+      .then(function () {
+        busy = false;
+      });
+  }
+
+  function panelHtml() {
+    return '<div class="reports-toolbar card"><div class="reports-toolbar-text">' +
+      "<strong>検索側への通知 (IndexNow)</strong>" +
+      '<span id="indexnow-note" class="reports-open-count">タブを開くと状態を読み込みます</span>' +
+      '</div><div class="reports-toolbar-actions">' +
+      '<button type="button" class="secondary-btn" id="indexnow-refresh">状態を読む</button>' +
+      '<button type="button" class="secondary-btn" id="indexnow-force">いま送る</button>' +
+      '</div></div><div id="indexnow-body"></div>';
+  }
+
+  function showMine(on) {
+    var mine = document.getElementById(PANEL_ID);
+    if (mine) mine.classList.toggle("hidden", !on);
+    if (!on) return;
+    var panels = document.querySelectorAll(".admin-panel");
+    for (var i = 0; i < panels.length; i++) {
+      if (panels[i].getAttribute("id") !== PANEL_ID) panels[i].classList.add("hidden");
+    }
+    var tabs = document.querySelectorAll(".admin-tab");
+    for (var j = 0; j < tabs.length; j++) {
+      tabs[j].classList.toggle(
+        "is-active",
+        tabs[j].getAttribute("data-tab") === TAB_ID
+      );
+    }
+  }
+
+  function install() {
+    var nav = document.querySelector(".admin-tabs");
+    var main = document.getElementById("reports-main");
+    if (!nav || !main || document.getElementById(PANEL_ID)) return;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "admin-tab";
+    btn.setAttribute("data-tab", TAB_ID);
+    btn.textContent = "検索通知";
+    nav.appendChild(btn);
+
+    var panel = document.createElement("div");
+    panel.setAttribute("id", PANEL_ID);
+    panel.className = "admin-panel hidden";
+    panel.innerHTML = panelHtml();
+    main.appendChild(panel);
+
+    nav.addEventListener("click", function (ev) {
+      var t = ev.target;
+      var hit = t && t.getAttribute ? t.getAttribute("data-tab") : null;
+      if (!hit) return;
+      var mine = hit === TAB_ID;
+      showMine(mine);
+      if (mine) load(false);
+    });
+
+    var refresh = document.getElementById("indexnow-refresh");
+    if (refresh) refresh.addEventListener("click", function () { load(false); });
+    var force = document.getElementById("indexnow-force");
+    if (force) force.addEventListener("click", function () { load(true); });
+  }
+
+  window.AdminIndexNow = { render: render, verdict: verdict, load: load };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", install);
+  } else {
+    install();
+  }
+})();
