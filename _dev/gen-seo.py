@@ -110,6 +110,95 @@ def swap_attr(text, prefix, value):
     return text[:i + len(prefix)] + value + text[j:], True
 
 
+def subject_meta(sid):
+    # 科目ごとの subject.js から、その科目にしか書いていない字面を読む。
+    # 新しい文章は1文字も書かない (正本は科目定義の側に在る)。
+    path = os.path.join(ROOT, "subjects", sid, "subject.js")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except Exception:
+        return {}
+    out = {}
+    for key in ("formalTitle", "title", "homeNote", "startExpect"):
+        at = text.find(chr(10) + "  " + key + ":")
+        if at < 0:
+            continue
+        i = text.find(chr(34), at)
+        if i < 0:
+            continue
+        j = text.find(chr(34), i + 1)
+        if j < 0:
+            continue
+        out[key] = text[i + 1:j]
+    for key in ("modules", "categories"):
+        at = text.find("  " + key + ": {")
+        if at < 0:
+            continue
+        end = text.find(chr(10) + "  },", at)
+        if end < 0:
+            continue
+        labels = []
+        for line in text[at:end].split(chr(10))[1:]:
+            k = line.rfind(": " + chr(34))
+            if k < 0:
+                continue
+            rest = line[k + 3:]
+            q = rest.find(chr(34))
+            if q <= 0:
+                continue
+            label = rest[:q]
+            if label and label not in labels:
+                labels.append(label)
+        if labels:
+            out[key] = labels
+    return out
+
+
+def question_counts():
+    # 問題数と無料の境目は config/pricing.js が正本。金額は持ってこない
+    # (按分の式が正本なので、此処に写すと正本が2つになる)。
+    path = os.path.join(ROOT, "config", "pricing.js")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except Exception:
+        return {}, 0, 0
+    counts = {}
+    at = text.find("SUBJECT_CATALOG = {")
+    if at >= 0:
+        chunk = text[at:]
+        sid = ""
+        for line in chunk.split(chr(10)):
+            bare = line.strip()
+            if bare.endswith(": {"):
+                sid = bare[:-3].strip().strip(chr(34))
+            elif bare.startswith("questionCount:") and sid:
+                digits = ""
+                for ch in bare:
+                    if ch.isdigit():
+                        digits += ch
+                if digits:
+                    counts[sid] = int(digits)
+                sid = ""
+            elif bare == "};":
+                break
+    def number_after(marker):
+        i = text.find(marker)
+        if i < 0:
+            return 0
+        digits = ""
+        for ch in text[i + len(marker):]:
+            if ch.isdigit():
+                digits += ch
+            elif digits:
+                break
+        return int(digits) if digits else 0
+    free_max = number_after("FREE_SUBJECT_MAX_COUNT = ")
+    free_daily = number_after("FREE_DAILY = ")
+    return counts, free_max, free_daily
+
+
 def subject_page(index_text, sid, title, desc):
     # index.html をそのまま写し、head の題と説明と正典だけを科目のものに替える。
     # 本体 (script / css / base) は1文字も変えない。だから利用者の見る画面は
