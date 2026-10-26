@@ -40,6 +40,13 @@
   const PRICE_CAP_COUNT = 3000;
   const FREE_DAILY = 20;
 
+  // 問題の出どころ。無料か有料かは、まずこれで決まる。
+  // public-past-exam = 実施団体が公表した過去問の転載 (出典明記が条件)。
+  // original = 我々が書いた問題。これだけが有料になる。
+  const SOURCE_PUBLIC_PAST_EXAM = "public-past-exam";
+  const SOURCE_ORIGINAL = "original";
+  const SOURCE_TYPES = [SOURCE_ORIGINAL, SOURCE_PUBLIC_PAST_EXAM];
+
   const PACK_TITLE = "プレミアムパック";
   const PACK_PRODUCT_NAME = "ビジネス道場 — プレミアムパック";
 
