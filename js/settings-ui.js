@@ -389,6 +389,7 @@ function buildPool(settings) {
 
   const base = QUIZ_DATA.filter((q) => {
     if (includeSet && !includeSet.has(q.id)) return false;
+    if (excludeSet && excludeSet.has(q.id)) return false;
     if (onlyIdsMode) return true;
     if (!settings.categories.includes(q.category)) return false;
     if (!settings.priorities.includes(q.priority)) return false;
