@@ -373,6 +373,7 @@ const Entitlement = (function () {
     PRICE_CAP_COUNT,
     jstDateKey,
     priceForQuestionCount,
+    priceForSubject,
     getSubjectPriceYen,
     resolveQuestionCountAsync,
     isFreeSubject,
