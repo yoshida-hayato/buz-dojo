@@ -11,16 +11,14 @@ window.AdminQuestionStatsShared = (function () {
     return id;
   }
 
+  // 接頭の表は3枚目を持たない。js/question-stats-paths.js の1枚を使う
+  // (admin/question-analytics.html がこれより先に読む)。手元に3枚あった頃、
+  // bc-pp- と bc-po- を足し忘れた1枚だけが専門2科目を生産管理に吸い込んだ。
   function guessSubjectId(questionId, subjectIdFromStat) {
     if (subjectIdFromStat) return subjectIdFromStat;
-    const id = String(questionId || "");
-    if (id.startsWith("ws-")) return "windows-shortcuts";
-    if (id.startsWith("bc-")) return "biz-career";
-    if (id.startsWith("ef-")) return "excel-functions";
-    if (id.startsWith("om-")) return "outlook-mail";
-    if (id.startsWith("tc-")) return "teams-collab";
-    if (id.startsWith("aoi-")) return "ai-ontology-intro";
-    if (id.startsWith("ao-")) return "ai-ontology-core";
+    if (typeof QuestionStatsPaths !== "undefined" && QuestionStatsPaths.guessSubjectId) {
+      return QuestionStatsPaths.guessSubjectId(questionId);
+    }
     return "sap";
   }
 
