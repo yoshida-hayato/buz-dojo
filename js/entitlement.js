@@ -116,7 +116,7 @@ const Entitlement = (function () {
       typeof SubjectCatalog.getQuestionCountSync === "function"
     ) {
       const live = Number(SubjectCatalog.getQuestionCountSync(subjectId));
-      if (live > 0) return priceForQuestionCount(live);
+      if (live > 0) return priceForSubject(subjectId, live);
     }
     if (P && typeof P.getSubjectPriceYen === "function") {
       const catalogYen = P.getSubjectPriceYen(subjectId);
