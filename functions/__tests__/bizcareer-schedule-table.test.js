@@ -106,3 +106,54 @@ describe("ビジキャリの日程表 (公式の写しの正本)", () => {
     expect(exams - withPeriod).toBe(2);
   });
 });
+
+//
+// 着地頁 (guides) は、この表の3つめの写しである。
+//
+// 10/26 06:48便 に見つけた穴: 上の2本はサイトの定数と X の定数を突き合わせて
+// いたが、着地頁の日付は誰も見ていなかった。表を令和10年度まで延ばしても、
+// 着地頁だけが古い年度を言い続ける形になる。日付そのものを足すのではなく、
+// 「表に無い日付が頁に出ていない」と「表の最後の試験日が頁に出ている」を見張る。
+// 前者は書き間違いと取り残しを、後者は表を延ばしたときの更新忘れを捕まえる。
+//
+const GUIDE = fs.readFileSync(
+  path.join(__dirname, "..", "..", "guides", "seisan-kanri-2kyu.html"),
+  "utf8"
+);
+
+// 8桁の暦日 (20261005) を ISO (2026-10-05) に直す
+function spread(compact) {
+  return compact.slice(0, 4) + "-" + compact.slice(4, 6) + "-" + compact.slice(6, 8);
+}
+
+function compactDatesIn(src) {
+  const found = src.match(/20[0-9][0-9][0-1][0-9][0-3][0-9]/g);
+  return found === null ? [] : found;
+}
+
+describe("着地頁の日付も、同じ表から外れない", () => {
+  test("頁に出る日付は、すべて公式の表に在る", () => {
+    // 直し方: 頁の日付を直すか、表の側に出典つきで足す。
+    const allowed = OFFICIAL_EXAM_DATES.concat(OFFICIAL_APPLICATION_PERIODS);
+    const stranger = compactDatesIn(GUIDE)
+      .map(spread)
+      .filter((iso) => allowed.indexOf(iso) < 0);
+    expect(stranger.join(",")).toBe("");
+  });
+
+  test("表の最後の試験日が、頁にも出ている", () => {
+    // 表を延ばしたときに、頁の更新を忘れると此処で落ちる。
+    const last = OFFICIAL_EXAM_DATES[OFFICIAL_EXAM_DATES.length - 1];
+    const compact = last.split("-").join("");
+    expect(GUIDE.indexOf(compact) >= 0).toBe(true);
+  });
+
+  test("頁は、いちばん新しい受付期間の締切を言っている", () => {
+    // 受付期間が公表されている期のうち、最後の1つの締切。これが頁から
+    // 消えると、利用者は「いつまでに申し込むか」を頁から読めなくなる。
+    // 過ぎた期は文章の中にしか無いので、此処では見ない。
+    const last = OFFICIAL_APPLICATION_PERIODS[OFFICIAL_APPLICATION_PERIODS.length - 2];
+    const compact = last.split("-").join("");
+    expect(GUIDE.indexOf(compact) >= 0).toBe(true);
+  });
+});
