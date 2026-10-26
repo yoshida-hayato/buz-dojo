@@ -65,6 +65,11 @@ async function fetchCatalogCount(subjectId, pricing) {
 
 async function getSubjectPriceYenLive(subjectId, pricing) {
   const count = await fetchCatalogCount(subjectId, pricing);
+  // 請求額も出どころの規則を通す。公開過去問は問題数に関わらず0円で、
+  // getPlanLineItemLive が 0円の単品を弾くので、決済セッションは作られない。
+  if (typeof pricing.priceForSubject === "function") {
+    return pricing.priceForSubject(subjectId, count);
+  }
   return pricing.priceForQuestionCount(count);
 }
 
