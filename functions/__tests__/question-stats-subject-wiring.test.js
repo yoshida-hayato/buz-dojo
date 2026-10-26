@@ -132,3 +132,72 @@ describe("長い接頭が短い接頭より先に在る (2026-10-26 の壊れ方
     }
   });
 });
+
+describe("マスタの実物の問題 id が、正しい科目に行く", () => {
+  // 2026-10-26 に学習道場の公開 questions.js で実測した先頭の id。
+  const SAMPLES = [
+    ["bc-sc-pm-001", "biz-career"],
+    ["bc-pp-sc-001", "biz-pm-planning"],
+    ["bc-po-sc-001", "biz-pm-operation"],
+    ["aoi-sc-intro-001", "ai-ontology-intro"],
+  ];
+
+  SAMPLES.forEach((pair) => {
+    test(pair[0] + " は " + pair[1] + " に行く", () => {
+      expect(server.guessSubjectId(pair[0])).toBe(pair[1]);
+      expect(clientModule(true).guessSubjectId(pair[0])).toBe(pair[1]);
+    });
+  });
+
+  test("科目が明示されていれば、接頭より明示が勝つ", () => {
+    expect(server.guessSubjectId("bc-pp-sc-001", "biz-career")).toBe("biz-career");
+  });
+
+  test("どの接頭にも当たらない id は既定の科目に行く", () => {
+    expect(server.guessSubjectId("10.1")).toBe(server.DEFAULT_SUBJECT_ID);
+  });
+
+  test("問題の書き込み先が科目別サブコレクションになる", () => {
+    const seen = [];
+    const db = {
+      collection(name) {
+        seen.push(name);
+        return this;
+      },
+      doc(name) {
+        seen.push(name);
+        return this;
+      },
+    };
+    server.docRef(db, "bc-pp-sc-001");
+    expect(seen).toEqual([
+      "questionStats",
+      "biz-pm-planning",
+      "questions",
+      "bc-pp-sc-001",
+    ]);
+  });
+});
+
+describe("管理画面は3枚目の表を持たない", () => {
+  test("接頭の字面が admin-question-stats-shared に残っていない", () => {
+    expect(ADMIN_SRC).not.toContain('startsWith("bc-")');
+    expect(ADMIN_SRC).not.toContain('startsWith("ws-")');
+  });
+
+  test("admin は QuestionStatsPaths に当て推量を任せている", () => {
+    expect(ADMIN_SRC).toContain("QuestionStatsPaths.guessSubjectId");
+  });
+
+  test("admin の頁は、当て推量の表を先に読み込む", () => {
+    const before = ADMIN_HTML.indexOf("js/question-stats-paths.js");
+    const after = ADMIN_HTML.indexOf("js/admin-question-stats-shared.js");
+    expect(before).toBeGreaterThan(-1);
+    expect(after).toBeGreaterThan(before);
+  });
+
+  test("サブコレクションの科目を、行まで持ち回している", () => {
+    expect(ADMIN_SRC).toContain("subjectId: sid");
+    expect(ADMIN_SRC).toContain("item.subjectId || d.subjectId");
+  });
+});
