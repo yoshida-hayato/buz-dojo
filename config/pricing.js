@@ -114,10 +114,26 @@
     return Math.round(raw / 10) * 10;
   }
 
+  function getSubjectType(subjectId) {
+    const meta = SUBJECT_CATALOG[subjectId];
+    if (!meta) return null;
+    return meta.sourceType || SOURCE_ORIGINAL;
+  }
+
+  function isPublicPastExam(subjectId) {
+    return getSubjectType(subjectId) === SOURCE_PUBLIC_PAST_EXAM;
+  }
+
+  // 金額の唯一の入口。問題数の段より、出どころの規則が先に効く。
+  function priceForSubject(subjectId, questionCount) {
+    if (isPublicPastExam(subjectId)) return 0;
+    return priceForQuestionCount(questionCount);
+  }
+
   function getSubjectPriceYen(subjectId) {
     const meta = SUBJECT_CATALOG[subjectId];
     if (!meta) return null;
-    return priceForQuestionCount(meta.questionCount);
+    return priceForSubject(subjectId, meta.questionCount);
   }
 
   function isSubjectFree(subjectId) {
