@@ -111,6 +111,10 @@ describe("無料判定は静的な問題数で短絡しない", () => {
     expect(ent.isFreeSubject(null)).toBe(false);
   });
 
+  // 2026-10-26 12:48便 で、無料か有料かを決める軸が問題数から出どころへ
+  // 変わった。この検査は「無料 かつかつ 問題数が100以下」と書いていたので、
+  // 公開過去問の科目を1件足した時点で落ちる (18:48便 に11本目を足す
+  // 実験で現に落とした)。規則そのものを書き直す。
   test("公式の catalog で現に無料・有料の向きが変わっていない", () => {
     const ent = loadEntitlement({
       liveCounts: Object.keys(pricing.SUBJECT_CATALOG).reduce((acc, id) => {
