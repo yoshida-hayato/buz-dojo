@@ -333,3 +333,9 @@ body.quiz-screen-active .site-footer { display: none; }
   padding: 10px 16px;
   font-size: 14px;
 }
+
+.static-subject-about {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 16px 16px 8px;
+}
