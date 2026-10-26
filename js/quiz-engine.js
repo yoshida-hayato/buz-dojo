@@ -659,6 +659,8 @@ function finishAnswer(isCorrect, givenText) {
     expEl.innerHTML = formatRichText(q.entry.explanation || "（解説データがありません）");
   }
 
+  renderQuestionSource(q.entry);
+
   resetQuestionReportForm();
   $("question-report").open = false;
   if (QuestionReports.isAvailable()) {
