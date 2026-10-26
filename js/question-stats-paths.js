@@ -83,6 +83,9 @@ const QuestionStatsPaths = (function () {
 
   return {
     SUBJECT_IDS,
+    FALLBACK_SUBJECT_IDS,
+    ID_PREFIXES,
+    DEFAULT_SUBJECT_ID,
     guessSubjectId,
     isSubjectDocId,
     docRef,
