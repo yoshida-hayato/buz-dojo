@@ -55,6 +55,17 @@ const Entitlement = (function () {
     return Math.round(raw / 10) * 10;
   }
 
+  // 出どころの規則 (公開過去問は問題数に関わらず無料) を通す入口。
+  // 問題数だけを見る priceForQuestionCount を直に呼ぶと、この規則を飛ばして
+  // 公開過去問の科目にカードだけ金額が出る。請求側 (getPlanLineItem) は
+  // 0円の単品を作らないので、押しても決済に進めない画面になる。
+  function priceForSubject(subjectId, n) {
+    if (P && typeof P.priceForSubject === "function") {
+      return P.priceForSubject(subjectId, n);
+    }
+    return priceForQuestionCount(n);
+  }
+
   function resolveQuestionCount(subjectId) {
     if (
       typeof CURRENT_SUBJECT !== "undefined" &&
