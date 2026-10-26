@@ -58,42 +58,52 @@
     sap: {
       title: "SAP",
       questionCount: 4951,
+      sourceType: SOURCE_ORIGINAL,
     },
     "windows-shortcuts": {
       title: "Windowsショートカット",
       questionCount: 341,
+      sourceType: SOURCE_ORIGINAL,
     },
     "biz-career": {
       title: "ビジネスキャリア検定（生産管理）",
       questionCount: 823,
+      sourceType: SOURCE_ORIGINAL,
     },
     "biz-pm-planning": {
       title: "ビジネスキャリア検定（生産管理プランニング専門知識）",
       questionCount: 694,
+      sourceType: SOURCE_ORIGINAL,
     },
     "biz-pm-operation": {
       title: "ビジネスキャリア検定（生産管理オペレーション2級・専門知識）",
       questionCount: 295,
+      sourceType: SOURCE_ORIGINAL,
     },
     "excel-functions": {
       title: "Excel関数・表計算実務",
       questionCount: 150,
+      sourceType: SOURCE_ORIGINAL,
     },
     "outlook-mail": {
       title: "Outlookメール実務",
       questionCount: 100,
+      sourceType: SOURCE_ORIGINAL,
     },
     "teams-collab": {
       title: "Teamsの使い方",
       questionCount: 95,
+      sourceType: SOURCE_ORIGINAL,
     },
     "ai-ontology-intro": {
       title: "オントロジー入門",
       questionCount: 60,
+      sourceType: SOURCE_ORIGINAL,
     },
     "ai-ontology-core": {
       title: "オントロジー基礎",
       questionCount: 107,
+      sourceType: SOURCE_ORIGINAL,
     },
   };
 
