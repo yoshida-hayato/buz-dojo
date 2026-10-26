@@ -63,7 +63,10 @@ window.AdminQuestionStatsShared = (function () {
           .get();
         snap.forEach((doc) => {
           seen.add(doc.id);
-          docs.push({ id: doc.id, data: doc.data() || {} });
+          // 入っていたサブコレクションそのものが、その問題の科目である。
+          // ここで落とすと、stats の doc に subjectId が無い古い記録が
+          // 接頭の当て推量に回ってしまう。
+          docs.push({ id: doc.id, data: doc.data() || {}, subjectId: sid });
         });
       })
     );
