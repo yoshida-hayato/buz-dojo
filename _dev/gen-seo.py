@@ -329,7 +329,9 @@ def write_subject_pages():
     with open(os.path.join(ROOT, "index.html"), encoding="utf-8") as fh:
         index_text = fh.read()
     table = known_titles(index_text)
+    counts, free_max, free_daily = question_counts()
     wrote = 0
+    about = 0
     for sid in enabled_subject_ids():
         pair = table.get(sid)
         if not pair:
@@ -337,9 +339,19 @@ def write_subject_pages():
         body = subject_page(index_text, sid, pair[0], pair[1])
         if not body:
             continue
+        block = subject_noscript(sid, counts, free_max, free_daily)
+        if block:
+            # 本文の先頭に置く。描画しないクローラは上から読むので、
+            # 殻の3,826文字より前に科目の字を置きたい。
+            opening = LT + "body" + GT
+            at = body.find(opening)
+            if at >= 0:
+                cut = at + len(opening)
+                body = body[:cut] + chr(10) + block.rstrip(chr(10)) + body[cut:]
+                about += 1
         write(sid, body)
         wrote += 1
-    print("gen-seo: subject pages " + str(wrote))
+    print("gen-seo: subject pages " + str(wrote) + " about " + str(about))
 
 
 def inject_absolute_og(text, here_path):
