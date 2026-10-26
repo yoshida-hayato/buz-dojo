@@ -1,8 +1,18 @@
 /** questionStats パス（クライアント js/question-stats-paths.js と同期） */
-const SUBJECT_IDS = [
+const pricing = require("./pricing-shared.js");
+
+// 科目の一覧は料金の正本から導く。config/pricing.js に科目を足せば
+// _dev/sync-shared.py が pricing-shared.js を同期するので、ここは
+// 科目が増えても手で直さなくてよい。
+// 以前はここに8件を手で並べていて、biz-pm-planning と biz-pm-operation が
+// レジストリに入った時点から欠けていた (2026-10-26 実測)。欠けると
+// listAllQuestionStatsBuz がその科目のサブコレクションを一度も読まない。
+const FALLBACK_SUBJECT_IDS = [
   "sap",
   "windows-shortcuts",
   "biz-career",
+  "biz-pm-planning",
+  "biz-pm-operation",
   "excel-functions",
   "outlook-mail",
   "teams-collab",
