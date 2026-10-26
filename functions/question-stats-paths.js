@@ -20,17 +20,40 @@ const FALLBACK_SUBJECT_IDS = [
   "ai-ontology-core",
 ];
 
+function listSubjectIds() {
+  const catalog = pricing && pricing.SUBJECT_CATALOG;
+  const ids = catalog ? Object.keys(catalog) : [];
+  return ids.length ? ids : FALLBACK_SUBJECT_IDS.slice();
+}
+
+const SUBJECT_IDS = listSubjectIds();
+
+// 問題 id の接頭から科目を当てる。hint (科目の明示) が無いときだけ効く。
+// 並び順そのものが仕様である: 生産管理の問題は bc-sc-、プランニング専門は
+// bc-pp-、オペレーション専門は bc-po- で、3つとも bc- で始まる
+// (2026-10-26 にマスタの questions.js で実測)。だから長いほうを bc- より
+// 先に置く。順を逆にすると専門2科目が生産管理に吸い込まれる。
+const ID_PREFIXES = [
+  ["bc-pp-", "biz-pm-planning"],
+  ["bc-po-", "biz-pm-operation"],
+  ["ws-", "windows-shortcuts"],
+  ["bc-", "biz-career"],
+  ["ef-", "excel-functions"],
+  ["om-", "outlook-mail"],
+  ["tc-", "teams-collab"],
+  ["aoi-", "ai-ontology-intro"],
+  ["ao-", "ai-ontology-core"],
+];
+
+const DEFAULT_SUBJECT_ID = "sap";
+
 function guessSubjectId(questionId, hint) {
   if (hint) return String(hint);
   const id = String(questionId || "");
-  if (id.startsWith("ws-")) return "windows-shortcuts";
-  if (id.startsWith("bc-")) return "biz-career";
-  if (id.startsWith("ef-")) return "excel-functions";
-  if (id.startsWith("om-")) return "outlook-mail";
-  if (id.startsWith("tc-")) return "teams-collab";
-  if (id.startsWith("aoi-")) return "ai-ontology-intro";
-  if (id.startsWith("ao-")) return "ai-ontology-core";
-  return "sap";
+  for (let i = 0; i < ID_PREFIXES.length; i++) {
+    if (id.startsWith(ID_PREFIXES[i][0])) return ID_PREFIXES[i][1];
+  }
+  return DEFAULT_SUBJECT_ID;
 }
 
 function isSubjectDocId(id) {
