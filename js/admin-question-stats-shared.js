@@ -148,7 +148,10 @@ window.AdminQuestionStatsShared = (function () {
       const d = item.data || {};
       const questionId = item.id;
       const meta = metaMap.get(questionId) || {};
-      const subjectId = guessSubjectId(questionId, d.subjectId || meta.subjectId || "");
+      const subjectId = guessSubjectId(
+        questionId,
+        item.subjectId || d.subjectId || meta.subjectId || ""
+      );
       const subjectLabel = subjectTitle(subjectId);
       const text = meta.text || "（マスタ未取得）";
       const answer = meta.answer || "—";
