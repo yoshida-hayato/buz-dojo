@@ -199,6 +199,87 @@ def question_counts():
     return counts, free_max, free_daily
 
 
+# 科目の頁から、その科目の着地頁へ張る。無い科目は張らない。
+GUIDE_FOR = {
+    "sap": "/guides/sap-quiz.html",
+    "biz-career": "/guides/seisan-kanri-2kyu.html",
+    "biz-pm-planning": "/guides/seisan-kanri-planning-2kyu.html",
+    "biz-pm-operation": "/guides/seisan-kanri-operation-2kyu.html",
+}
+
+
+def guide_link(sid):
+    # 着地頁の題を其の頁から読む。此処に題を写すと正本が2つになる。
+    rel = GUIDE_FOR.get(sid)
+    if not rel:
+        return ""
+    full = os.path.join(ROOT, rel.lstrip("/"))
+    try:
+        with open(full, encoding="utf-8") as fh:
+            text = fh.read()
+    except Exception:
+        return ""
+    head = LT + "title" + GT
+    i = text.find(head)
+    j = text.find(LT + "/title" + GT, i + len(head)) if i >= 0 else -1
+    if i < 0 or j < 0:
+        return ""
+    label = text[i + len(head):j].strip()
+    brand = " " + chr(8212) + " ビジネス道場"
+    if label.endswith(brand):
+        label = label[: -len(brand)]
+    if not label:
+        return ""
+    return (
+        "    " + LT + "p" + GT
+        + LT + 'a href=' + chr(34) + rel + chr(34) + GT + label + LT + "/a" + GT
+        + LT + "/p" + GT + chr(10)
+    )
+
+
+def listing(label, items):
+    if not items:
+        return ""
+    out = "    " + tag("h3", label) + chr(10) + "    " + LT + "ul" + GT + chr(10)
+    for item in items:
+        out += "      " + tag("li", item) + chr(10)
+    out += "    " + LT + "/ul" + GT + chr(10)
+    return out
+
+
+def subject_noscript(sid, counts, free_max, free_daily):
+    # 描画しないクローラが見る本文は、いま11本とも同一である (3,826文字)。
+    # 殻 (SPA の全画面の文面) が同じだからで、科目の字は1文字も入っていない。
+    # 科目にしか無い字面を此処で静的に足す。JS が動く利用者には1pxも出ない
+    # (noscript なので) ため、画面と操作には何の影響も無い。
+    meta = subject_meta(sid)
+    if not meta:
+        return ""
+    heading = meta.get("formalTitle") or meta.get("title") or ""
+    if not heading:
+        return ""
+    body = "  " + LT + "noscript" + GT + chr(10)
+    body += "   " + LT + 'section class=' + chr(34) + "static-subject-about" + chr(34) + GT + chr(10)
+    body += "    " + tag("h2", heading + "の練習問題") + chr(10)
+    for key in ("homeNote", "startExpect"):
+        if meta.get(key):
+            body += "    " + tag("p", meta[key]) + chr(10)
+    count = counts.get(sid)
+    if count and free_max and free_daily:
+        if count <= free_max:
+            note = "収録 " + str(count) + "問。全問無料で解けます。"
+        else:
+            note = "収録 " + str(count) + "問。1日" + str(free_daily) + "問まで無料で解けます。"
+        body += "    " + tag("p", note) + chr(10)
+    body += listing("出題分野", meta.get("modules") or [])
+    body += listing("出題形式", meta.get("categories") or [])
+    body += guide_link(sid)
+    body += "    " + LT + "p" + GT + LT + 'a href=' + chr(34) + "/" + chr(34) + GT + "科目一覧" + LT + "/a" + GT + LT + "/p" + GT + chr(10)
+    body += "   " + LT + "/section" + GT + chr(10)
+    body += "  " + LT + "/noscript" + GT + chr(10)
+    return body
+
+
 def subject_page(index_text, sid, title, desc):
     # index.html をそのまま写し、head の題と説明と正典だけを科目のものに替える。
     # 本体 (script / css / base) は1文字も変えない。だから利用者の見る画面は
