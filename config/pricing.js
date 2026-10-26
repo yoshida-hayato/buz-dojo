@@ -10,6 +10,14 @@
  * - その上から PRICE_CAP_COUNT 未満 → PRICE_MIN〜PRICE_MAX を問題数に応じて
  *   按分（10円単位）
  * - 問題数 ≥ PRICE_CAP_COUNT → 上限 PRICE_MAX
+ *
+ * 出どころの規則 (問題数より先に効く。2026-10-26 社長指示):
+ * - sourceType が SOURCE_PUBLIC_PAST_EXAM (公開された過去問の転載) なら、
+ *   問題数に関わらず無料（¥0）。公開情報で金は取らない
+ * - sourceType が SOURCE_ORIGINAL (自作問題) なら、上の問題数の段で決める
+ * - 金額を出す経路は3つある (この正本・js/entitlement.js・
+ *   functions/subject-catalog.js)。どれも priceForSubject を通すこと。
+ *   priceForQuestionCount を直に呼ぶと、出どころの規則を飛ばす
  */
 (function (root, factory) {
   const api = factory();
