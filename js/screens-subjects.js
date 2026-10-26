@@ -1431,7 +1431,10 @@ function subjectPriceYenForUi(subjectId, loadedCount) {
   const resolved = subjectId ? Entitlement.getSubjectPriceYen(subjectId) : null;
   if (resolved != null) return resolved;
   const n = Number(loadedCount);
-  return Entitlement.priceForQuestionCount(n > 0 ? n : 0);
+  // ここも出どころの規則を通す。カタログにも静的値にも無い科目では
+  // sourceType も無いので同じ答えになるが、規則を飛ばす呼び方を
+  // 画面に1つも残さないため priceForSubject で書く。
+  return Entitlement.priceForSubject(subjectId, n > 0 ? n : 0);
 }
 
 function updateHomeNote() {
