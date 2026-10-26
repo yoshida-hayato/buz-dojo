@@ -102,3 +102,43 @@ describe("科目ごとの静的な頁 — 台本が書き、設定が型を被�
     expect(INDEX.indexOf("if (!canonical.parentNode) document.head.appendChild(canonical)") >= 0).toBe(true);
   });
 });
+
+//
+// 配信の札 (Cache-Control) の見張り。10/26 06:48便 に足した。
+//
+// 科目の頁は index.html の写しで、中にはデプロイごとに変わる鍵 (APP VERSION)
+// が入っている。掴まれると、再訪した人に古い殻が出る。だから型だけでなく
+// 札も要る。いまは10本とも両方持っているので、落ちるのは誰かが片方だけに
+// したときである (手元で1本を型だけにして、落ちることを確かめた)。
+//
+// 着地頁 (guides) については、この便では宣言を足していない。legal には
+// no-cache の宣言が在るのに guides には1本も無い、という非対称は残っている。
+// 既定の札は公式文書に記述が無く (18:48便 が探した)、本番の応答ヘッダは
+// 社員の側からは観測できないので、直す前に実害が在るかを測れない。
+// 引き継ぎメモの保留に置いた。
+//
+function noCachePaths() {
+  const out = [];
+  (FIREBASE.hosting.headers || []).forEach((rule) => {
+    const hit = (rule.headers || []).filter(
+      (h) => h.key === "Cache-Control" && String(h.value).indexOf("no-cache") >= 0
+    );
+    if (hit.length > 0) out.push(rule.source);
+  });
+  return out;
+}
+
+describe("科目の頁の配信の札", () => {
+  test("入口を持つ科目すべてに no-cache の宣言が在る (型だけでは足りない)", () => {
+    // 直し方: firebase.json のその科目の行に Cache-Control を1つ足す。
+    const cached = noCachePaths();
+    const missing = enabledIds().filter((id) => cached.indexOf("/" + id) < 0);
+    expect(missing.join(",")).toBe("");
+  });
+
+  test("トップと index.html にも no-cache の宣言が在る", () => {
+    const cached = noCachePaths();
+    const missing = ["/", "/index.html"].filter((src) => cached.indexOf(src) < 0);
+    expect(missing.join(",")).toBe("");
+  });
+});
