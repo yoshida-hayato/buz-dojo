@@ -374,6 +374,12 @@ function buildPool(settings) {
     includeSet = new Set(QuizStorage.wrongIds());
   }
 
+  // まだ一度も解いていない問題のみ。除外の集合なので includeSet とは別に持つ。
+  const excludeSet =
+    !onlyIdsMode && settings.poolMode === "untouched"
+      ? new Set(QuizStorage.answeredIds())
+      : null;
+
   // モジュールチップが無い／未生成のときは絞らない（空配列で全問除外になるのを防ぐ）
   const moduleInputs = document.querySelectorAll('input[name="module"]');
   const hasModuleFilter =
