@@ -55,12 +55,37 @@ describe("getSubjectPriceYen / isSubjectFree", () => {
     expect(Pricing.getSubjectPriceYen("__not_a_real_subject__")).toBeNull();
   });
 
-  test("登録済みの科目は priceForQuestionCount と同じ値を返す", () => {
+  // 2026-10-26 12:48便 で、無料か有料かを決める軸が問題数から出どころへ
+  // 変わった。この検査は priceForQuestionCount (問題数だけを見る) と
+  // 突き合わせていたので、公開過去問の科目を1件足した時点で落ちる。
+  // 2026-10-26 18:48便 に、11本目を足す実験で現に落とした。
+  // 比べる相手を priceForSubject (出どころが先に効く唯一の入口) にする。
+  test("登録済みの科目は priceForSubject と同じ値を返す", () => {
     for (const [id, meta] of Object.entries(Pricing.SUBJECT_CATALOG)) {
+      expect(Pricing.getSubjectPriceYen(id)).toBe(
+        Pricing.priceForSubject(id, meta.questionCount)
+      );
+    }
+  });
+
+  test("自作の科目に限り、問題数だけの段と同じ値になる", () => {
+    for (const [id, meta] of Object.entries(Pricing.SUBJECT_CATALOG)) {
+      if (Pricing.isPublicPastExam(id)) continue;
       expect(Pricing.getSubjectPriceYen(id)).toBe(
         Pricing.priceForQuestionCount(meta.questionCount)
       );
     }
+  });
+
+  test("公開過去問の科目は、問題数の段を無視して0円になる", () => {
+    const ids = Object.keys(Pricing.SUBJECT_CATALOG).filter((id) =>
+      Pricing.isPublicPastExam(id)
+    );
+    ids.forEach((id) => {
+      expect(Pricing.getSubjectPriceYen(id)).toBe(0);
+    });
+    // いまは0件。足された日にこの検査が意味を持つ。
+    expect(Array.isArray(ids)).toBe(true);
   });
 
   test("価格が0円の科目は isSubjectFree が true", () => {
