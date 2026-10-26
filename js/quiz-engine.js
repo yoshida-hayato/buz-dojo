@@ -199,6 +199,29 @@ function renderQuestion() {
 /** フィードバックカードを隠し、解説など前問のDOM残りを消す */
 let questionGlobalRateSeq = 0;
 
+// 公開された過去問を転載した問題には、実施団体の許諾の条件として出典の明記が
+// 要る。許諾を確認できた4団体 (情報処理推進機構・日本FP協会・法務省・
+// 厚生労働省) は、いずれも出典の明記と、改変した場合はその旨の明記を求めて
+// いる。つまり出典が出ないと、無料で載せてよい根拠そのものが崩れる。
+// 条件の写しは docs/EXAM_LICENSE_REGISTRY.md、機械が読む台帳は
+// config/exam-licenses.js に在る。
+// 自作問題には source が無いので、その場合は1pxも足さない。
+// textContent で入れるのは、団体が示す出典の書式をそのまま出すためで、
+// 字面に山かっこが混じっても画面に差し込まれないようにするためでもある。
+function renderQuestionSource(entry) {
+  const host = $("feedback-answer");
+  if (!host) return;
+  const stale = host.querySelector(".feedback-source");
+  if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
+  const raw =
+    entry && typeof entry.source === "string" ? entry.source.trim() : "";
+  if (!raw) return;
+  const line = document.createElement("div");
+  line.className = "feedback-source";
+  line.textContent = "出典: " + raw + (entry.sourceModified ? "（一部改変）" : "");
+  host.appendChild(line);
+}
+
 function clearChapterClearBanner() {
   const banner = $("chapter-clear-banner");
   if (!banner) return;
