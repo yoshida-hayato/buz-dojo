@@ -476,6 +476,9 @@ function updatePoolCount() {
       } else if (settings.poolMode === "unmastered") {
         hint.textContent =
           "未習得の問題がありません。すべての問題で再開するか、間違えた問題に切り替えられます。";
+      } else if (settings.poolMode === "untouched") {
+        hint.textContent =
+          "この条件の問題は、すべて一度は解いています。すべての問題で再開するか、間違えた問題に切り替えられます。";
       } else {
         hint.textContent = "この条件では出題できる問題がありません。";
       }
