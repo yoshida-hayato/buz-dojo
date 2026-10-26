@@ -681,10 +681,15 @@ function paintSubjectPickerCards(box, rows, packOn) {
       }
       const metaParts = [];
       if (typeof Entitlement !== "undefined") {
+        // priceForSubject を通す。priceForQuestionCount を直に呼ぶと
+        // 出どころの規則 (公開過去問は件数に関わらず0円) を飛ばす。
+        // registry の科目は priceYen を持たないので、この落ち先が
+        // 実際には唯一の経路である (2026-10-26 に10科目とも実測)。
+        // 直に呼んでいた間、公開過去問の科目は 1,980円 と 購読中 を出した。
         priceYen =
           typeof s.priceYen === "number"
             ? s.priceYen
-            : Entitlement.priceForQuestionCount(total);
+            : Entitlement.priceForSubject(s.id, total);
         freeSubject = priceYen <= 0;
         hasAccess = Entitlement.hasAccess(s.id);
         const rem = Entitlement.remainingFree(s.id);
