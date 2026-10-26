@@ -764,6 +764,13 @@
   color: var(--sap-blue-dark);
   margin-bottom: 6px;
 }
+.feedback-source {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-sub);
+  word-break: break-word;
+}
 .feedback-answer-text {
   line-height: 1.5;
   word-break: break-word;
