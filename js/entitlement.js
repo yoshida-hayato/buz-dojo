@@ -124,7 +124,7 @@ const Entitlement = (function () {
     }
     const n = resolveQuestionCount(subjectId);
     if (n == null) return null;
-    return priceForQuestionCount(n);
+    return priceForSubject(subjectId, n);
   }
 
   // 無料かどうかも、金額と同じ出どころで決める。
