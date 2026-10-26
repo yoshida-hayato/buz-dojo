@@ -5,10 +5,17 @@
  * 旧: questionStats/{questionId}  （読み取りのみフォールバック）
  */
 const QuestionStatsPaths = (function () {
-  const SUBJECT_IDS = [
+  // このモジュールは app.js から遅延で読み込まれる。index.html と
+  // admin/question-analytics.html のどちらも subjects/registry.js を先に
+  // 読むので、ここに来た時点で SUBJECT_REGISTRY は在る。
+  // 以前は8件を手で並べていて、biz-pm-planning と biz-pm-operation が
+  // レジストリに入った時点から欠けていた (2026-10-26 実測)。
+  const FALLBACK_SUBJECT_IDS = [
     "sap",
     "windows-shortcuts",
     "biz-career",
+    "biz-pm-planning",
+    "biz-pm-operation",
     "excel-functions",
     "outlook-mail",
     "teams-collab",
