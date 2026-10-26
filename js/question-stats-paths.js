@@ -3,6 +3,10 @@
  *
  * 新: questionStats/{subjectId}/questions/{questionId}
  * 旧: questionStats/{questionId}  （読み取りのみフォールバック）
+ *
+ * 科目の一覧と接頭の表は functions/question-stats-paths.js と同じ中身にする。
+ * ずれていないことは functions/__tests__/question-stats-subject-wiring.test.js
+ * が見張っている。
  */
 const QuestionStatsPaths = (function () {
   // このモジュールは app.js から遅延で読み込まれる。index.html と
