@@ -120,7 +120,21 @@ describe("無料判定は静的な問題数で短絡しない", () => {
     });
     Object.keys(pricing.SUBJECT_CATALOG).forEach((id) => {
       const n = pricing.SUBJECT_CATALOG[id].questionCount;
-      expect(ent.isFreeSubject(id)).toBe(n <= FREE_LIMIT);
+      const free = pricing.isPublicPastExam(id) || n <= FREE_LIMIT;
+      expect(ent.isFreeSubject(id)).toBe(free);
+    });
+  });
+
+  test("出どころの規則が、問題数の段より先に効く", () => {
+    const ids = Object.keys(pricing.SUBJECT_CATALOG);
+    const ent = loadEntitlement({
+      liveCounts: ids.reduce((acc, id) => {
+        acc[id] = FREE_LIMIT * 50;
+        return acc;
+      }, {}),
+    });
+    ids.forEach((id) => {
+      expect(ent.isFreeSubject(id)).toBe(pricing.isPublicPastExam(id));
     });
   });
 });
