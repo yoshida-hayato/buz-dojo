@@ -449,6 +449,8 @@ function updatePoolCount() {
     }
   } else if (pool.length === 0 && settings.poolMode === "wrong") {
     note = "（間違えたことのある問題がありません）";
+  } else if (pool.length === 0 && settings.poolMode === "untouched") {
+    note = "（この条件の問題はすべて一度は解いています）";
   } else if (
     usesInput &&
     settings.answerMode === "both" &&
