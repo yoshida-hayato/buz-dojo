@@ -104,13 +104,18 @@ const ActivityCalendar = (function () {
     return cells;
   }
 
+  // 53週の決め打ちだと、うるう年かつ1月1日が土曜の年 (直近は2028年) で
+  // 12月31日のセルが1つ足りない。年末を越えるまで列を足す。
   function yearColumns(year) {
     const start = startOfWeek(year + "-01-01");
+    const endOfYear = year + "-12-31";
     const cols = [];
-    for (let w = 0; w < 53; w++) {
+    let cursor = start;
+    while (cursor <= endOfYear) {
       const week = [];
-      for (let r = 0; r < 7; r++) week.push(addDays(start, w * 7 + r));
+      for (let r = 0; r < 7; r++) week.push(addDays(cursor, r));
       cols.push(week);
+      cursor = addDays(cursor, 7);
     }
     return cols;
   }
