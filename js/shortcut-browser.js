@@ -140,8 +140,7 @@ const ShortcutBrowser = (() => {
 
   function search(query, module) {
     const q = (query || "").trim();
-    let rows = catalog;
-    if (module && module !== "ALL") rows = rows.filter((r) => r.module === module);
+    const rows = scopedCatalog(module);
     if (!q) return rows;
     const tokens = expandTokens(q).concat(
       toHalfWidth(q).split(/[\s\u3000]+/).filter(Boolean).map(normalize)
