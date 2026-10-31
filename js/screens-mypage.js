@@ -306,9 +306,14 @@ function paintMyPageStats(statsEl, rows) {
     const stats = subjectSummary || { answered: 0, correct: 0, masteredChoice: 0 };
     const answered = Number(stats.answered) || 0;
     const correct = Number(stats.correct) || 0;
-    const mastered = Number(stats.masteredChoice) || 0;
-    const hasProgress = answered > 0 || mastered > 0;
+    const masteredRaw = Number(stats.masteredChoice) || 0;
+    const hasProgress = answered > 0 || masteredRaw > 0;
     const total = summary.questionTotal || 0;
+    // 旧マスタの保存値が分母を超えると 習得 600/500 になる。カードと同じ頭打ち
+    const mastered =
+      typeof MasteryDisplay !== "undefined"
+        ? MasteryDisplay.clampMastered(masteredRaw, total)
+        : masteredRaw;
     // ピッカー同様: 保存 rankName ではなく catalog＋成績から再計算
     let rank = null;
     if (
