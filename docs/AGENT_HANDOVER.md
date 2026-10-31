@@ -22,10 +22,41 @@ createRankContextFromLoaded と clampMastered が在ることを確認した。
 
 ## いま何が起きているか
 
-- 00:48便 (11/1) は21件出した。主題は1つで、段位 (js/rank.js) である。
-  547行・関数33個で、785件のテストのどれ1つもこのファイルの名前を見ていなかった。
-  歩いて3つ見つけ、全部実測して直し、ガードを2枚置いた
-- (1) 科目カードとホームのバナーが、同じ人に別の段位を出していた。
+- 06:48便 (11/1) は24件出した。主題は1つで、科目の切り替えである。
+  保留の一覧の次の3枚 (syntax-browser / tcode-browser / chapter-progress) を
+  歩いていて出た。chapter-progress は無傷だった (保留に在った clearCorrect が
+  0の章は、現データ6章すべてが値を持ち module も一致する。node で実測。
+  次の自分はここを見直さなくてよい)
+- (1) 科目を切り替えると、前の科目の changelog と Tコード一覧が残る。
+  追加データの台本はよその repo のマスタで、宣言の書き方がそろっていない。
+  SAP の changelog.js は const CHANGELOG、学習道場の9科目は var CHANGELOG
+  (本番の実物を6本取って確かめた)。これを script タグで読むと、2度目が
+  Identifier CHANGELOG has already been declared で台本ごと落ちるのに
+  onload は成功として返り、しかも const は window の属性ではないので
+  clearGlobals の window.CHANGELOG = undefined が当たらない。Chromium で
+  実測: SAP を見たあとに Excel関数 へ移ると、ベルの更新履歴が SAP の2件の
+  まま残った。loadQuizBundle と同じ形 (fetch して隔離した器で評価し window に
+  書く) の loadDataScript を置き、loadScript の入口でファイル名で振り分けた。
+  呼び出しの字面を1文字も変えずに changelog と lesson と extras の3経路が
+  そろう。clearGlobals は読む側の一覧から回すようにした
+- (2) clearGlobals は window.ABAP_SYNTAX を消していたが、画面が読むのは
+  ABAP_SYNTAX_REF である。最初からずれていた。TCODE_MODULE_ORDER と
+  ABAP_SYNTAX_GROUP_ORDER も抜けていた。一覧を正本にして、読む側の字面と
+  突き合わせるガードを置いた
+- (3) 件数の行の母数が、絞りを掛けても全件のままだった。Chromium で実測:
+  Tコード確認で MM の絞りで 受注 を引くと 0件ヒット（全10件中）。MM は4件
+  しか無く、当たる3件は SD に在るので「全部見たが無い」と読める。直した後は
+  0件ヒット（MM の4件中）。絞りが無いときの字面は1文字も変わらない。
+  grep で3枚目 (shortcut-browser) が出たので3枚とも直した
+- ガードは2枚で約束13つ。subject-data-globals と browser-count-scope。
+  18通りに壊して18通りとも落ちた。テストは 83ファイル824件から 85ファイル874件。
+  24件とも、まっさらな clone に1件ずつ時刻順に当てて全テストを走らせ、
+  途中のどの状態でも落ちず、最終状態が手元の木と1バイトも違わないことを
+  確かめた。さらに貼る前に payload を Slack の変換に通してから json.loads し、
+  元と一致することを機械で見た
+- 00:48便 (11/1) の25件は全部入り、本番でも反映を確認した (段位が画面によって
+  最大3段ちがう件と、習得数が分母を超える件)。閉じている
+- (ここから下は 00:48便 の記録) (1) 科目カードとホームのバナーが、同じ人に別の段位を出していた。
   createPickerRankContext が段位定義から記述式の門を全部外しており、Tコード
   記述式を一度も触っていない SAP 利用者で バナー 六段 に対しカードが
   七段/七段/八段/九段 だった (選択式習得 2600/3300/4000/4951 の4点で実測)。
