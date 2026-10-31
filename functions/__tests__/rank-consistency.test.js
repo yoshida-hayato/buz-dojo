@@ -153,3 +153,37 @@ describe("約束1: 読み込み済み科目のカードは、ホームのバナ�
     });
   }
 });
+
+describe("約束2: 習得数は現存する問題数を超えない", () => {
+  // 旧マスタの問題IDで積まれた保存値は、問題が減った科目で分母を超える。
+  // 超えたまま出すと成績画面に 5071 / 4951 や 9999 / 619 が並ぶ (実測)
+  for (const [id, total] of Object.entries(SUBJECTS)) {
+    test(id, () => {
+      const ctx = load(id, total, true);
+      const inputTotal = vm.runInContext("tcodeQuestionCount()", ctx);
+      const s = {
+        answered: 1200, correct: 1000, inputAnswered: 200, inputCorrect: 150,
+        masteredChoice: total + 500, masteredInput: 9999, q: {},
+      };
+      expect(call(ctx, "masteredCount(ARG)", s)).toBeLessThanOrEqual(total);
+      expect(call(ctx, "inputMasteredCount(ARG)", s)).toBeLessThanOrEqual(inputTotal);
+    });
+  }
+});
+
+describe("約束3: 昇段条件の記述式習得は、getRank が使った数で書く", () => {
+  // 直す前: getRank は保存値300で七段の条件を満たしたと判定しながら、
+  // 同じバナーの条件行は q から数え直して あと124問 と出し、帯を0パーセントにした
+  test("保存値だけで条件を満たしている人に あと124問 と出さない", () => {
+    const ctx = load("sap", 4951, true);
+    const s = {
+      answered: 9000, correct: 7500, inputAnswered: 900, inputCorrect: 700,
+      masteredChoice: 3300, masteredInput: 300, q: {},
+    };
+    const p = call(ctx, "rankProgress(ARG)", s);
+    const row = p.conditions.filter((c) => c.label === "記述式習得")[0];
+    expect(Boolean(row)).toBe(true);
+    expect(row.met).toBe(true);
+    expect(p.pct).toBeGreaterThan(0);
+  });
+});
