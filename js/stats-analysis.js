@@ -77,6 +77,7 @@ const StatsAnalysis = (function () {
   }
 
   function labelForModule(key) {
+    if (!key) return "未分類";
     return MODULE_LABELS[key] || key;
   }
 
