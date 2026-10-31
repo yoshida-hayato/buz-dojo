@@ -386,6 +386,13 @@ function rankMinCorrect(rankDef) {
   return Math.floor(rankCorrectCap() * (rankDef.correctRatio || 0));
 }
 
+// 段位定義から記述式の必要正解数を算出する。
+// 汎用段位は記述式の門を inputCorrectRatio で書く (SAP段位は minInputMasteredPct)。
+function rankMinInputCorrect(rankDef) {
+  if (!rankDef.inputCorrectRatio) return 0;
+  return Math.ceil(QUIZ_DATA.length * rankDef.inputCorrectRatio);
+}
+
 function getRank(stats) {
   const acc = rankChoiceAccuracyPct(stats);
   const accInput = rankInputAccuracyPct(stats);
