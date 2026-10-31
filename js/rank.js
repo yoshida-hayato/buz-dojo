@@ -439,7 +439,7 @@ function rankProgress(stats) {
 
   const rankMin = rankMinCorrect(rank);
   const nextMin = rankMinCorrect(next);
-  const inputMastered = inputMasteredIdSet(stats).size;
+  const inputMastered = rankInputMasteredCount(stats);
 
   // 表示順: 累計正解 → 選択式習得 → 選択式直近正答率 → 記述式習得 → 記述式直近正答率
   if (nextMin > rankMin) {
