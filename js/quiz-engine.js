@@ -63,6 +63,12 @@ async function startQuizAsync(settings, options = {}) {
     sessionNewChoiceMastered: new Map(),
     sessionNewInputMastered: new Map(),
   };
+  // 模試だけ時計を起こす。通常のクイズに戻ったときは必ず止める
+  // (前の模試の残り時間が画面に残らないように)。
+  if (typeof ExamMode !== "undefined") {
+    if (settings.examMode) ExamMode.begin();
+    else ExamMode.stop();
+  }
   showScreen("quiz");
   renderQuestion();
 }
