@@ -473,7 +473,10 @@ function buildPickerRows(subjects, catalogCounts, allSummaries, summariesLoaded)
       if (typeof QuizStorage !== "undefined" && QuizStorage._displaySummary) {
         row = QuizStorage._displaySummary(row);
       }
-      mastered = Number(row.masteredChoice) || 0;
+      mastered =
+        typeof MasteryDisplay !== "undefined"
+          ? MasteryDisplay.clampMastered(row.masteredChoice, total)
+          : Number(row.masteredChoice) || 0;
       answered = Number(row.answered) || 0;
       const hasProgress = answered > 0 || mastered > 0;
       if (
