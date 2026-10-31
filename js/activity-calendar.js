@@ -38,9 +38,19 @@ const ActivityCalendar = (function () {
     return toKey(d);
   }
 
+  function lastDayOfMonth(year, monthIndex) {
+    return new Date(year, monthIndex + 1, 0).getDate();
+  }
+
+  // setMonth は日を保持するので、31日起点では隣月に存在しない日になり、
+  // 翌月へ繰り上がる (2026-10-31 の1か月前が 2026-09-31 = 10/01 になる)。
+  // 月末は月末に丸める。
   function addMonths(key, n) {
     const d = parseKey(key);
+    const day = d.getDate();
+    d.setDate(1);
     d.setMonth(d.getMonth() + n);
+    d.setDate(Math.min(day, lastDayOfMonth(d.getFullYear(), d.getMonth())));
     return toKey(d);
   }
 
