@@ -187,3 +187,57 @@ describe("約束3: 昇段条件の記述式習得は、getRank が使った数�
     expect(p.pct).toBeGreaterThan(0);
   });
 });
+
+describe("約束4: minAcc を書き忘れた段を、黙って到達不能にしない", () => {
+  // 科目を足す人が手で段位表を書く日に踏む形。acc >= r.minAcc は
+  // minAcc が無いと必ず偽になり、その段から上が永久に止まる
+  test("minAcc の無い段にも届く", () => {
+    const ctx = load("biz-career", 823, true);
+    vm.runInContext(
+      "RANKS = DEFAULT_RANKS.slice(0, 12).map(function (r) {" +
+        " var c = Object.assign({}, r); delete c.minAcc; return c; });",
+      ctx
+    );
+    const s = {
+      answered: 1200, correct: 1000, inputAnswered: 0, inputCorrect: 0,
+      masteredChoice: 200, masteredInput: 0, q: {},
+    };
+    expect(nameOf(call(ctx, "getRank(ARG)", s))).toBe("二段");
+  });
+});
+
+describe("約束5: getRank は汎用段位の記述式の門を見る", () => {
+  // 記述式を持つ科目に汎用段位を使うと、記述式の門は inputCorrectRatio で書かれる。
+  // 11本目を足した日に踏む形なので、いまの10科目では効かない式を直に測る。
+  function ctxWithInput() {
+    const ctx = load("biz-career", 823, true);
+    vm.runInContext("INPUT_CATEGORIES = new Set(['term']); RANKS = DEFAULT_RANKS.slice();", ctx);
+    return ctx;
+  }
+  const base = {
+    answered: 1647, correct: 1400, inputAnswered: 10, inputCorrect: 9,
+    masteredChoice: 500, masteredInput: 0, q: {},
+  };
+
+  test("汎用段位は記述式の門を持っている (前提の確認)", () => {
+    const ctx = ctxWithInput();
+    expect(
+      vm.runInContext("RANKS.filter(function (r) { return r.inputCorrectRatio; }).length", ctx)
+    ).toBeGreaterThan(0);
+    expect(vm.runInContext("rankMinInputCorrect({ inputCorrectRatio: 0.05 })", ctx)).toBe(42);
+  });
+
+  test("記述式の正解が足りない人は、門を持つ段に届かない", () => {
+    const ctx = ctxWithInput();
+    const got = call(ctx, "getRank(ARG)", base);
+    const need = vm.runInContext("rankMinInputCorrect(" + JSON.stringify(got) + ")", ctx);
+    expect([nameOf(got), need]).toEqual(["六段", 0]);
+    expect(need).toBeLessThanOrEqual(base.inputCorrect);
+  });
+
+  test("記述式の正解が足りれば、門を持つ段に届く (塞ぎっぱなしにしない)", () => {
+    const ctx = ctxWithInput();
+    const s = Object.assign({}, base, { inputAnswered: 50, inputCorrect: 45 });
+    expect(nameOf(call(ctx, "getRank(ARG)", s))).toBe("七段");
+  });
+});
