@@ -559,10 +559,7 @@ function renderRankBanner(prefix) {
 }
 
 function inputMasteredCount(stats) {
-  const fromQ = inputMasteredIdSet(stats).size;
-  const stored = typeof stats.masteredInput === "number" ? stats.masteredInput : 0;
-  if (stored > 0 && fromQ === 0) return stored;
-  return Math.max(fromQ, stored);
+  return rankInputMasteredCount(stats);
 }
 
 function tcodeQuestionCount() {
