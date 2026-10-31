@@ -263,3 +263,36 @@ describe("約束4: 絞りの中だけを数えている", () => {
     expect(sum).toBe(h.api.getCatalog().length);
   });
 });
+// ここが本題である。上の約束は search を直に呼ぶので、件数の行を直したことを
+// 測っていない。チップを押した後の字面そのものを見る。
+describe("約束5: 絞りを押した後の件数の行", () => {
+  test.each([
+    ["MM", "受注", "0件ヒット（MM の4件中）"],
+    ["MM", "発注", "2件ヒット（MM の4件中）"],
+    ["SD", "受注", "3件ヒット（SD の4件中）"],
+    ["FI", "仕訳", "2件ヒット（FI の2件中）"],
+  ])("Tコード %s / %s", (mod, q, want) => {
+    const h = tcode();
+    expect(renderWith(h, "tcode", q, mod)).toBe(want);
+  });
+
+  test.each([
+    ["内部テーブル", "定数", "0件ヒット（内部テーブル の3件中）"],
+    ["基本", "定数", "1件ヒット（基本 の2件中）"],
+  ])("ABAP構文 %s / %s", (grp, q, want) => {
+    const h = syntax();
+    expect(renderWith(h, "syntax", q, grp)).toBe(want);
+  });
+
+  test("絞りを押して検索語が空なら、絞りの件数が出る", () => {
+    const h = tcode();
+    expect(renderWith(h, "tcode", "", "MM")).toBe("全4件");
+  });
+
+  test("絞りを押してから ALL に戻すと、全件の字面に戻る", () => {
+    const h = tcode();
+    expect(renderWith(h, "tcode", "受注", "MM")).toBe("0件ヒット（MM の4件中）");
+    clickChip(h.nodes["tcode-module-chips"], "ALL");
+    expect(h.nodes["tcode-result-count"].textContent).toBe("3件ヒット（全10件中）");
+  });
+});
