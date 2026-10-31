@@ -510,6 +510,11 @@ function buildQuestion(entry, settings, forceInputMode) {
     return { entry, direction, inputMode: true, choices: [], answerIndex: -1 };
   }
 
+  // 選択肢の数。模試は本番の肢数 (settings.choiceCount) にそろえる。
+  // 指定が無ければ通常の CHOICE_COUNT。正誤・並べ替え・穴埋め・略称は
+  // 形式そのものが肢数を決めるので、ここまで来ない。
+  const slots = Math.max(2, Number(settings && settings.choiceCount) || CHOICE_COUNT);
+
   /** 同一操作の別表記など、誤答候補に出すと「どちらも正解」に見えるペアを除外する */
   const distractorExcluded = (candidate) => {
     const ids = entry.distractorExcludeIds;
