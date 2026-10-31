@@ -14,6 +14,11 @@ function renderResult() {
   else message = "繰り返し解いて定着させましょう。";
   $("result-message").textContent = message;
 
+  // 模試のときだけ合否を出す。基準の問数は config/exam-formats.js が持つ。
+  if (typeof ExamMode !== "undefined" && ExamMode.paintVerdict) {
+    ExamMode.paintVerdict();
+  }
+
   // 昇段／降段の判定
   const rankAfter = getRank(QuizStorage.load());
   const banner = $("rank-up-banner");
