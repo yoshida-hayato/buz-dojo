@@ -624,6 +624,15 @@ function finishAnswer(isCorrect, givenText) {
     }
   }
 
+  // 模試は本番の形を再現するので、1問ごとの正誤も解説も出さない。
+  // 採点は結果画面でまとめて出る (誤答一覧に解説が並ぶ)。成績の記録と
+  // 習得の判定は上で済んでいるので、ここから先の描画だけを飛ばす。
+  if (typeof ExamMode !== "undefined" && ExamMode.isExamQuiz()) {
+    quiz.lastFeedback = { isCorrect, givenText };
+    nextQuestion();
+    return;
+  }
+
   // カードを出す前に中身を全部書き換える（前問の解説が一瞬・稀に残るのを防ぐ）
   $("feedback-result").textContent = isCorrect ? "正解！" : "不正解…";
   paintChapterClearBanner(chapterResult);
