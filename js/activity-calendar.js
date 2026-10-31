@@ -500,16 +500,25 @@ const ActivityCalendar = (function () {
       detailHtml(daily, opts);
   }
 
+  // 期間を動かすときは選択日も同じだけ動かす。anchor だけ動かすと、
+  // 下の詳細行が表示していない期間の日付を出す。
+  function shift(n) {
+    if (view === "week") {
+      anchor = addDays(anchor, n * 7);
+      selected = addDays(selected, n * 7);
+      return;
+    }
+    const months = view === "year" ? n * 12 : n;
+    anchor = addMonths(anchor, months);
+    selected = addMonths(selected, months);
+  }
+
   function goPrev() {
-    if (view === "week") anchor = addDays(anchor, -7);
-    else if (view === "month") anchor = addMonths(anchor, -1);
-    else anchor = addMonths(anchor, -12);
+    shift(-1);
   }
 
   function goNext() {
-    if (view === "week") anchor = addDays(anchor, 7);
-    else if (view === "month") anchor = addMonths(anchor, 1);
-    else anchor = addMonths(anchor, 12);
+    shift(1);
   }
 
   function onClick(e) {
