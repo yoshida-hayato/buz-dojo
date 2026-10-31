@@ -113,3 +113,47 @@ describe("約束1: データ台本は大域に名前を作らない", () => {
     expect(b.CHANGELOG[0].note).toBe("Excel関数の初版");
   });
 });
+describe("約束4と5: 消す名前と読む名前が一致している", () => {
+  const { api, win } = load(fetchOf({}));
+
+  test("clearGlobals が一覧の名前をすべて消す", () => {
+    api.DATA_SCRIPT_GLOBALS.forEach((n) => {
+      win[n] = ["のこり"];
+    });
+    api.clearGlobals();
+    api.DATA_SCRIPT_GLOBALS.forEach((n) => {
+      expect(win[n]).toBeUndefined();
+    });
+  });
+
+  // 2026-11-01 まで clearGlobals は window.ABAP_SYNTAX を消していたが、
+  // 画面が読むのは ABAP_SYNTAX_REF だった。綴りがずれても気づかない形
+  // だったので、読む側の字面から名前を取って突き合わせる。
+  test("画面が読む大域は、すべて一覧に入っている", () => {
+    const readers = {
+      "js/syntax-browser.js": ["ABAP_SYNTAX_REF", "ABAP_SYNTAX_GROUP_ORDER"],
+      "js/tcode-browser.js": ["TCODE_REF", "TCODE_MODULE_ORDER"],
+      "js/app-chrome.js": ["CHANGELOG"],
+      "js/lesson-progress.js": ["LESSON_DATA"],
+    };
+    Object.keys(readers).forEach((file) => {
+      const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+      readers[file].forEach((name) => {
+        expect(text.indexOf(name)).toBeGreaterThan(-1);
+        expect(api.DATA_SCRIPT_GLOBALS).toContain(name);
+      });
+    });
+  });
+
+  test("一覧の名前には、必ず読み手が居る", () => {
+    const names = fs
+      .readdirSync(path.join(ROOT, "js"))
+      .filter((f) => f.endsWith(".js") && f !== "subject-loader.js");
+    const files = names
+      .map((f) => fs.readFileSync(path.join(ROOT, "js", f), "utf8"))
+      .join(NL);
+    api.DATA_SCRIPT_GLOBALS.forEach((name) => {
+      expect(files.indexOf(name)).toBeGreaterThan(-1);
+    });
+  });
+});
