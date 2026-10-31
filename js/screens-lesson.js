@@ -270,7 +270,24 @@ function renderLessonScreen() {
     const feedback = document.createElement("p");
     feedback.className = "lesson-quiz-feedback hidden";
 
-    (q.choices || []).forEach((choice, i) => {
+    // 正解の字面と肢の並びは quiz-builder と同じ規約で決める。
+    // 問題データの約束は「choices の先頭が正解」で、answer を持つのは
+    // 正誤問題だけである。ここが q.answer を見ていたので、answer の鍵を
+    // 持たない scenario の問題は全部の肢が不正解と判定され、確認クイズから
+    // 次へ進む button が一度も作られなかった。
+    const isJudgmentQ = q.category === "judgment";
+    const answerText = isJudgmentQ
+      ? judgmentSingleAnswer(q)
+      : (q.choices || [])[0];
+    const shownChoices = isJudgmentQ
+      ? shuffle(["正", "誤"])
+      : shuffle(q.choices || []);
+    if (!shownChoices.length || answerText == null) {
+      bodyEl.textContent = "この確認クイズを表示できませんでした。ホームに戻ってください。";
+      return;
+    }
+
+    shownChoices.forEach((choice, i) => {
       const li = document.createElement("li");
       const btn = document.createElement("button");
       btn.type = "button";
@@ -280,7 +297,7 @@ function renderLessonScreen() {
         list.querySelectorAll("button").forEach((b) => {
           b.disabled = true;
         });
-        const correct = String(choice) === String(q.answer);
+        const correct = String(choice) === String(answerText);
         feedback.classList.remove("hidden");
         if (correct) {
           feedback.textContent = "正解です。";
