@@ -196,10 +196,7 @@ const TcodeBrowser = (() => {
     const q = (query || "").trim();
     const tokens = expandTokens(q);
     const rawNorm = normalize(q);
-    let rows = catalog;
-    if (moduleFilter && moduleFilter !== "ALL") {
-      rows = rows.filter((r) => r.module === moduleFilter);
-    }
+    const rows = scopedCatalog(moduleFilter);
     if (!q) return rows;
     return rows
       .map((r) => ({ r, s: scoreEntry(r, tokens, rawNorm) }))
