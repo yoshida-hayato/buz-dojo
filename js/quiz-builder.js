@@ -532,7 +532,7 @@ function buildQuestion(entry, settings, forceInputMode) {
   let distractors;
   if (field === "code" && entry.category === "tcode") {
     // Tコードが答えの場合は「接頭が同じ組」と「数字が同じ組」を混ぜる
-    distractors = pickCodeDistractors(entry, candidates, CHOICE_COUNT - 1);
+    distractors = pickCodeDistractors(entry, candidates, slots - 1);
   } else {
     const used = new Set([entry[field]]);
     distractors = [];
