@@ -348,6 +348,16 @@
   scenario の形しか作れないので、SAP や Tコードの科目では出題プールが空になる。
   (3) 肢に同じ字面が2つ在る問題では、その重複も正解と判定される。これは
   quiz-builder の indexOf と同じ振る舞いなので、今より悪くはない
+- 次に見るべき場所の順番 (12:48便 に測った)。js の54枚のうち27枚は、名前を
+  見ているテストが1枚も無い。道具は「テストの中にその名前が出てくるか」なので
+  弱い目安だが、検算は通る (pricing は23枚、entitlement は16枚で拾える)。
+  金の経路は厚く見張られていて、学習と表示の側が薄い。利用者が触る側で
+  大きいのは stats-analysis 678行 / activity-calendar 547 / rank 547 (getRank は
+  テストに1度も出てこない) / syntax-browser 343 / tcode-browser 325 /
+  shortcut-browser 253 / chapter-progress 226 / screens-stats 217 /
+  screens-contact 184 / subject-config 167。管理画面側 (admin-reports 1469 など)
+  は社長しか使わないので後ろでよい。この主題と同じ形 (テスト0件の画面に
+  1行の間違いが40日残る) が次に出るのは、たぶんこの上の方である
 - 最優先: 科目を増やす道。配線の側は 18:48便 で閉じた。11本目を足す実験を
   実際にやり、落ちた22件が足し忘れを名指しすることを確かめ、手数を
   docs/ADD_SUBJECT_CHECKLIST.md に残した。次に科目を足す人は、まずこの1枚を
