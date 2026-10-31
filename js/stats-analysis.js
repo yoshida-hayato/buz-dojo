@@ -268,7 +268,8 @@ const StatsAnalysis = (function () {
   function moduleStatsRows(stats) {
     const map = {};
     QUIZ_DATA.forEach((entry) => {
-      const key = entry.module;
+      // module が無い問題を "undefined" という行にしない
+      const key = entry.module || "未分類";
       if (!map[key]) map[key] = { key, total: 0, mastered: 0, a: 0, c: 0 };
       map[key].total += 1;
       const s = (stats.q || {})[entry.id];
