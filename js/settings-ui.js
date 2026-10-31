@@ -492,6 +492,9 @@ function updatePoolCount() {
     }
   }
   updateCategoryChipCounts();
+  // 模試の面は出題設定に依らないが、ここは科目に入った時点と設定を
+  // 触った時点の両方で必ず通るので、塗り直す場所として確かである。
+  if (typeof ExamMode !== "undefined" && ExamMode.paintCard) ExamMode.paintCard();
 }
 
 /** 出題枠に応じて記述式にするか決める（forceInputMode があればそれを優先） */
