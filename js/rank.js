@@ -295,7 +295,7 @@ function masteredCount(stats) {
   const stored = typeof stats.masteredChoice === "number" ? stats.masteredChoice : 0;
   const qSize = stats.q ? Object.keys(stats.q).length : 0;
   if (qSize > 0) return fromQ;
-  return stored || fromQ;
+  return clampToExisting(stored || fromQ, QUIZ_DATA.length);
 }
 
 function choiceMasteredCount(stats) {
