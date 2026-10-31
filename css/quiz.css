@@ -376,6 +376,29 @@
 .quiz-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .quiz-progress-text { font-size: 14px; font-weight: 700; }
 .quiz-score { font-size: 13px; color: var(--text-sub); }
+.exam-timer {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sap-blue-dark);
+  font-variant-numeric: tabular-nums;
+}
+.exam-timer.is-urgent { color: var(--red); }
+.exam-card-spec { font-size: 13px; color: var(--text-sub); line-height: 1.7; margin: 0 0 8px; }
+.exam-card-note { font-size: 12px; color: var(--text-sub); margin: 0 0 10px; }
+.exam-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.exam-card-actions .primary-btn { flex: 1 1 auto; }
+.exam-card.is-locked { border-left: 4px solid #e6c34a; }
+.exam-verdict {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+.exam-verdict.is-pass { background: var(--green-bg); color: var(--green); }
+.exam-verdict.is-fail { background: var(--red-bg); color: var(--red); }
 
 .progress-bar {
   height: 8px;
