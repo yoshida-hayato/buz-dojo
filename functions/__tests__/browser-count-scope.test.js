@@ -244,3 +244,22 @@ describe("約束2と3: 絞りが無いときの字面は変わらない", () => 
     expect(renderWith(h, "syntax", "定数", "ALL")).toBe("1件ヒット（全5件中）");
   });
 });
+describe("約束4: 絞りの中だけを数えている", () => {
+  test.each([
+    ["SD", "受注", 3, 4],
+    ["MM", "受注", 0, 4],
+    ["MM", "発注", 2, 4],
+    ["FI", "仕訳", 2, 2],
+    ["ALL", "受注", 3, 10],
+  ])("Tコード %s / %s", (mod, q, wantHits, wantScope) => {
+    const h = tcode();
+    expect(h.api.search(q, mod).length).toBe(wantHits);
+    expect(h.api.search("", mod).length).toBe(wantScope);
+  });
+
+  test("絞りの母数の合計が全件に等しい (取りこぼしが無い)", () => {
+    const h = tcode();
+    const sum = ["SD", "MM", "FI"].reduce((n, m) => n + h.api.search("", m).length, 0);
+    expect(sum).toBe(h.api.getCatalog().length);
+  });
+});
