@@ -268,11 +268,10 @@ const SubjectLoader = (function () {
     window.JUDGMENT_DATA = undefined;
     window.ORDER_DATA = undefined;
     window.CONTRAST_DATA = undefined;
-    window.CHANGELOG = undefined;
     window.LEARNING_BACKLOG = undefined;
-    window.LESSON_DATA = undefined;
-    window.TCODE_REF = undefined;
-    window.ABAP_SYNTAX = undefined;
+    DATA_SCRIPT_GLOBALS.forEach((n) => {
+      window[n] = undefined;
+    });
   }
 
   /**
