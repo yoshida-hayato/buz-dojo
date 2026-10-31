@@ -375,11 +375,13 @@ const StatsAnalysis = (function () {
         `<span class="rp-rank">${i + 1}</span>` +
         `<div class="rp-body">` +
           `<div class="rp-head">` +
-            `<span class="rp-code">${esc(item.entry.code)}</span>` +
+            // code を持たない形式 (並べ替え・対比・シナリオ等) で
+            // "undefined" と出さない。repo の他5ファイルと同じ守り方にする
+            (item.entry.code ? `<span class="rp-code">${esc(item.entry.code)}</span>` : "") +
             `<span class="rp-pri">${priLabel}</span>` +
             `<span class="rp-module">${esc(labelForModule(item.entry.module))}</span>` +
           `</div>` +
-          `<div class="rp-name">${esc(item.entry.name)}</div>` +
+          `<div class="rp-name">${esc(item.entry.name || item.entry.question || item.entry.code || "")}</div>` +
           `<div class="rp-meta">不正解 ${item.wrong}回 · 正答率 ${item.rate}% · ${mastered ? "習得済み" : "未習得"}</div>` +
         `</div>`;
       container.appendChild(row);
