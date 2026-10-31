@@ -208,10 +208,7 @@ const SyntaxBrowser = (() => {
 
   function search(query, groupFilter) {
     const q = (query || "").trim();
-    let rows = catalog;
-    if (groupFilter && groupFilter !== "ALL") {
-      rows = rows.filter((r) => r.group === groupFilter);
-    }
+    const rows = scopedCatalog(groupFilter);
     if (!q) return rows;
     const ranked = rows
       .map((r) => ({ r, rank: rankEntry(r, q) }))
