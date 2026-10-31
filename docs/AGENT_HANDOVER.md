@@ -449,10 +449,26 @@ createRankContextFromLoaded と clampMastered が在ることを確認した。
   は社長しか使わないので後ろでよい。この主題と同じ形 (テスト0件の画面に
   1行の間違いが40日残る) が次に出るのは、たぶんこの上の方である
 - 上の一覧のうち stats-analysis と activity-calendar は 18:48便、rank は
-  00:48便 で歩いてガードを置いた (壊れは4件と3件)。次に歩くのは
-  syntax-browser 343 と tcode-browser 325 と chapter-progress 226 である。
-  この3枚はどれも SAP かオントロジー専用の面なので、壊れていても当たる人は
-  少ない。それでも一覧の上から順に続けるなら、ここでよい
+  00:48便、syntax-browser と tcode-browser と chapter-progress は 06:48便 で
+  歩いた。chapter-progress は無傷。ブラウザ2枚は件数の行を直し、ついでに
+  科目の切り替えで前の科目のデータが残る件が出た (こちらが本題だった)。
+  ショートカット確認も同じ型だったので3枚とも閉じた
+- 次に歩くのは screens-stats 217 と screens-contact 184 と subject-config 167
+  である。screens-stats には 18:48便 が見つけた未解決 (グラフ5つが1つの try に
+  同居し、1つ投げると残りが黙って空になる) が在るので、そこから入ればよい
+- 06:48便 が見つけたが直さなかったもの (同じ調査を2度やらないために残す)。
+  (1) tcode-browser と syntax-browser の init() は科目を読むたびに呼ばれ、
+  bind() が addEventListener を結び直す。入力欄は index.html の固定要素なので
+  聞き手が科目の数だけ溜まる。ただし searchTimer を共有しているので描画は
+  1回で済み、実害は クリアを押すと N回描く だけである (測った)。直すなら
+  bind を1度だけにする旗を置く
+  (2) tcode-browser と syntax-browser は show() で絞りを戻さないが、
+  shortcut-browser だけ activeModule を ALL に戻す。どちらが正しいかは
+  観測が無いので触っていない。3枚そろえるなら、先に「絞りを覚えていてほしいか」
+  を決めること
+  (3) highlight は escapeHtml を掛けた後の字面に正規表現を当てるので、
+  検索語に & を入れると実体参照の中に mark が入り、amp; が画面に出る。
+  踏むのは & を打った人だけなので直していない
 - 00:48便 が見つけたが直さなかったもの (同じ調査を2度やらないために残す)。
   (1) 読み込んでいない科目のカードの段位は、いまも記述式の門を外した近似である。
   記述式の問題数は読み込まないと分からず、catalog は全問数しか持たない。
