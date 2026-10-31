@@ -272,10 +272,15 @@ const ActivityCalendar = (function () {
     const weekStart = startOfWeek(anchor);
     const weekRows = subjectWeekRows(subjects, weekStart);
     const dayRows = subjectDayRows(subjects, selected);
+    // 前へ/次へ で過去の週を見ているときに「今週」と書かない
+    const weekTitle =
+      weekStart === startOfWeek(todayKey())
+        ? "今週の合算内訳"
+        : formatMd(weekStart) + " – " + formatMd(addDays(weekStart, 6)) + " の合算内訳";
     return (
       '<div class="cal-breakdown">' +
       '<div class="cal-breakdown-block">' +
-      '<p class="cal-breakdown-title">今週の合算内訳</p>' +
+      '<p class="cal-breakdown-title">' + weekTitle + "</p>" +
       breakdownListHtml(weekRows) +
       "</div>" +
       '<div class="cal-breakdown-block">' +
