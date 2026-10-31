@@ -210,3 +210,37 @@ describe("約束1: 絞りが掛かっているとき、母数は絞りの中の�
     expect(h.api.search("定数", "ALL").length).toBe(1);
   });
 });
+// 件数の行は描画のときにだけ書かれる。入力欄に値を入れ、チップを押し、
+// 描き直したあとの字面を読む。直す前は絞りを押しても母数が全件のままだった。
+function renderWith(h, kind, query, chipKey) {
+  const ids =
+    kind === "tcode"
+      ? { input: "tcode-search", count: "tcode-result-count", chips: "tcode-module-chips" }
+      : { input: "syntax-search", count: "syntax-result-count", chips: "syntax-group-chips" };
+  h.nodes[ids.input].value = query;
+  h.api.show();
+  if (chipKey && chipKey !== "ALL") clickChip(h.nodes[ids.chips], chipKey);
+  return h.nodes[ids.count].textContent;
+}
+
+describe("約束2と3: 絞りが無いときの字面は変わらない", () => {
+  test("Tコード: 検索語が空なら 全10件", () => {
+    const h = tcode();
+    expect(renderWith(h, "tcode", "", "ALL")).toBe("全10件");
+  });
+
+  test("Tコード: ALL で 受注 なら 3件ヒット（全10件中）", () => {
+    const h = tcode();
+    expect(renderWith(h, "tcode", "受注", "ALL")).toBe("3件ヒット（全10件中）");
+  });
+
+  test("ABAP構文: 検索語が空なら 全5件", () => {
+    const h = syntax();
+    expect(renderWith(h, "syntax", "", "ALL")).toBe("全5件");
+  });
+
+  test("ABAP構文: ALL で 定数 なら 1件ヒット（全5件中）", () => {
+    const h = syntax();
+    expect(renderWith(h, "syntax", "定数", "ALL")).toBe("1件ヒット（全5件中）");
+  });
+});
