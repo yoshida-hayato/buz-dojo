@@ -66,6 +66,7 @@ function wireAppChromeOnce() {
   });
   $("quit-btn").addEventListener("click", () => {
     if (confirm("クイズを中断してホームへ戻りますか？（回答済みの成績は保存されています）")) {
+      if (typeof ExamMode !== "undefined") ExamMode.stop();
       goHome();
     }
   });
