@@ -205,7 +205,7 @@ const StatsAnalysis = (function () {
       .filter((r) => r.total > 0)
       .map((r) => ({
         ...r,
-        label: CATEGORY_LABELS[r.key] || r.key,
+        label: labelForCategory(r.key),
         masteryPct: r.total === 0 ? 0 : Math.round((r.mastered / r.total) * 100),
         accPct: r.a === 0 ? null : acc(r.c, r.a),
       }))
