@@ -124,6 +124,20 @@ const ShortcutBrowser = (() => {
     return score;
   }
 
+  // モジュールの絞りを掛けた母集団。絞りが無ければ全件
+  function scopedCatalog(moduleFilter) {
+    if (!moduleFilter || moduleFilter === "ALL") return catalog;
+    return catalog.filter((r) => r.module === moduleFilter);
+  }
+
+  // 件数の行の文。絞りが掛かっているときは、母数も絞りの中の件数にする。
+  // Tコード確認と ABAP構文確認 に在ったのと同じ型である (2026-11-01)。
+  function countLabel(hits, moduleFilter) {
+    const inScope = moduleFilter && moduleFilter !== "ALL";
+    const head = inScope ? moduleFilter + " の" : "全";
+    return hits + "件ヒット（" + head + scopedCatalog(moduleFilter).length + "件中）";
+  }
+
   function search(query, module) {
     const q = (query || "").trim();
     let rows = catalog;
