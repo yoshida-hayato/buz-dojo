@@ -122,6 +122,7 @@ const MasteryDisplay = (function () {
   return {
     SEEN_COUNT_KEY,
     DENOM_GROWTH_NOTE,
+    clampMastered,
     formatMastery,
     denomGrowthNote,
     meaningUnchangedMemo,
