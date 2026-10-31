@@ -76,3 +76,40 @@ describe("約束0: 足場の window が大域そのものである", () => {
   });
 });
 
+// SAP 側の実物と同じ書き方 (const)
+const SAP_CHANGELOG =
+  "const CHANGELOG = [" + NL +
+  '  { date: "2026-10-20", added: 120, note: "Tコード問題を追加" },' + NL +
+  '  { date: "2026-09-30", added: 80, note: "ABAP構文を追加" }' + NL +
+  "];" + NL;
+// 学習道場側の実物と同じ書き方 (var)
+const EXCEL_CHANGELOG =
+  "var CHANGELOG = [" + NL +
+  '  { date: "2026-09-14", added: 150, note: "Excel関数の初版" }' + NL +
+  "];" + NL;
+
+function fetchOf(bodyByUrl) {
+  return async (url) => {
+    const key = Object.keys(bodyByUrl).find((k) => url.indexOf(k) === 0);
+    if (!key) return { ok: false, text: async () => "" };
+    return { ok: true, text: async () => bodyByUrl[key] };
+  };
+}
+
+describe("約束1: データ台本は大域に名前を作らない", () => {
+  test("const で書かれた台本を2度続けて評価できる", () => {
+    const { api } = load(fetchOf({}));
+    const a = api.evalDataScript(SAP_CHANGELOG, ["CHANGELOG"]);
+    const b = api.evalDataScript(SAP_CHANGELOG, ["CHANGELOG"]);
+    expect(a.CHANGELOG.length).toBe(2);
+    expect(b.CHANGELOG.length).toBe(2);
+  });
+
+  test("const の台本のあとに var の台本を評価できる", () => {
+    const { api } = load(fetchOf({}));
+    api.evalDataScript(SAP_CHANGELOG, ["CHANGELOG"]);
+    const b = api.evalDataScript(EXCEL_CHANGELOG, ["CHANGELOG"]);
+    expect(b.CHANGELOG.length).toBe(1);
+    expect(b.CHANGELOG[0].note).toBe("Excel関数の初版");
+  });
+});
