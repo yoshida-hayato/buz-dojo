@@ -37,6 +37,7 @@ async function ensureQuizModules() {
     "js/settings-ui.js",
     "js/quiz-builder.js",
     "js/quiz-engine.js",
+    "js/exam-mode.js",
     "js/screens-result.js",
     "js/firebase-app-util.js",
     "js/screens-contact.js",
