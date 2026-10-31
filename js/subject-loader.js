@@ -467,5 +467,11 @@ const SubjectLoader = (function () {
     loadExtraScripts,
     getLoadedId,
     resolveContentBase,
+    DATA_SCRIPT_GLOBALS,
+    DATA_SCRIPT_FILES,
+    isDataScript,
+    evalDataScript,
+    loadDataScript,
+    clearGlobals,
   };
 })();
