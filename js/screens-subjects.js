@@ -485,7 +485,11 @@ function buildPickerRows(subjects, catalogCounts, allSummaries, summariesLoaded)
         typeof createPickerRankContext === "function"
       ) {
         rank = getRankForContext(row, createPickerRankContext(total, s.id));
-        if (rank && typeof SubjectSummary !== "undefined" && summariesLoaded) {
+        // 読み込んでいない科目の段位は記述式の門を外した近似なので、控えに焼かない
+        // (SAP で 六段 のはずが 九段 と焼かれる経路が在った。2026-11-01 実測)
+        const rankIsExact =
+          typeof pickerSubjectIsLoaded === "function" && pickerSubjectIsLoaded(s.id);
+        if (rank && rankIsExact && typeof SubjectSummary !== "undefined" && summariesLoaded) {
           const snapped = SubjectSummary.normalize({
             ...row,
             rankName: rank.name || "",
