@@ -181,7 +181,63 @@ const SubjectLoader = (function () {
     return fallback;
   }
 
+  // データだけの台本 (changelog / lesson / tcodes / abap-syntax) は、
+  // script タグではなく取得して隔離した器で評価する。
+  //
+  // なぜか (2026-11-01 に Chromium で実測):
+  //   これらはよその repo のマスタで、宣言の書き方がそろっていない。
+  //   SAP の changelog.js は const CHANGELOG、学習道場の9科目は
+  //   var CHANGELOG である。script タグで2度目を読むと
+  //   Identifier CHANGELOG has already been declared で台本ごと落ちるのに、
+  //   script の onload は成功として返るので、こちらは失敗に気づかない。
+  //   しかも const は window の属性ではないため、clearGlobals の
+  //   window.CHANGELOG = undefined が当たらない。結果、SAP を見たあとに
+  //   別の科目へ移ると、ベルの更新履歴が SAP のまま残った。
+  //   問題データ (loadQuizBundle) は既に同じ逃げ方をしている。
+  const DATA_SCRIPT_GLOBALS = [
+    "CHANGELOG",
+    "LESSON_DATA",
+    "TCODE_REF",
+    "TCODE_MODULE_ORDER",
+    "ABAP_SYNTAX_REF",
+    "ABAP_SYNTAX_GROUP_ORDER",
+  ];
+
+  // 隔離して読む台本の名前。自前の subject.js だけが script タグで入る
+  const DATA_SCRIPT_FILES = [
+    "changelog.js",
+    "lesson.js",
+    "tcodes.js",
+    "abap-syntax.js",
+  ];
+
+  function isDataScript(src) {
+    const tail = String(src).split("?")[0].split("/").pop();
+    return DATA_SCRIPT_FILES.indexOf(tail) !== -1;
+  }
+
+  function evalDataScript(text, names) {
+    const picks = names
+      .map((n) => n + ":typeof " + n + "!==" + "'undefined'" + "?" + n + ":undefined")
+      .join(",");
+    const nl = String.fromCharCode(10);
+    return new Function(text + nl + ";return{" + picks + "};")();
+  }
+
+  async function loadDataScript(src, cacheBust, names) {
+    const v = cacheBust || (typeof APP_VERSION !== "undefined" ? APP_VERSION : String(Date.now()));
+    const url = src + (src.includes("?") ? "&" : "?") + "v=" + encodeURIComponent(v);
+    const res = await fetch(url, { cache: "force-cache", mode: "cors" });
+    if (!res.ok) throw new Error("fetch failed: " + src);
+    const out = evalDataScript(await res.text(), names || DATA_SCRIPT_GLOBALS);
+    (names || DATA_SCRIPT_GLOBALS).forEach((n) => {
+      if (typeof out[n] !== "undefined") window[n] = out[n];
+    });
+    return out;
+  }
+
   function loadScript(src, cacheBust) {
+    if (isDataScript(src)) return loadDataScript(src, cacheBust, DATA_SCRIPT_GLOBALS);
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[data-subject-src="${src}"]`);
       if (existing) existing.remove();
