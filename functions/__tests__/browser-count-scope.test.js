@@ -296,3 +296,40 @@ describe("約束5: 絞りを押した後の件数の行", () => {
     expect(h.nodes["tcode-result-count"].textContent).toBe("3件ヒット（全10件中）");
   });
 });
+// ショートカット確認も同じ型だった (3枚目)。1枚だけ直して終わらないための分。
+describe("約束6: ショートカット確認も同じ字面になる", () => {
+  function shortcut() {
+    const h = load("shortcut-browser.js", "ShortcutBrowser", {
+      QUIZ_DATA: SHORTCUTS.map((r) =>
+        Object.assign({ category: "shortcut" }, r)
+      ),
+      SHORTCUT_MODULE_ORDER: ["基本操作", "ウィンドウ"],
+    });
+    h.api.init();
+    return h;
+  }
+
+  test("絞りの中だけを数える", () => {
+    const h = shortcut();
+    expect(h.api.getCatalog().length).toBe(3);
+    expect(h.api.search("", "基本操作").length).toBe(2);
+    expect(h.api.search("", "ウィンドウ").length).toBe(1);
+  });
+
+  test("件数の行に絞りの名前と絞りの中の件数が出る", () => {
+    const h = shortcut();
+    h.nodes["shortcut-search"].value = "ロック";
+    h.api.show();
+    clickChip(h.nodes["shortcut-module-chips"], "基本操作");
+    expect(h.nodes["shortcut-result-count"].textContent).toBe(
+      "0件ヒット（基本操作 の2件中）"
+    );
+  });
+
+  test("絞りが無いときの字面は変わらない", () => {
+    const h = shortcut();
+    h.nodes["shortcut-search"].value = "";
+    h.api.show();
+    expect(h.nodes["shortcut-result-count"].textContent).toBe("全3件");
+  });
+});
