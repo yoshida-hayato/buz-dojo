@@ -112,3 +112,101 @@ describe("約束0: チップの足場が innerHTML を読める", () => {
   });
 });
 
+function load(file, name, globals) {
+  const nodes = {};
+  const sandbox = Object.assign(
+    {
+      Math, String, Number, Array, Object, JSON, Set, Map, RegExp, Date,
+      console: { warn: () => {}, error: () => {} },
+      setTimeout: (fn) => { if (typeof fn === "function") fn(); return 0; },
+      clearTimeout: () => {},
+      escapeHtml: (s) => String(s === undefined || s === null ? "" : s),
+      document: {
+        getElementById: (id) => {
+          if (!nodes[id]) nodes[id] = el();
+          return nodes[id];
+        },
+        addEventListener() {},
+      },
+    },
+    globals
+  );
+  sandbox.globalThis = sandbox;
+  const ctx = vm.createContext(sandbox);
+  const src = fs.readFileSync(path.join(ROOT, "js", file), "utf8");
+  const api = vm.runInContext(src + NL + "; " + name + ";", ctx);
+  return { api, nodes };
+}
+
+const TCODES = [
+  { code: "VA01", module: "SD", name: "受注伝票の登録", description: "受注伝票を登録する" },
+  { code: "VA02", module: "SD", name: "受注伝票の変更", description: "受注伝票を変更する" },
+  { code: "VA03", module: "SD", name: "受注伝票の照会", description: "受注伝票を照会する" },
+  { code: "VL01N", module: "SD", name: "出荷伝票の登録", description: "出荷伝票を登録する" },
+  { code: "ME21N", module: "MM", name: "購買発注の登録", description: "購買発注を登録する" },
+  { code: "ME22N", module: "MM", name: "購買発注の変更", description: "購買発注を変更する" },
+  { code: "MIGO", module: "MM", name: "入出庫処理", description: "入庫と出庫を処理する" },
+  { code: "MMBE", module: "MM", name: "在庫照会", description: "在庫を照会する" },
+  { code: "FB01", module: "FI", name: "仕訳伝票の登録", description: "仕訳伝票を登録する" },
+  { code: "FB03", module: "FI", name: "仕訳伝票の照会", description: "仕訳伝票を照会する" },
+];
+
+const SYNTAX = [
+  { id: "a1", group: "基本", want: "変数を宣言したい", syntax: "DATA lv_x TYPE i.", note: "宣言する" },
+  { id: "a2", group: "基本", want: "定数を置きたい", syntax: "CONSTANTS lc_x TYPE i VALUE 1.", note: "固定値" },
+  { id: "b1", group: "内部テーブル", want: "行を足したい", syntax: "APPEND ls_x TO lt_x.", note: "足す" },
+  { id: "b2", group: "内部テーブル", want: "並べ替えたい", syntax: "SORT lt_x BY f1.", note: "並べ替える" },
+  { id: "b3", group: "内部テーブル", want: "空にしたい", syntax: "CLEAR lt_x.", note: "空にする" },
+];
+
+function tcode() {
+  const h = load("tcode-browser.js", "TcodeBrowser", {
+    TCODE_REF: TCODES,
+    TCODE_MODULE_ORDER: ["SD", "MM", "FI"],
+  });
+  h.api.init();
+  return h;
+}
+
+const SHORTCUTS = [
+  { id: "s1", keys: "Ctrl+C", module: "基本操作", action: "コピー", note: "選択をコピー" },
+  { id: "s2", keys: "Ctrl+V", module: "基本操作", action: "貼り付け", note: "貼り付ける" },
+  { id: "s3", keys: "Win+L", module: "ウィンドウ", action: "ロック", note: "画面をロック" },
+];
+
+function syntax() {
+  const h = load("syntax-browser.js", "SyntaxBrowser", {
+    ABAP_SYNTAX_REF: SYNTAX,
+    ABAP_SYNTAX_GROUP_ORDER: ["基本", "内部テーブル"],
+  });
+  h.api.init();
+  return h;
+}
+
+describe("約束1: 絞りが掛かっているとき、母数は絞りの中の件数", () => {
+  test("Tコード: MM で 受注 を引くと 0件ヒット（MM の4件中）", () => {
+    const h = tcode();
+    h.nodes["tcode-search"] = h.nodes["tcode-search"] || el();
+    h.api.show();
+    // 絞りを MM にする (チップの押下と同じ経路の代わりに search を通す)
+    expect(h.api.search("受注", "MM").length).toBe(0);
+    expect(h.api.search("受注", "SD").length).toBe(3);
+    expect(h.api.search("発注", "MM").length).toBe(2);
+  });
+
+  test("Tコード: 件数の行に絞りの名前と絞りの中の件数が出る", () => {
+    const h = tcode();
+    const node = h.nodes["tcode-result-count"] || el();
+    h.nodes["tcode-result-count"] = node;
+    h.api.show();
+    // show() は ALL なので、まず ALL の字面を確かめる
+    expect(node.textContent).toBe("全10件");
+  });
+
+  test("ABAP構文: 内部テーブル の絞りで 定数 を引くと0件", () => {
+    const h = syntax();
+    expect(h.api.search("定数", "内部テーブル").length).toBe(0);
+    expect(h.api.search("定数", "基本").length).toBe(1);
+    expect(h.api.search("定数", "ALL").length).toBe(1);
+  });
+});
