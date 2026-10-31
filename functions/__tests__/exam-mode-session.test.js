@@ -133,3 +133,100 @@ test("権利が在れば始まり、面の鍵は外れる", () => {
   expect(calls.startQuiz[0].examMode).toBe(true);
 });
 
+function examQuiz(answered, correct) {
+  const questions = [];
+  for (let i = 0; i < 40; i++) {
+    questions.push({ entry: { id: "q" + i }, _answered: i < answered });
+  }
+  return {
+    questions,
+    idx: answered,
+    correctCount: correct,
+    wrongs: [],
+    settings: { examMode: true },
+  };
+}
+
+test("時間切れ: 残りは未回答として採点に入り、成績には記録しない", () => {
+  const q = examQuiz(31, 20);
+  const { ExamMode, calls, sandbox } = build({ quiz: q });
+  ExamMode.finishByTimeout();
+  expect(q.wrongs.length).toBe(9);
+  expect(q.wrongs[0].given).toBe("（時間切れ・未回答）");
+  expect(q.correctCount).toBe(20);
+  expect(q.idx).toBe(39);
+  expect(calls.render).toBe(1);
+  expect(calls.screen).toEqual(["result"]);
+  expect(sandbox.QuizStorage).toBe(undefined);
+});
+
+test("時間切れは模試でないときは何もしない", () => {
+  const q = examQuiz(10, 5);
+  q.settings = { examMode: false };
+  const { ExamMode, calls } = build({ quiz: q });
+  ExamMode.finishByTimeout();
+  expect(q.wrongs.length).toBe(0);
+  expect(calls.render).toBe(0);
+});
+
+test("合否の文面が、表の基準の問数をそのまま言う", () => {
+  const pass = examQuiz(40, 24);
+  const a = build({ quiz: pass });
+  a.ExamMode.paintVerdict();
+  const t = a.els["exam-verdict"].textContent;
+  expect(a.els["exam-verdict"].has("hidden")).toBe(false);
+  expect(a.els["exam-verdict"].has("is-pass")).toBe(true);
+  expect(t.indexOf("合格")).toBe(0);
+  expect(t.indexOf("40問中24問")).toBeGreaterThan(-1);
+
+  const fail = examQuiz(40, 23);
+  const b = build({ quiz: fail });
+  b.ExamMode.paintVerdict();
+  expect(b.els["exam-verdict"].has("is-fail")).toBe(true);
+  expect(b.els["exam-verdict"].textContent.indexOf("不合格")).toBe(0);
+});
+
+test("模試でないときは合否を出さない", () => {
+  const q = examQuiz(10, 5);
+  q.settings = { examMode: false };
+  const { ExamMode, els } = build({ quiz: q });
+  ExamMode.paintVerdict();
+  expect(els["exam-verdict"].has("hidden")).toBe(true);
+});
+
+test("時計: 110分から減り、5分以下で急ぎの印が付き、0で採点に入る", () => {
+  const q = examQuiz(0, 0);
+  const clock = { t: 1762000000000 };
+  const { ExamMode, els, calls } = build({ quiz: q, clock });
+  ExamMode.begin();
+  expect(calls.intervals).toBe(1);
+  expect(els["exam-timer"].has("hidden")).toBe(false);
+  expect(els["exam-timer"].textContent).toBe("残り 110:00");
+  expect(els["exam-timer"].has("is-urgent")).toBe(false);
+
+  clock.t += 6299000;
+  ExamMode.tick();
+  expect(els["exam-timer"].textContent).toBe("残り 05:01");
+  expect(els["exam-timer"].has("is-urgent")).toBe(false);
+
+  clock.t += 1000;
+  ExamMode.tick();
+  expect(els["exam-timer"].textContent).toBe("残り 05:00");
+  expect(els["exam-timer"].has("is-urgent")).toBe(true);
+
+  clock.t += 300000;
+  ExamMode.tick();
+  expect(calls.screen).toEqual(["result"]);
+  expect(q.wrongs.length).toBe(40);
+  expect(els["exam-timer"].has("hidden")).toBe(true);
+});
+
+test("中断してから次の模試を始めても、前の残り時間を持ち越さない", () => {
+  const clock = { t: 1762000000000 };
+  const { ExamMode } = build({ quiz: examQuiz(0, 0), clock });
+  ExamMode.begin();
+  clock.t += 3600000;
+  ExamMode.stop();
+  ExamMode.begin();
+  expect(ExamMode.remainingMs()).toBe(6600000);
+});
