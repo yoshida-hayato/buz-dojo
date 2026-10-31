@@ -398,17 +398,15 @@ function getRank(stats) {
   const accInput = rankInputAccuracyPct(stats);
   const correct = effectiveCorrectCount(stats);
   const mastered = masteredCount(stats);
-  const inputMastered =
-    typeof stats.masteredInput === "number" && (!stats.q || !Object.keys(stats.q).length)
-      ? stats.masteredInput
-      : inputMasteredIdSet(stats).size;
+  const inputMastered = rankInputMasteredCount(stats);
   let current = RANKS[0];
   for (const r of RANKS) {
     if (
       correct >= rankMinCorrect(r) &&
-      acc >= r.minAcc &&
+      acc >= (r.minAcc || 0) &&
       mastered >= masteredNeeded(r.minMasteredPct) &&
       inputMastered >= inputMasteredNeeded(r.minInputMasteredPct) &&
+      (stats.inputCorrect || 0) >= rankMinInputCorrect(r) &&
       accInput >= (r.minInputAcc || 0)
     ) current = r;
   }
