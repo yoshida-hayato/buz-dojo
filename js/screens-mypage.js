@@ -322,7 +322,10 @@ function paintMyPageStats(statsEl, rows) {
       typeof createPickerRankContext === "function"
     ) {
       rank = getRankForContext(stats, createPickerRankContext(total, s.id));
-      if (rank && typeof SubjectSummary !== "undefined") {
+      // ピッカーと同じ理由: 近似の段位は控えに焼かない
+      const rankIsExact =
+        typeof pickerSubjectIsLoaded === "function" && pickerSubjectIsLoaded(s.id);
+      if (rank && rankIsExact && typeof SubjectSummary !== "undefined") {
         const snapped = SubjectSummary.normalize({
           ...stats,
           rankName: rank.name || "",
