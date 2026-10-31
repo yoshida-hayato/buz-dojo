@@ -171,6 +171,52 @@ function getRankForContext(stats, ctx) {
   return current;
 }
 
+// 科目ピッカーが見ている科目が、いま読み込まれている科目そのものか
+function pickerSubjectIsLoaded(subjectId) {
+  return Boolean(
+    subjectId &&
+      typeof CURRENT_SUBJECT !== "undefined" &&
+      CURRENT_SUBJECT &&
+      CURRENT_SUBJECT.id === subjectId &&
+      typeof RANKS !== "undefined" &&
+      Array.isArray(RANKS) &&
+      RANKS.length > 0
+  );
+}
+
+// 読み込み済み科目のカード用。ホームのバナー (getRank) と同じ段位定義・同じ
+// 記述式の分母で数えるので、2つの画面が同じ段位を出す。
+// 分けてある理由: 読み込んでいない科目は記述式の問題数が分からないため、
+// createPickerRankContext は記述式の門を外す。外した段位は本来より高く出る。
+function createLoadedSubjectRankContext(catalogTotal) {
+  const total = Math.max(0, Number(catalogTotal) || 0);
+  const inputTotal = tcodeQuestionCount();
+  const cap = total * RANK_CORRECT_CAP_MULT;
+  return {
+    total,
+    ranks: RANKS.slice(),
+    masteredNeeded(pct) {
+      return Math.ceil(((pct || 0) / 100) * total);
+    },
+    rankMinCorrect(r) {
+      return Math.floor(cap * (r.correctRatio || 0));
+    },
+    rankMinInputCorrect(r) {
+      if (!r.inputCorrectRatio) return 0;
+      return Math.ceil(total * r.inputCorrectRatio);
+    },
+    inputMasteredNeeded(pct) {
+      return Math.ceil(((pct || 0) / 100) * inputTotal);
+    },
+    masteredCount(stats) {
+      return clampToExisting(Number(stats && stats.masteredChoice) || 0, total);
+    },
+    inputMasteredCount(stats) {
+      return clampToExisting(Number(stats && stats.masteredInput) || 0, inputTotal);
+    },
+  };
+}
+
 function accuracy(correct, answered) {
   return answered === 0 ? 0 : Math.round((correct / answered) * 100);
 }
