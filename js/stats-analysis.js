@@ -156,35 +156,43 @@ const StatsAnalysis = (function () {
 
   /** カテゴリ別: 習得率（全問題ベース）と正答率（回答ベース）。Tコードは選択／記述に分割 */
   function categoryStatsRows(stats) {
-    const buckets = {
-      tcode_choice: { key: "tcode_choice", total: 0, mastered: 0, a: 0, c: 0 },
-      tcode_input: { key: "tcode_input", total: 0, mastered: 0, a: 0, c: 0 },
-      shortcut: { key: "shortcut", total: 0, mastered: 0, a: 0, c: 0 },
-      term: { key: "term", total: 0, mastered: 0, a: 0, c: 0 },
-      scenario: { key: "scenario", total: 0, mastered: 0, a: 0, c: 0 },
-      judgment: { key: "judgment", total: 0, mastered: 0, a: 0, c: 0 },
-      abbr: { key: "abbr", total: 0, mastered: 0, a: 0, c: 0 },
-    };
+    // 器は科目の categories から作る。字面で7つ並べていたときは、
+    // 並べ替え・対比・手順の並べ替え・穴埋めの問題が黙って落ちていた
+    function newBucket(key) {
+      return { key: key, total: 0, mastered: 0, a: 0, c: 0 };
+    }
+    const buckets = {};
+    subjectCategories().forEach(function (cat) {
+      if (isInputCategory(cat)) {
+        buckets[cat + "_choice"] = newBucket(cat + "_choice");
+        buckets[cat + "_input"] = newBucket(cat + "_input");
+      } else {
+        buckets[cat] = newBucket(cat);
+      }
+    });
 
     QUIZ_DATA.forEach((entry) => {
       const s = (stats.q || {})[entry.id];
-      if (entry.category === "tcode") {
-        buckets.tcode_choice.total += 1;
-        buckets.tcode_input.total += 1;
+      const cat = entry.category;
+      if (isInputCategory(cat)) {
+        const choice = buckets[cat + "_choice"] || (buckets[cat + "_choice"] = newBucket(cat + "_choice"));
+        const input = buckets[cat + "_input"] || (buckets[cat + "_input"] = newBucket(cat + "_input"));
+        choice.total += 1;
+        input.total += 1;
         if (s) {
-          if (QuizStorage.isChoiceMastered(s)) buckets.tcode_choice.mastered += 1;
-          if ((s.ik || 0) >= 2) buckets.tcode_input.mastered += 1;
+          if (QuizStorage.isChoiceMastered(s)) choice.mastered += 1;
+          if ((s.ik || 0) >= 2) input.mastered += 1;
           const ia = s.ia || 0;
           const ic = s.ic || 0;
-          buckets.tcode_choice.a += s.a - ia;
-          buckets.tcode_choice.c += s.c - ic;
-          buckets.tcode_input.a += ia;
-          buckets.tcode_input.c += ic;
+          choice.a += Math.max(0, (s.a || 0) - ia);
+          choice.c += Math.max(0, (s.c || 0) - ic);
+          input.a += ia;
+          input.c += ic;
         }
         return;
       }
-      const b = buckets[entry.category];
-      if (!b) return;
+      // 科目定義に無いカテゴリでも器を作る。落とすと成績から問題が消える
+      const b = buckets[cat] || (buckets[cat] = newBucket(cat));
       b.total += 1;
       if (s) {
         if (QuizStorage.isChoiceMastered(s)) b.mastered += 1;
