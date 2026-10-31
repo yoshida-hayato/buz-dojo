@@ -113,6 +113,11 @@ function createRankContextFromLoaded() {
  * 入力問題集合は持たないため入力条件は外す（選択式の累計・習得・正答率のみ）。
  */
 function createPickerRankContext(catalogTotal, subjectId) {
+  // 読み込み済みの科目は、バナーと同じ条件 (RANKS と実際の記述式の問題数) で
+  // 数える側に回す。それ以外は記述式の問題数が分からないので門を外したままにする
+  if (pickerSubjectIsLoaded(subjectId)) {
+    return createLoadedSubjectRankContext(catalogTotal);
+  }
   const total = Math.max(0, Number(catalogTotal) || 0);
   const baseRanks =
     subjectId === "sap" && typeof DEFAULT_SAP_RANKS !== "undefined"
