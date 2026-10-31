@@ -539,14 +539,14 @@ function buildQuestion(entry, settings, forceInputMode) {
     // 紛らわしい対比語を必ず候補に入れる（例: 見積↔引合）
     const forceIds = Array.isArray(entry.distractorForceIds) ? entry.distractorForceIds : [];
     for (const fid of forceIds) {
-      if (distractors.length >= CHOICE_COUNT - 1) break;
+      if (distractors.length >= slots - 1) break;
       const fc = QUIZ_DATA.find((q) => q && q.id === fid && q.category === entry.category);
       if (!fc || used.has(fc[field])) continue;
       used.add(fc[field]);
       distractors.push(fc[field]);
     }
     for (const c of candidates) {
-      if (distractors.length >= CHOICE_COUNT - 1) break;
+      if (distractors.length >= slots - 1) break;
       if (used.has(c[field])) continue;
       used.add(c[field]);
       distractors.push(c[field]);
