@@ -278,6 +278,14 @@ function inputAttemptedCount(stats) {
 }
 
 // ===== 段位 =====
+// 保存値は旧マスタの件数で書かれていることがある。現マスタの件数を超えたまま
+// 分母に並べると、成績画面に 600 / 500問 のような行が出る。現存の件数で頭を打つ。
+function clampToExisting(count, total) {
+  const n = Math.max(0, Number(count) || 0);
+  const max = Math.max(0, Number(total) || 0);
+  return n > max ? max : n;
+}
+
 /**
  * 選択式習得済み（2回連続正解中）の問題数。
  * 現存問題の q 集計を優先し、q が空のときだけ保存値を使う。
