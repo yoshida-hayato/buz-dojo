@@ -39,9 +39,17 @@ const MasteryDisplay = (function () {
    * 絶対数を主、%は従の文言。
    * @returns {{ primary: string, secondary: string, pct: number, plain: string, html: string }}
    */
-  function formatMastery(mastered, total) {
+  function clampMastered(mastered, total) {
     const m = Math.max(0, Number(mastered) || 0);
     const t = Math.max(0, Number(total) || 0);
+    return t > 0 && m > t ? t : m;
+  }
+
+  function formatMastery(mastered, total) {
+    const t = Math.max(0, Number(total) || 0);
+    // 保存値は旧マスタの件数で書かれていることがある。分母を超えたまま出すと
+    // 習得 600/500 (120%) になる。件数が読めているときだけ頭を打つ
+    const m = clampMastered(mastered, t);
     if (t <= 0) {
       return {
         primary: "全0問",
