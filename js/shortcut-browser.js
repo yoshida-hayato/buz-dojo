@@ -198,6 +198,14 @@ const ShortcutBrowser = (() => {
         ? `${rows.length}件ヒット（全${catalog.length}件中）`
         : `全${rows.length}件`;
     }
+    // 上の1行は母数に全件を使っている。テンプレート文字列なので
+    // パッチの口 (Slack) ではその行を運べない。だから直後に上書きする。
+    // 消すときは countLabel ごと消さずに、上の行を直すこと。
+    if (countEl) {
+      countEl.textContent = query.trim()
+        ? countLabel(rows.length, activeModule)
+        : "全" + rows.length + "件";
+    }
     if (rows.length === 0) {
       listEl.innerHTML =
         `<div class="tcode-empty">該当するショートカットがありません。別の言い回し（例: 「コピー」「ロック」「合計」）でも試してください。</div>`;
