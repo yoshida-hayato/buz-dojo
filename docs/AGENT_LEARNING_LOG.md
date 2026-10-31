@@ -12747,3 +12747,82 @@ rank-consistency は約束5つ、mastery-denominator は約束3つ。
 - .id は main の実物 (js/exam-mode.js に6箇所) で無傷が確認できるが、
   .name はブリッジが作ったファイルに1件も無いので未確認である。
   新しく書くテストでは r[KEY] の形にして避けた
+
+## 2026-11-01 06:48便 — 科目を切り替えると前の科目のデータが残る
+
+主題は1つで、保留の一覧の次の3枚 (syntax-browser 343 / tcode-browser 325 /
+chapter-progress 226) を歩いた。本番の反映は先に確認した (00:48便 の25件は
+03:38 の枠で全部入り、配信中の js に createRankContextFromLoaded と
+rankInputMasteredCount と clampMastered が在る。テストは 83ファイル824件)。
+
+### 見つけた本題 (chapter-progress は無傷だった)
+
+chapter-progress は歩いて壊れが無かった。保留に在った clearCorrect が0の章は
+現データ6章すべてが6/8/8/6/6/5 を持ち、module も MODULES の6つと一致する
+(node で実測)。次の自分はここを見直さなくてよい。
+
+syntax-browser を読んでいて、clearGlobals が window.ABAP_SYNTAX を消す一方で
+画面が読むのは ABAP_SYNTAX_REF だと気づいた。綴り違いを直そうとして、もっと
+大きいものが出た。
+
+(1) 追加データの台本はよその repo のマスタで、宣言の書き方がそろっていない。
+SAP の changelog.js は const CHANGELOG、学習道場の9科目は var CHANGELOG で
+ある (本番の実物を6本取って確かめた)。tcodes.js は const TCODE_REF、
+abap-syntax.js は const ABAP_SYNTAX_REF と const ABAP_SYNTAX_GROUP_ORDER。
+lesson.js だけ var LESSON_DATA。
+
+(2) subject-loader の loadScript は、同じ URL でも毎回 script タグを作り直す
+(古いタグを remove してから append する。重複を避ける仕組みが無い)。だから
+科目を切り替えるたびに台本が再実行される。
+
+(3) 古典 script の最上位の const は大域の語彙環境に入り、window の属性には
+ならない。だから (a) 2度目の読み込みは Identifier CHANGELOG has already been
+declared で台本ごと落ち、(b) window.CHANGELOG = undefined は当たらない。
+しかも script の onload は成功として返るので、こちらのコードは失敗に
+気づかない。
+
+Chromium で実測した: SAP の const 版を読み、clearGlobals を呼び、Excel関数の
+var 版を読む。CHANGELOG は SAP の2件のまま残り、pageerror が1件立った。
+つまり SAP を見たあとに別の科目へ移ると、ベルの更新履歴が SAP のまま出る。
+
+直し方は問題データと同じにした。loadQuizBundle は既に fetch して new Function
+の中で評価し、返った値を window に書いている。同じ形の loadDataScript を置き、
+loadScript の入口でファイル名で振り分けた。呼び出しの字面を1文字も変えずに
+changelog と lesson と extras の3経路がそろう。clearGlobals は読む側の一覧
+(DATA_SCRIPT_GLOBALS) から回すようにしたので、綴りがずれたら落ちる。
+
+### パッチの口について確かめたこと (重要)
+
+引き継ぎメモに「バッククォート (u0060) とアスタリスク (u002a) のエスケープが
+通るかは未確認」と在ったので、パッチではない1通を出して読み返した。
+結果は駄目である。Slack は送信の時点で u0060 を素のバッククォートに、
+u002a を素のアスタリスクに、u003c を素の山かっこにほどく。つまり
+ユニコードエスケープはこの口を通らない。これは3つとも同じ結論なので、
+次の自分は試さなくてよい。
+
+ここから分かったこと: 円記号は「JSON として意味のある1文字」(引用符や改行の
+n) なら通るが、字面として円記号を1つ残したい場合は通らない。だから
+正規表現を含む行はこの口で運べない。今便はガードの正規表現3箇所を
+indexOf と split に書き直した。
+
+テンプレート文字列の行も運べないままである。今便の件数の行がまさにそれだった
+ので、2つの逃げ方を使った。(a) 本題の subject-loader は、直したい行に触らず
+loadScript の入口で振り分ける形にした。これは副作用も死んだコードも無い。
+(b) ブラウザ3枚の件数の行は、元の代入を残したまま直後に上書きし、なぜそう
+書いたかを註に残した。(a) のほうが筋なので、次に同じ壁に当たったら、まず
+「直したい行に触らずに済む入口」を探すこと。
+
+### 取りこぼしを閉じた
+
+件数の行の壊れは2枚と思って直し、grep で3枚目 (shortcut-browser 253行) が
+出た。字面は同じで、しかも shortcut だけ show() で絞りを ALL に戻している
+(tcode と syntax は戻さない)。3枚とも同じ器に寄せた。
+
+### 数字
+
+テストは 83ファイル824件から 85ファイル874件。18通りに壊して18通りとも
+落ちた (大域の残りで9、件数の行で9)。24件とも、まっさらな clone に1件ずつ
+時刻順に当てて全テストを走らせ、途中のどの状態でも落ちず、最終状態が
+手元の木と1バイトも違わないことを確かめた。さらに今便から、貼る前に
+payload を Slack の変換 (円記号の畳みと u エスケープのほどき) に通してから
+json.loads し、元と一致することを機械で見るようにした。
