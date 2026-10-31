@@ -347,6 +347,16 @@ function inputMasteredIdSet(stats) {
   return set;
 }
 
+// 記述式習得済みの問題数。段位判定・昇段条件・成績画面がこの1本を使う。
+// 形は masteredCount と同じ (q があれば現存問題の集計、空なら保存値)。
+function rankInputMasteredCount(stats) {
+  const fromQ = inputMasteredIdSet(stats).size;
+  const stored = typeof stats.masteredInput === "number" ? stats.masteredInput : 0;
+  const qSize = stats.q ? Object.keys(stats.q).length : 0;
+  if (qSize > 0) return fromQ;
+  return clampToExisting(stored || fromQ, tcodeQuestionCount());
+}
+
 function masteredPct(count) {
   return QUIZ_DATA.length === 0 ? 0 : Math.round((count / QUIZ_DATA.length) * 100);
 }
