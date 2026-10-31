@@ -190,6 +190,22 @@ const SyntaxBrowser = (() => {
     return { hit: tier < 9, tier, score };
   }
 
+  // 分類の絞りを掛けた母集団。絞りが無ければ全件
+  function scopedCatalog(groupFilter) {
+    if (!groupFilter || groupFilter === "ALL") return catalog;
+    return catalog.filter((r) => r.group === groupFilter);
+  }
+
+  // 件数の行の文。絞りが掛かっているときは、母数も絞りの中の件数にする。
+  // 2026-11-01 に Chromium で実測: 内部テーブル の絞りで引くと
+  // 0件ヒット（全10件中）と出ていた。絞りの中は4件しか無く、当たる3件は
+  // 別の分類に在る。母数が全件のままだと「どこにも無い」と読めてしまう。
+  function countLabel(hits, groupFilter) {
+    const inScope = groupFilter && groupFilter !== "ALL";
+    const head = inScope ? groupFilter + " の" : "全";
+    return hits + "件ヒット（" + head + scopedCatalog(groupFilter).length + "件中）";
+  }
+
   function search(query, groupFilter) {
     const q = (query || "").trim();
     let rows = catalog;
