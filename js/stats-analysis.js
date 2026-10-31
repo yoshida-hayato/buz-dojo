@@ -26,6 +26,8 @@ const StatsAnalysis = (function () {
     3: "★ 余裕があれば",
   };
 
+  // 科目の categories が読めないときだけ使う控え (SAP の字面)。
+  // 正本は科目定義から注入される CATEGORIES である。
   const CATEGORY_LABELS = {
     tcode_choice: "Tコード（選択式）",
     tcode_input: "Tコード（記述式）",
@@ -35,6 +37,34 @@ const StatsAnalysis = (function () {
     judgment: "正誤",
     abbr: "略称",
   };
+
+  // CATEGORIES が無いときの控え。今までと同じ7つの器になる
+  const FALLBACK_CATEGORY_KEYS = ["tcode", "shortcut", "term", "scenario", "judgment", "abbr"];
+
+  function subjectCategories() {
+    const c = typeof CATEGORIES !== "undefined" && CATEGORIES ? Object.keys(CATEGORIES) : [];
+    return c.length ? c : FALLBACK_CATEGORY_KEYS;
+  }
+
+  function isInputCategory(cat) {
+    if (typeof INPUT_CATEGORIES !== "undefined" && INPUT_CATEGORIES && INPUT_CATEGORIES.has) {
+      return INPUT_CATEGORIES.has(cat);
+    }
+    return cat === "tcode";
+  }
+
+  function labelForCategory(key) {
+    const choice = key.length > 7 && key.slice(-7) === "_choice";
+    const input = key.length > 6 && key.slice(-6) === "_input";
+    if (choice || input) {
+      const base = key.slice(0, key.lastIndexOf("_"));
+      const baseLabel =
+        (typeof CATEGORIES !== "undefined" && CATEGORIES && CATEGORIES[base]) || base;
+      return CATEGORY_LABELS[key] || baseLabel + (choice ? "（選択式）" : "（記述式）");
+    }
+    if (typeof CATEGORIES !== "undefined" && CATEGORIES && CATEGORIES[key]) return CATEGORIES[key];
+    return CATEGORY_LABELS[key] || key;
+  }
 
   const MIN_CATEGORY_ATTEMPTS = 5;
 
