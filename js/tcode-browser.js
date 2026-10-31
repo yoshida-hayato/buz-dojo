@@ -176,6 +176,22 @@ const TcodeBrowser = (() => {
     return score;
   }
 
+  // モジュールの絞りを掛けた母集団。絞りが無ければ全件
+  function scopedCatalog(moduleFilter) {
+    if (!moduleFilter || moduleFilter === "ALL") return catalog;
+    return catalog.filter((r) => r.module === moduleFilter);
+  }
+
+  // 件数の行の文。絞りが掛かっているときは、母数も絞りの中の件数にする。
+  // 2026-11-01 に Chromium で実測: MM の絞りで引くと
+  // 0件ヒット（全10件中）と出ていた。絞りの中は4件しか無く、当たる3件は
+  // 別のモジュールに在る。母数が全件のままだと「どこにも無い」と読めてしまう。
+  function countLabel(hits, moduleFilter) {
+    const inScope = moduleFilter && moduleFilter !== "ALL";
+    const head = inScope ? moduleFilter + " の" : "全";
+    return hits + "件ヒット（" + head + scopedCatalog(moduleFilter).length + "件中）";
+  }
+
   function search(query, moduleFilter) {
     const q = (query || "").trim();
     const tokens = expandTokens(q);
