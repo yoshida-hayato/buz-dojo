@@ -99,3 +99,57 @@ describe("約束1: 読み込み済み科目のカードは、ホームのバナ�
     }
   });
 });
+
+// 問題別の詳細 (q) とサマリの数を食い違わせない。本物の summary は reconcile 済み
+function statsOf(ctx, masteredFrac, capFrac, inputFrac) {
+  const all = vm.runInContext("QUIZ_DATA.map(function (q) { return q.id; })", ctx);
+  const inputIds = vm.runInContext(
+    "QUIZ_DATA.filter(function (q) { return INPUT_CATEGORIES.has(q.category); })" +
+      ".map(function (q) { return q.id; })",
+    ctx
+  );
+  const isInput = new Set(inputIds);
+  const choice = all.filter((x) => !isInput.has(x));
+  const mN = Math.floor(choice.length * masteredFrac);
+  const iN = Math.floor(inputIds.length * inputFrac);
+  const q = {};
+  for (let i = 0; i < mN; i += 1) q[choice[i]] = { a: 2, c: 2, k: 2 };
+  for (let i = 0; i < iN; i += 1) q[inputIds[i]] = { a: 2, c: 2, k: 2, ia: 2, ik: 2 };
+  let have = (mN + iN) * 2;
+  const cap = all.length * 3;
+  const want = Math.floor(cap * capFrac);
+  let i = mN;
+  while (have < want && i < choice.length) {
+    q[choice[i]] = { a: 1, c: 1, k: 1 };
+    have += 1;
+    i += 1;
+  }
+  return {
+    answered: Math.round(have / 0.86) + 1,
+    correct: have,
+    inputAnswered: iN * 2,
+    inputCorrect: iN * 2,
+    masteredChoice: mN + iN,
+    masteredInput: iN,
+    q,
+  };
+}
+
+const LEVELS = [
+  [0.1, 0.1, 0], [0.3, 0.3, 0], [0.55, 0.55, 0],
+  [0.7, 0.7, 0], [0.85, 0.85, 0], [1, 1, 0],
+  [0.85, 0.85, 0.5], [1, 1, 1],
+];
+
+describe("約束1: 読み込み済み科目のカードは、ホームのバナーと同じ段位を出す", () => {
+  for (const [id, total] of Object.entries(SUBJECTS)) {
+    test(id, () => {
+      const ctx = load(id, total, true);
+      for (const [m, c, ip] of LEVELS) {
+        const s = statsOf(ctx, m, c, ip);
+        const banner = nameOf(call(ctx, "getRank(ARG)", s));
+        expect([id, m, c, ip, nameOf(cardOf(ctx, id, total, s))]).toEqual([id, m, c, ip, banner]);
+      }
+    });
+  }
+});
