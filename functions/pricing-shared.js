@@ -105,6 +105,11 @@
       questionCount: 107,
       sourceType: SOURCE_ORIGINAL,
     },
+    "fe-kamoku-b": {
+      title: "基本情報技術者試験 科目B",
+      questionCount: 24,
+      sourceType: SOURCE_ORIGINAL,
+    },
   };
 
   function priceForQuestionCount(n) {
