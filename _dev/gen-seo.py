@@ -34,12 +34,8 @@ def tag(name, value):
     return LT + name + GT + value + LT + "/" + name + GT
 
 
-def enabled_subject_ids():
-    # registry.js を素朴に切り出す。量指定子つきの正規表現は使わない。
-    path = os.path.join(ROOT, "subjects", "registry.js")
-    with open(path, encoding="utf-8") as fh:
-        text = fh.read()
-    out = []
+def _ids_in(text, out):
+    # 素朴に切り出す。量指定子つきの正規表現は使わない。
     marker = 'id: "'
     parts = text.split(marker)
     for part in parts[1:]:
@@ -53,6 +49,23 @@ def enabled_subject_ids():
         if "enabled: true" not in part:
             continue
         out.append(name)
+    return out
+
+
+def enabled_subject_ids():
+    # レジストリは2枚ある。subjects/registry.js (マスタが外に在る科目) と
+    # config/extra-subjects.js (問題データをこちら側に持つ科目)。
+    # 2枚目を読み落とすと、その科目の静的な頁と sitemap の行が出ない。
+    out = []
+    paths = [
+        os.path.join(ROOT, "subjects", "registry.js"),
+        os.path.join(ROOT, "config", "extra-subjects.js"),
+    ]
+    for path in paths:
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as fh:
+            _ids_in(fh.read(), out)
     return out
 
 
