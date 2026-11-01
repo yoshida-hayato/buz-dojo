@@ -200,3 +200,22 @@ describe("約束2: 2度目の読み込みが前の科目の値を上書きする
     expect(win.CHANGELOG.length).toBe(2);
   });
 });
+describe("約束3: 台本に無い名前は window に書かない", () => {
+  test("changelog.js を読んでも TCODE_REF は生えない", async () => {
+    const { api, win } = load(fetchOf({ "sapdata/": SAP_CHANGELOG }));
+    await api.loadDataScript("sapdata/changelog.js", "v1", api.DATA_SCRIPT_GLOBALS);
+    expect(win.CHANGELOG.length).toBe(2);
+    expect(Object.prototype.hasOwnProperty.call(win, "TCODE_REF")).toBe(false);
+  });
+
+  test("取得に失敗したら投げる (黙って成功にしない)", async () => {
+    const { api } = load(fetchOf({}));
+    let threw = false;
+    try {
+      await api.loadDataScript("nowhere/changelog.js", "v1", ["CHANGELOG"]);
+    } catch (e) {
+      threw = true;
+    }
+    expect(threw).toBe(true);
+  });
+});
