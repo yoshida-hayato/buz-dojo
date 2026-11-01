@@ -55,6 +55,9 @@ describe("robots.txt と sitemap.xml — 台本と呼び出しの両方が在る
 
   test("sitemap の並びは registry から読む (科目を増やしても追いつく)", () => {
     expect(GEN.indexOf('"subjects", "registry.js"') >= 0).toBe(true);
+    // レジストリは2枚ある。2枚目を読む行を落とすと、こちら側に問題データを
+    // 持つ科目だけが頁も索引の申告も出ない (2026-11-01 18:48便 に足した)。
+    expect(GEN.indexOf('"extra-subjects.js"') >= 0).toBe(true);
     expect(GEN.indexOf("enabled: true") >= 0).toBe(true);
   });
 
