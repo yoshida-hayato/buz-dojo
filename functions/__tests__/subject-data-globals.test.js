@@ -219,3 +219,119 @@ describe("約束3: 台本に無い名前は window に書かない", () => {
     expect(threw).toBe(true);
   });
 });
+// 約束6が一番大事である。上の約束は loadDataScript を直に呼んで測るので、
+// 呼び元を script タグに戻されても気づかない。だから呼び元を実際に走らせ、
+// script タグが1本も挿されないことを見る。
+describe("約束6: 呼び元が script タグを使わない", () => {
+  const SAP_TCODES =
+    "const TCODE_REF = [" + NL +
+    '  { code: "VA01", module: "SD", name: "受注伝票の登録" }' + NL +
+    "];" + NL +
+    'const TCODE_MODULE_ORDER = ["SD"];' + NL;
+
+  function withSap(fetchImpl) {
+    const h = load(fetchImpl);
+    h.win.SUBJECT_REGISTRY = [
+      {
+        id: "sap",
+        enabled: true,
+        path: "subjects/sap",
+        contentBase: "sapdata",
+      },
+    ];
+    h.win.APP_VERSION = "t1";
+    h.win.SUBJECT = { id: "sap", extraScripts: ["tcodes.js", "abap-syntax.js"] };
+    return h;
+  }
+
+  test("loadExtraScripts は fetch で読み、script を挿さない", async () => {
+    const h = withSap(
+      fetchOf({
+        "sapdata/tcodes.js": SAP_TCODES,
+        "sapdata/abap-syntax.js": "const ABAP_SYNTAX_REF = [];" + NL,
+      })
+    );
+    await h.api.loadExtraScripts("sap");
+    expect(h.injected).toEqual([]);
+    expect(h.win.TCODE_REF.length).toBe(1);
+    expect(h.win.TCODE_MODULE_ORDER).toEqual(["SD"]);
+    expect(h.win.ABAP_SYNTAX_REF).toEqual([]);
+  });
+
+  test("同じ科目に2度入っても落ちず、2度目の中身が入る", async () => {
+    const second =
+      "const TCODE_REF = [" + NL +
+      '  { code: "VA01", module: "SD", name: "受注伝票の登録" },' + NL +
+      '  { code: "ME21N", module: "MM", name: "購買発注の登録" }' + NL +
+      "];" + NL +
+      'const TCODE_MODULE_ORDER = ["SD", "MM"];' + NL;
+    let call = 0;
+    const h = withSap(async (url) => {
+      if (url.indexOf("abap-syntax") > -1) {
+        return { ok: true, text: async () => "const ABAP_SYNTAX_REF = [];" + NL };
+      }
+      call += 1;
+      return { ok: true, text: async () => (call === 1 ? SAP_TCODES : second) };
+    });
+    await h.api.loadExtraScripts("sap");
+    expect(h.win.TCODE_REF.length).toBe(1);
+    h.api.clearGlobals();
+    h.win.SUBJECT = { id: "sap", extraScripts: ["tcodes.js", "abap-syntax.js"] };
+    await h.api.loadExtraScripts("sap");
+    expect(h.win.TCODE_REF.length).toBe(2);
+    expect(h.injected).toEqual([]);
+  });
+
+  // 振り分けは loadScript の入口で行う。changelog / lesson / extras は
+  // 呼び出しの字面を変えずに隔離経路へ入る。自前の subject.js だけが
+  // script タグで入る。ここを外されると、また const が大域に生える。
+  test.each([
+    ["sapdata/changelog.js", true],
+    ["sapdata/lesson.js", true],
+    ["sapdata/tcodes.js", true],
+    ["sapdata/abap-syntax.js", true],
+    ["sapdata/tcodes.js?v=9", true],
+    ["subjects/sap/subject.js", false],
+    ["subjects/sap/subject.js?v=9", false],
+    ["js/quiz-engine.js", false],
+  ])("%s を隔離して読むか = %s", (src, want) => {
+    const { api } = load(fetchOf({}));
+    expect(api.isDataScript(src)).toBe(want);
+  });
+
+  // 科目が増えた日に、追加台本が一覧から漏れていないかを見る。
+  // 正規表現は使わない (パッチの口が円記号を運べない)。
+  test("隔離する一覧が、科目が実際に持つ追加台本を覆っている", () => {
+    const { api } = load(fetchOf({}));
+    const quote = String.fromCharCode(34);
+    const dirs = fs
+      .readdirSync(path.join(ROOT, "subjects"))
+      .filter((d) => fs.existsSync(path.join(ROOT, "subjects", d, "subject.js")));
+    expect(dirs.length).toBeGreaterThan(5);
+    const files = new Set(["changelog.js", "lesson.js"]);
+    dirs.forEach((id) => {
+      const txt = fs.readFileSync(path.join(ROOT, "subjects", id, "subject.js"), "utf8");
+      const at = txt.indexOf("extraScripts:");
+      if (at === -1) return;
+      const open = txt.indexOf("[", at);
+      const close = txt.indexOf("]", open);
+      if (open === -1 || close === -1) return;
+      txt
+        .slice(open + 1, close)
+        .split(quote)
+        .forEach((part, n) => {
+          if (n % 2 === 1 && part) files.add(part);
+        });
+    });
+    expect(files.size).toBeGreaterThan(2);
+    files.forEach((f) => {
+      expect(api.DATA_SCRIPT_FILES).toContain(f);
+    });
+  });
+
+  test("subject.js は隔離一覧に入っていない (段位の正本は script タグで読む)", () => {
+    const { api } = load(fetchOf({}));
+    expect(api.DATA_SCRIPT_FILES).not.toContain("subject.js");
+    expect(api.DATA_SCRIPT_FILES).not.toContain("questions.js");
+  });
+});
