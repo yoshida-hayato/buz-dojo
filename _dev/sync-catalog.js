@@ -76,6 +76,10 @@ const counts = {
   "ai-ontology-core": evalSubjectTotal(
     path.join(PERSONAL, "学習道場/subjects/ai-ontology-core")
   ),
+  // この科目だけはマスタがこの repo の中に在る (2026-11-01 18:48便)。
+  // だから PERSONAL ではなく ROOT から数える。catalog.js を書く先は無い
+  // (問い合わせ先が無く、config/pricing.js の静的な値が正本である)。
+  "fe-kamoku-b": evalSubjectTotal(path.join(ROOT, "data/fe-kamoku-b")),
 };
 
 function writeCatalog(filePath, count) {
