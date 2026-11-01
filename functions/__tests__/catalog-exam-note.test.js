@@ -24,6 +24,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const rows = require("../test-helpers/subject-rows");
 
 const ROOT = path.join(__dirname, "..", "..");
 const read = (...rel) => fs.readFileSync(path.join(ROOT, ...rel), "utf8");
@@ -45,7 +46,7 @@ function ctxAt(nowIso) {
     }
   }
   const ctx = vm.createContext({ Date: FixedDate, Math, JSON, Intl, console, window: {} });
-  vm.runInContext(read("subjects", "registry.js"), ctx, { filename: "registry" });
+  rows.loadRegistryInto(ctx);
   vm.runInContext(SCREENS, ctx, { filename: "screens-subjects" });
   return ctx;
 }
