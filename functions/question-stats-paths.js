@@ -46,6 +46,7 @@ const ID_PREFIXES = [
   ["aoi-", "ai-ontology-intro"],
   ["ao-", "ai-ontology-core"],
   ["feb-", "fe-kamoku-b"],
+  ["fea-", "fe-kamoku-a"],
 ];
 
 const DEFAULT_SUBJECT_ID = "sap";
