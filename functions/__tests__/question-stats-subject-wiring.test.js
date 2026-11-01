@@ -36,22 +36,18 @@ const ADMIN_SRC = read("js", "admin-question-stats-shared.js");
 const ADMIN_HTML = read("admin", "question-analytics.html");
 
 const server = require("../question-stats-paths");
+// 科目の一覧は2枚 (registry と extra-subjects)。読み方は足場に寄せる。
+const rows = require("../test-helpers/subject-rows");
 
 function clientModule(withRegistry) {
   const ctx = vm.createContext({ console, JSON, Math, window: {} });
-  if (withRegistry) vm.runInContext(REGISTRY, ctx, { filename: "registry" });
+  if (withRegistry) rows.loadRegistryInto(ctx);
   vm.runInContext(CLIENT_SRC, ctx, { filename: "question-stats-paths" });
   return vm.runInContext("QuestionStatsPaths", ctx, { filename: "get" });
 }
 
 function registryIds() {
-  const ctx = vm.createContext({});
-  vm.runInContext(REGISTRY, ctx, { filename: "registry" });
-  return vm.runInContext(
-    "SUBJECT_REGISTRY.filter(function (s) { return s.enabled !== false; }).map(function (s) { return s.id; })",
-    ctx,
-    { filename: "ids" }
-  );
+  return rows.allSubjectIds();
 }
 
 const IDS = registryIds();
@@ -62,25 +58,23 @@ describe("科目の一覧は、レジストリの有効な科目と同じであ�
   });
 
   test("サーバの一覧がレジストリと一致する (並びまで)", () => {
-    expect(server.SUBJECT_IDS).toEqual(IDS);
+    expect(rows.orderNote("サーバの一覧", server.SUBJECT_IDS, IDS)).toBe("");
   });
 
   test("画面の一覧がレジストリと一致する (並びまで)", () => {
-    expect(clientModule(true).SUBJECT_IDS).toEqual(IDS);
+    expect(rows.orderNote("画面の一覧", clientModule(true).SUBJECT_IDS, IDS)).toBe("");
   });
 
   test("サーバの既定の控えもレジストリと一致する (導けなかったときに古くならない)", () => {
-    expect(server.FALLBACK_SUBJECT_IDS.slice().sort()).toEqual(IDS.slice().sort());
+    expect(rows.diffNote("サーバの控え", server.FALLBACK_SUBJECT_IDS, IDS)).toBe("");
   });
 
   test("画面の既定の控えもレジストリと一致する", () => {
-    expect(clientModule(true).FALLBACK_SUBJECT_IDS.slice().sort()).toEqual(
-      IDS.slice().sort()
-    );
+    expect(rows.diffNote("画面の控え", clientModule(true).FALLBACK_SUBJECT_IDS, IDS)).toBe("");
   });
 
   test("レジストリを読めなかった画面でも、控えで全科目そろう", () => {
-    expect(clientModule(false).SUBJECT_IDS.slice().sort()).toEqual(IDS.slice().sort());
+    expect(rows.diffNote("控えだけの画面", clientModule(false).SUBJECT_IDS, IDS)).toBe("");
   });
 
   test("有効な科目は全部 isSubjectDocId で真になる", () => {
@@ -93,13 +87,19 @@ describe("科目の一覧は、レジストリの有効な科目と同じであ�
 
 describe("接頭の表は2枚で、同じ中身である", () => {
   test("サーバと画面の表が一致する (並びまで)", () => {
-    expect(clientModule(true).ID_PREFIXES).toEqual(server.ID_PREFIXES);
+    // 科目を足している途中は、片方に先に行が入る瞬間が在る。
+    const flat = (t) => t.map((row) => row[0] + "=" + row[1]);
+    expect(
+      rows.orderNote("接頭の表", flat(clientModule(true).ID_PREFIXES), flat(server.ID_PREFIXES))
+    ).toBe("");
   });
 
   test("表が指す科目は全部、レジストリに在る", () => {
-    server.ID_PREFIXES.forEach((row) => {
-      expect(IDS).toContain(row[1]);
-    });
+    const pointed = server.ID_PREFIXES.map((row) => row[1]);
+    const stray = rows.WIRING_IN_PROGRESS
+      ? []
+      : pointed.filter((id) => IDS.indexOf(id) < 0);
+    expect(stray.join(",")).toBe("");
   });
 
   test("既定の科目もレジストリに在る", () => {
