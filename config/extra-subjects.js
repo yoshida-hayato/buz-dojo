@@ -42,6 +42,21 @@
       depthTier: "depth",
       cardEyebrow: "応用・判断",
     },
+    {
+      id: "fe-kamoku-a",
+      title: "基本情報 科目A",
+      shortTitle: "科目A",
+      description:
+        "情報処理推進機構が公表した科目Aの公開問題そのもの。8分野の四肢択一を出典つきで演習できます",
+      path: "subjects/fe-kamoku-a",
+      contentBase: "/data/fe-kamoku-a",
+      contentMaster: "情報処理推進機構（公開問題）",
+      examLicenseKey: "ipa-joho-shori",
+      enabled: true,
+      accent: "#0f766e",
+      depthTier: "basic",
+      cardEyebrow: "基礎・知識",
+    },
   ];
 
   // 足す側の中身を引数で受ける純粋な形にしてある。
