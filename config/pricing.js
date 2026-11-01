@@ -107,6 +107,12 @@
       questionCount: 24,
       sourceType: SOURCE_ORIGINAL,
     },
+    "fe-kamoku-a": {
+      title: "基本情報技術者試験 科目A",
+      questionCount: 46,
+      sourceType: SOURCE_PUBLIC_PAST_EXAM,
+      examLicense: "ipa-joho-shori",
+    },
   };
 
   function priceForQuestionCount(n) {
