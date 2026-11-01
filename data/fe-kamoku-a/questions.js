@@ -462,3 +462,112 @@ QUIZ_DATA.push(
     ),
   }
 );
+
+// ---- ネットワーク --------------------------------------------
+QUIZ_DATA.push(
+  {
+    id: "fea-sc-net-025",
+    category: "scenario",
+    module: "ネットワーク",
+    code: "A25",
+    priority: 2,
+    name: "IoT で用いられる無線通信技術であり，近距離の IT 機器同士が通信する無線 PAN（Personal Area Network）と呼ばれるネットワークに利用されるものはどれか。",
+    choices: [
+      "BLE（Bluetooth Low Energy）",
+      "LTE（Long Term Evolution）",
+      "PLC（Power Line Communication）",
+      "PPP（Point-to-Point Protocol）",
+    ],
+    source: "基本情報技術者試験 科目A サンプル問題 問25",
+    sourceModified: true,
+    explanation: feaText(
+      "無線 PAN は身の回り数メートルの範囲をつなぐもので、BLE がその代表である。省電力なので IoT の機器に向く。",
+      "LTE は携帯電話の広域網で、PLC は電力線を使う有線の通信である。",
+      "PPP は2点間を接続するためのプロトコルで、PAN という距離の区分の話ではない。"
+    ),
+  },
+  {
+    id: "fea-sc-net-026",
+    category: "scenario",
+    module: "ネットワーク",
+    code: "A26",
+    priority: 2,
+    name: "1.5 M ビット／秒の伝送路を用いて 12 M バイトのデータを転送するのに必要な伝送時間は何秒か。ここで，伝送路の伝送効率を 50％とする。",
+    choices: [
+      "128",
+      "16",
+      "32",
+      "64",
+    ],
+    source: "基本情報技術者試験 科目A サンプル問題 問26",
+    sourceModified: true,
+    explanation: feaText(
+      "12 M バイトはビットに直すと 8 倍で 96 M ビットである。単位をそろえるのが最初の一手である。",
+      "伝送効率 50％なので実際に出る速さは 1.5 の半分で 0.75 M ビット／秒である。",
+      "96 ÷ 0.75 で 128 秒になる。"
+    ),
+  },
+  {
+    id: "fea-sc-net-027",
+    category: "scenario",
+    module: "ネットワーク",
+    code: "A27",
+    priority: 2,
+    name: "TCP/IP を利用している環境で，電子メールに画像データなどを添付するための規格はどれか。",
+    choices: [
+      "MIME",
+      "JPEG",
+      "MPEG",
+      "SMTP",
+    ],
+    source: "基本情報技術者試験 科目A サンプル問題 問27",
+    sourceModified: true,
+    explanation: feaText(
+      "MIME は、文字だけを運ぶ仕組みだった電子メールに、画像や音声などを載せるための取り決めである。",
+      "JPEG と MPEG は画像と動画そのものの形式で、添付の仕組みではない。",
+      "SMTP はメールを送る手順で、中身の組み立て方は定めていない。"
+    ),
+  },
+  {
+    id: "fea-sc-net-028",
+    category: "scenario",
+    module: "ネットワーク",
+    code: "A28",
+    priority: 2,
+    name: "トランスポート層のプロトコルであり，信頼性よりもリアルタイム性が重視される場合に用いられるものはどれか。",
+    choices: [
+      "UDP",
+      "HTTP",
+      "IP",
+      "TCP",
+    ],
+    source: "基本情報技術者試験 科目A サンプル問題 問28",
+    sourceModified: true,
+    explanation: feaText(
+      "UDP は確認応答や再送をしないので遅れが小さい。音声や映像のように、遅れるより欠けるほうがましな用途に向く。",
+      "TCP は同じ層だが、確認応答と再送で確実さを取るので遅れが出る。",
+      "HTTP は上の層、IP は下の層なので、そもそもトランスポート層ではない。"
+    ),
+  },
+  {
+    id: "fea-sc-net-029",
+    category: "scenario",
+    module: "ネットワーク",
+    code: "A29",
+    priority: 2,
+    name: "PC と Web サーバが HTTP で通信している。PC から Web サーバ宛てのパケットでは，送信元ポート番号は PC 側で割り当てた 50001，宛先ポート番号は 80 であった。Web サーバから PC への戻りのパケットでのポート番号の組合せはどれか。",
+    choices: [
+      "送信元 80，宛先 50001",
+      "送信元 50001，宛先 80",
+      "送信元 80 と 50001 以外からサーバ側で割り当てた番号，宛先 80",
+      "送信元 80 と 50001 以外からサーバ側で割り当てた番号，宛先 50001",
+    ],
+    source: "基本情報技術者試験 科目A サンプル問題 問29",
+    sourceModified: true,
+    explanation: feaText(
+      "戻りのパケットは、行きのパケットの送信元と宛先をそのまま入れ替えた形になる。",
+      "だから送信元はサーバの 80、宛先は PC が割り当てた 50001 である。",
+      "サーバが戻りのために新しい番号を割り当てることはない。それでは応答がどの通信のものか分からなくなる。"
+    ),
+  }
+);
