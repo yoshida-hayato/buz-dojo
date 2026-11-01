@@ -27,7 +27,22 @@
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   // 自前の問題データを持つ科目。contentBase はこのドメインの相対パスにする。
-  const EXTRA_SUBJECTS = [];
+  const EXTRA_SUBJECTS = [
+    {
+      id: "fe-kamoku-b",
+      title: "基本情報 科目B",
+      shortTitle: "科目B",
+      description:
+        "擬似言語のトレースと情報セキュリティ。基本情報技術者試験の科目Bの出題形式にそろえた自作問題です",
+      path: "subjects/fe-kamoku-b",
+      contentBase: "/data/fe-kamoku-b",
+      contentMaster: "ビジネス道場（自前の問題データ）",
+      enabled: true,
+      accent: "#b45309",
+      depthTier: "depth",
+      cardEyebrow: "応用・判断",
+    },
+  ];
 
   // 足す側の中身を引数で受ける純粋な形にしてある。
   // 理由: 一覧が空のうちは、一覧を回す約束をテストで1つも確かめられない。
