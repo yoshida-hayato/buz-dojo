@@ -125,6 +125,6 @@ describe("ビジキャリの日程表", () => {
   test("表が切れた後も画面は落ちず、注記が消えるだけ", () => {
     const ctx = ctxAt("2027-06-01T12:00:00+09:00");
     for (const id of EXAM) expect(ctx.subjectExamCountdownNote(id)).toBe("");
-    expect(ctx.enabledSubjectsSorted().length).toBe(10);
+    expect(rows.countNote(ctx.enabledSubjectsSorted().length)).toBe("");
   });
 });
