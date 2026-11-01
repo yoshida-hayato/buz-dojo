@@ -85,3 +85,34 @@ describe("約束1: 1枠が投げても、残りの枠は描かれる", () => {
     expect(threw).toBe(false);
   });
 });
+describe("約束2: 1つの try に2枠を同居させていない", () => {
+  // 字面の有無ではなく、try の区画ごとに描画の呼び出しが1つ以下であることを見る。
+  // 同居に戻す壊し方 (隔離をやめて1つの try に寄せる) は、これで落ちる。
+  test("try の区画ごとに、描画の呼び出しは1つまで", () => {
+    const text = fs.readFileSync(SRC, "utf8");
+    const parts = text.split("try {");
+    expect(parts.length).toBeGreaterThan(1);
+    parts.slice(1).forEach(function (part) {
+      const seg = part.split("catch")[0];
+      let n = 0;
+      let at = seg.indexOf("StatsAnalysis.render");
+      while (at > -1) {
+        n += 1;
+        at = seg.indexOf("StatsAnalysis.render", at + 1);
+      }
+      expect(n).toBeLessThan(2);
+    });
+  });
+
+  test("6枠とも drawStatsBlock を通している", () => {
+    const text = fs.readFileSync(SRC, "utf8");
+    let n = 0;
+    let at = text.indexOf("drawStatsBlock(");
+    while (at > -1) {
+      n += 1;
+      at = text.indexOf("drawStatsBlock(", at + 1);
+    }
+    // 宣言1つ + 呼び出し6つ
+    expect(n).toBeGreaterThan(6);
+  });
+});
