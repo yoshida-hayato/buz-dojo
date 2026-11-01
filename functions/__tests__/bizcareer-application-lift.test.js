@@ -22,7 +22,7 @@ const path = require("path");
 const vm = require("vm");
 
 const ROOT = path.join(__dirname, "..", "..");
-const REGISTRY = fs.readFileSync(path.join(ROOT, "subjects", "registry.js"), "utf8");
+const rows = require("../test-helpers/subject-rows");
 const SCREENS = fs.readFileSync(path.join(ROOT, "js", "screens-subjects.js"), "utf8");
 
 const BIZCAREER = ["biz-career", "biz-pm-planning", "biz-pm-operation"];
@@ -39,7 +39,7 @@ function orderAt(nowIso) {
     }
   }
   const ctx = vm.createContext({ Date: FixedDate, Math, JSON, Intl, console, window: {} });
-  vm.runInContext(REGISTRY, ctx, { filename: "registry" });
+  rows.loadRegistryInto(ctx);
   vm.runInContext(SCREENS, ctx, { filename: "screens-subjects" });
   return ctx.enabledSubjectsSorted().map(function (s) {
     return s["id"];
@@ -74,7 +74,7 @@ describe("ビジキャリ申込受付期間中は生産管理3科目を最上段
   });
 
   test("10科目すべてが並びに残る (持ち上げで落ちない)", () => {
-    expect(orderAt("2026-10-11T12:00:00+09:00").length).toBe(10);
-    expect(orderAt("2026-12-05T12:00:00+09:00").length).toBe(10);
+    expect(rows.countNote(orderAt("2026-10-11T12:00:00+09:00").length)).toBe("");
+    expect(rows.countNote(orderAt("2026-12-05T12:00:00+09:00").length)).toBe("");
   });
 });
