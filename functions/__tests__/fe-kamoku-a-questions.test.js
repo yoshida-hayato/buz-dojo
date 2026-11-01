@@ -118,3 +118,103 @@ describe("約束2: 転載の条件 (出典と改変の明記) が全問にそろ
     expect(pricing.priceForSubject(SUBJECT_ID, meta.questionCount)).toBe(0);
   });
 });
+
+describe("約束3: 正解が choices の先頭に在る", () => {
+  test("46問すべてで、先頭の肢が解答例と一致する", () => {
+    const bad = [];
+    loadQuiz().forEach((q) => {
+      const hint = CORRECT_HINT[q.code];
+      if (!hint) {
+        bad.push([q.code, "見本が無い"]);
+        return;
+      }
+      if (String(q.choices[0]).indexOf(hint) < 0) {
+        bad.push([q.code, String(q.choices[0]).slice(0, 24)]);
+      }
+    });
+    expect(bad).toEqual([]);
+  });
+
+  test("見本の表が、データの問と1対1で対応している", () => {
+    const codes = loadQuiz().map((q) => q.code).sort();
+    expect(codes).toEqual(Object.keys(CORRECT_HINT).sort());
+  });
+});
+
+describe("約束4: 肢の形", () => {
+  test("全問が肢を4つ持ち、同じ字面が2つ無い", () => {
+    const bad = loadQuiz().filter((q) => {
+      if (!Array.isArray(q.choices) || q.choices.length !== 4) return true;
+      const uniq = [];
+      q.choices.forEach((c) => {
+        if (uniq.indexOf(c) < 0) uniq.push(c);
+      });
+      return uniq.length !== 4;
+    });
+    expect(bad.map((q) => q.id)).toEqual([]);
+  });
+
+  test("肢が空文字でない", () => {
+    const bad = [];
+    loadQuiz().forEach((q) => {
+      q.choices.forEach((c) => {
+        if (typeof c !== "string" || !c.trim()) bad.push(q.id);
+      });
+    });
+    expect(bad).toEqual([]);
+  });
+});
+
+describe("約束5: 分類と分野の宣言が subject.js とそろっている", () => {
+  test("全問の module が subject.js の宣言に在る", () => {
+    const mods = declaredModules();
+    expect(mods.length).toBeGreaterThan(0);
+    const bad = loadQuiz().filter((q) => mods.indexOf(q.module) < 0);
+    expect(bad.map((q) => q.module)).toEqual([]);
+  });
+
+  test("全問の category が scenario である", () => {
+    const bad = loadQuiz().filter((q) => q.category !== "scenario");
+    expect(bad.map((q) => q.id)).toEqual([]);
+  });
+
+  test("id は fea- で始まり、重複しない", () => {
+    const rows = loadQuiz();
+    const bad = rows.filter((q) => String(q.id).indexOf("fea-") !== 0);
+    expect(bad.map((q) => q.id)).toEqual([]);
+    const uniq = [];
+    rows.forEach((q) => {
+      if (uniq.indexOf(q.id) < 0) uniq.push(q.id);
+    });
+    expect(uniq.length).toBe(rows.length);
+  });
+});
+
+describe("約束6: 図を見ないと解けない問を混ぜない", () => {
+  test("問題文と肢に、図や表への参照が無い", () => {
+    const bad = [];
+    loadQuiz().forEach((q) => {
+      const text = String(q.name) + " " + q.choices.join(" ");
+      FIGURE_WORDS.forEach((w) => {
+        if (text.indexOf(w) >= 0) bad.push([q.code, w]);
+      });
+    });
+    expect(bad).toEqual([]);
+  });
+});
+
+describe("約束7: パッチの口を通る字面だけで書かれている", () => {
+  test("素のバッククォートもアスタリスクも円記号も無い", () => {
+    // 直し方: コード囲みは feaCode()、改行は feaText() を使う。
+    expect(SRC.split(BACKTICK).length - 1).toBe(0);
+    expect(SRC.split(STAR).length - 1).toBe(0);
+    expect(SRC.split(YEN).length - 1).toBe(0);
+  });
+
+  test("解説が全問に在る", () => {
+    const bad = loadQuiz().filter(
+      (q) => typeof q.explanation !== "string" || q.explanation.length < 20
+    );
+    expect(bad.map((q) => q.id)).toEqual([]);
+  });
+});
