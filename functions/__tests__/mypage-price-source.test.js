@@ -181,11 +181,21 @@ describe("registry と config/pricing.js の科目表がずれていない", () 
     return ctx.__R.filter((s) => s.enabled !== false).map((s) => s.id);
   })();
 
+  // レジストリは2枚ある (registry.js と config/extra-subjects.js)。
+  // 上の切り出しは1枚目だけを見ているが、その行にはパッチの口を通らない
+  // 字面が在るので触らない。2枚ぶんの一覧を足場から取り直して、
+  // 下の検査はこちらを使う。1枚目だけを見ていると、問題データをこちら側に
+  // 持つ科目が料金の表から漏れても赤くならない (2026-11-01 18:48便)。
+  const allIds = rows.allSubjectIds();
+
   test("公開中の科目が1件以上ある", () => {
-    expect(registryIds.length).toBeGreaterThan(0);
+    expect(allIds.length).toBeGreaterThan(0);
+    // 2枚ぶんの一覧は、1枚目を全部含む (2枚目は push しかしないので)。
+    const lost = registryIds.filter((id) => allIds.indexOf(id) < 0);
+    expect(lost.join(",")).toBe("");
   });
 
-  test.each(registryIds.map((id) => [id]))(
+  test.each(allIds.map((id) => [id]))(
     "%s は config/pricing.js の SUBJECT_CATALOG にあり、問題数が 0 より大きい",
     (id) => {
       const meta = pricing.SUBJECT_CATALOG[id];
