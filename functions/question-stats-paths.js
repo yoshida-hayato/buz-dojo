@@ -18,6 +18,7 @@ const FALLBACK_SUBJECT_IDS = [
   "teams-collab",
   "ai-ontology-intro",
   "ai-ontology-core",
+  "fe-kamoku-b",
 ];
 
 function listSubjectIds() {
@@ -43,6 +44,7 @@ const ID_PREFIXES = [
   ["tc-", "teams-collab"],
   ["aoi-", "ai-ontology-intro"],
   ["ao-", "ai-ontology-core"],
+  ["feb-", "fe-kamoku-b"],
 ];
 
 const DEFAULT_SUBJECT_ID = "sap";
