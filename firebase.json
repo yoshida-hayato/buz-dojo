@@ -45,6 +45,7 @@
       { "source": "/teams-collab", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
       { "source": "/ai-ontology-intro", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
       { "source": "/ai-ontology-core", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/fe-kamoku-b", "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }, { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
       {
         "source": "/index.html",
         "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
