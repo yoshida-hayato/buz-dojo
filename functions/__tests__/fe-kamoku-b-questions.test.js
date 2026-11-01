@@ -157,3 +157,55 @@ describe("1問ずつの形がそろっている", () => {
     expect(empty.join(",")).toBe("");
   });
 });
+
+describe("パッチの口を通る字面だけで書かれている", () => {
+  test("素のバッククォートもアスタリスクも円記号も無い", () => {
+    // 直し方: コード囲みは febCode()、改行は febText() を使う。
+    //   どちらも String.fromCharCode から組んでいる。
+    //   ここに素の記号を書くと、次に同じファイルを直すパッチが
+    //   Slack の変換で壊れて、原因の分からない形で破棄される。
+    expect(SRC.indexOf(BACKTICK)).toBe(-1);
+    expect(SRC.indexOf(STAR)).toBe(-1);
+    expect(SRC.indexOf(YEN)).toBe(-1);
+  });
+
+  test("文字コードから組む足場が在る", () => {
+    expect(SRC.indexOf("String.fromCharCode(96, 96, 96)")).toBeGreaterThan(-1);
+    expect(SRC.indexOf("String.fromCharCode(10)")).toBeGreaterThan(-1);
+  });
+});
+
+describe("画面に出したときに、コード囲みが pre になる", () => {
+  const domUtil = (function () {
+    const sandbox = { String, Array, Object, JSON, Math, RegExp, console };
+    vm.createContext(sandbox);
+    vm.runInContext(read(path.join("js", "dom-util.js")), sandbox, { filename: "dom-util" });
+    return vm.runInContext("formatRichText", sandbox);
+  })();
+
+  const PRE_OPEN = LT + 'pre class="code-block"' + GT;
+
+  test("擬似言語の塊を持つ問題は pre に変わる", () => {
+    const withFence = QUIZ.filter(function (q) {
+      return q.name.indexOf(BACKTICK + BACKTICK + BACKTICK) >= 0;
+    });
+    // 擬似言語を1問も持たない科目なら、この見張りは何も主張できない。
+    expect(withFence.length).toBeGreaterThan(0);
+    const bad = withFence.filter(function (q) {
+      return domUtil(q.name).indexOf(PRE_OPEN) < 0;
+    }).map(function (q) {
+      return q.id;
+    });
+    expect(bad.join(",")).toBe("");
+  });
+
+  test("描いた後にバッククォートが1つも残らない", () => {
+    // 囲みの数が奇数だと、閉じられなかった囲みが素の記号として画面に出る。
+    const bad = QUIZ.filter(function (q) {
+      return domUtil(q.name).indexOf(BACKTICK) >= 0 || domUtil(q.explanation).indexOf(BACKTICK) >= 0;
+    }).map(function (q) {
+      return q.id;
+    });
+    expect(bad.join(",")).toBe("");
+  });
+});
