@@ -125,7 +125,7 @@ describe("並びの中で帯は連続する (同じ見出しが2度出ない)", 
     test("帯が連続している: " + d, () => {
       const ctx = ctxAt(d);
       const order = ctx.enabledSubjectsSorted();
-      expect(order.length).toBe(10);
+      expect(rows.countNote(order.length)).toBe("");
       const bandsSeen = [];
       let last = null;
       for (const s of order) {
