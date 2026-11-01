@@ -25,6 +25,7 @@ const QuestionStatsPaths = (function () {
     "teams-collab",
     "ai-ontology-intro",
     "ai-ontology-core",
+    "fe-kamoku-b",
   ];
 
   function listSubjectIds() {
@@ -55,6 +56,7 @@ const QuestionStatsPaths = (function () {
     ["tc-", "teams-collab"],
     ["aoi-", "ai-ontology-intro"],
     ["ao-", "ai-ontology-core"],
+    ["feb-", "fe-kamoku-b"],
   ];
 
   const DEFAULT_SUBJECT_ID = "sap";
