@@ -80,6 +80,7 @@ const counts = {
   // だから PERSONAL ではなく ROOT から数える。catalog.js を書く先は無い
   // (問い合わせ先が無く、config/pricing.js の静的な値が正本である)。
   "fe-kamoku-b": evalSubjectTotal(path.join(ROOT, "data/fe-kamoku-b")),
+  "fe-kamoku-a": evalSubjectTotal(path.join(ROOT, "data/fe-kamoku-a")),
 };
 
 function writeCatalog(filePath, count) {
