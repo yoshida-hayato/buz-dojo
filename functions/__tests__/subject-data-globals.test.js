@@ -157,3 +157,46 @@ describe("約束4と5: 消す名前と読む名前が一致している", () => 
     });
   });
 });
+describe("約束2: 2度目の読み込みが前の科目の値を上書きする", () => {
+  test("SAP のあとに Excel関数を読むと、ベルが読む CHANGELOG が入れ替わる", async () => {
+    const { api, win } = load(
+      fetchOf({
+        "sapdata/changelog.js": SAP_CHANGELOG,
+        "exceldata/changelog.js": EXCEL_CHANGELOG,
+      })
+    );
+    await api.loadDataScript("sapdata/changelog.js", "v1", ["CHANGELOG"]);
+    expect(win.CHANGELOG.length).toBe(2);
+    expect(win.CHANGELOG[0].note).toBe("Tコード問題を追加");
+
+    api.clearGlobals();
+    expect(win.CHANGELOG).toBeUndefined();
+
+    await api.loadDataScript("exceldata/changelog.js", "v1", ["CHANGELOG"]);
+    expect(win.CHANGELOG.length).toBe(1);
+    expect(win.CHANGELOG[0].note).toBe("Excel関数の初版");
+  });
+
+  test("逆順 (Excel関数のあとに SAP) でも入れ替わる", async () => {
+    const { api, win } = load(
+      fetchOf({
+        "sapdata/changelog.js": SAP_CHANGELOG,
+        "exceldata/changelog.js": EXCEL_CHANGELOG,
+      })
+    );
+    await api.loadDataScript("exceldata/changelog.js", "v1", ["CHANGELOG"]);
+    expect(win.CHANGELOG[0].note).toBe("Excel関数の初版");
+    api.clearGlobals();
+    await api.loadDataScript("sapdata/changelog.js", "v1", ["CHANGELOG"]);
+    expect(win.CHANGELOG.length).toBe(2);
+    expect(win.CHANGELOG[0].note).toBe("Tコード問題を追加");
+  });
+
+  test("同じ科目を2度読んでも落ちない (SAP に戻る筋)", async () => {
+    const { api, win } = load(fetchOf({ "sapdata/": SAP_CHANGELOG }));
+    await api.loadDataScript("sapdata/changelog.js", "v1", ["CHANGELOG"]);
+    api.clearGlobals();
+    await api.loadDataScript("sapdata/changelog.js", "v2", ["CHANGELOG"]);
+    expect(win.CHANGELOG.length).toBe(2);
+  });
+});
