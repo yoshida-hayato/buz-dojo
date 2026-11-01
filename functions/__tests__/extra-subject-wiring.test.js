@@ -153,3 +153,81 @@ describe("約束3: 2枚のレジストリの id が重ならない", () => {
 
 // ここから下は、2枚目に科目が1本でも入った日に効く。
 // 空のうちは何も主張しないが、1本入れると足し忘れを名指しで落とす。
+describe("約束4: 2枚目の科目が、本体と同じ配線を全部持つ", () => {
+  const rows = extras.EXTRA_SUBJECTS;
+
+  const cases = [];
+  rows.forEach(function (r) {
+    cases.push([r.id, r]);
+  });
+  if (!cases.length) cases.push(["(無し)", null]);
+
+  test.each(cases)(
+    "%s の配線がそろっている",
+    (id, row) => {
+      if (!row) {
+        expect(rows.length).toBe(0);
+        return;
+      }
+      // 問題データはこちら側に在る。よそのドメインを指していたら、
+      // この2枚目を作った理由そのものが消える
+      expect(typeof row.contentBase).toBe("string");
+      expect(row.contentBase.indexOf(":")).toBe(-1);
+      expect(row.contentBase.length).toBeGreaterThan(0);
+      expect(typeof row.title).toBe("string");
+      expect(typeof row.description).toBe("string");
+      expect(row.path).toBe("subjects/" + id);
+
+      // 段位と branding
+      expect(fs.existsSync(path.join(ROOT, "subjects", id, "subject.js"))).toBe(true);
+
+      // 料金の正本
+      const pricing = require(path.join(ROOT, "config", "pricing.js"));
+      const meta = pricing.SUBJECT_CATALOG[id];
+      expect(meta).toBeTruthy();
+      expect(typeof meta.questionCount).toBe("number");
+      expect(typeof meta.sourceType).toBe("string");
+
+      // 帯の表 / 静的な題 / フッターの入口 / 成績キーの控え
+      expect(read(path.join("js", "screens-subjects.js")).indexOf(QUOTE + id + QUOTE)).toBeGreaterThan(-1);
+      const html = read("index.html");
+      expect(html.indexOf(QUOTE + id + QUOTE + ":")).toBeGreaterThan(-1);
+      expect(html.indexOf("/" + id + QUOTE)).toBeGreaterThan(-1);
+      expect(read(path.join("functions", "question-stats-paths.js")).indexOf(QUOTE + id + QUOTE)).toBeGreaterThan(-1);
+      expect(read(path.join("js", "question-stats-paths.js")).indexOf(QUOTE + id + QUOTE)).toBeGreaterThan(-1);
+
+      // 道ごとの Content-Type と no-cache
+      const hosting = JSON.parse(read("firebase.json")).hosting;
+      const hit = (hosting.headers || []).filter(function (h) {
+        return h.source === "/" + id;
+      });
+      expect(hit.length).toBe(1);
+      const keys = [];
+      hit[0].headers.forEach(function (h) {
+        keys.push(h.key);
+      });
+      expect(keys).toContain("Content-Type");
+      expect(keys).toContain("Cache-Control");
+    }
+  );
+});
+
+describe("約束5: 公開情報を名乗る科目は、許諾の台帳に裏付けが在る", () => {
+  const rows = extras.EXTRA_SUBJECTS;
+  test("sourceType が公開過去問なら、許諾が granted の試験を指している", () => {
+    if (!rows.length) {
+      expect(rows.length).toBe(0);
+      return;
+    }
+    const pricing = require(path.join(ROOT, "config", "pricing.js"));
+    const licenses = require(path.join(ROOT, "config", "exam-licenses.js"));
+    rows.forEach(function (row) {
+      const meta = pricing.SUBJECT_CATALOG[row.id] || {};
+      if (meta.sourceType !== pricing.SOURCE_PUBLIC_PAST_EXAM) return;
+      expect(typeof row.examLicenseKey).toBe("string");
+      const lic = licenses.get(row.examLicenseKey);
+      expect(lic).toBeTruthy();
+      expect(lic.status).toBe("granted");
+    });
+  });
+});
