@@ -1,5 +1,25 @@
 /** 成績画面（アプリ側ラッパ） */
 
+// 成績のグラフは1枠ずつ隔離して描く。
+// 以前は6枠が1つの try に同居していて、1枠が投げると残りが黙って空になった。
+// 投げる入力は実測で2つ特定している (QUIZ_DATA が未定義 / QuizStorage が
+// 未定義)。どちらも「カテゴリ別から下の4枠が空」という形で出る。catch は
+// console.warn だけだったので、利用者にも私にも何も見えなかった。
+// 隔離すると、落ちるのはその1枠だけで、しかも空ではなく理由が出る。
+function drawStatsBlock(el, label, fn) {
+  try {
+    fn();
+  } catch (e) {
+    console.warn("成績グラフ描画に失敗(" + label + "):", e);
+    if (el) {
+      el.innerHTML =
+        '<div class="empty-note">' +
+        label +
+        "を表示できませんでした。再読み込みしてください。</div>";
+    }
+  }
+}
+
 // ===== 成績画面 =====
 function renderStats() {
   void renderStatsAsync();
