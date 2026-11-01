@@ -166,13 +166,13 @@ describe("index.html — 科目パスの題と説明がそろっている", () =
   test("known が 題と説明 の表として読める", () => {
     // 直し方: known の1行は slug: 題と説明の2要素配列 を1行に収める。
     expect(knownEntries()).not.toBe(null);
-    expect((knownEntries() || []).length).toBe(registryIds().length);
+    expect(rows.countNote(registryIds().length)).toBe("");
+    expect(rows.diffNote("known", (knownEntries() || []).map((e) => e.id), registryIds())).toBe("");
   });
 
   test("レジストリの科目すべてに題と説明が在り、余りが無い", () => {
     const ids = (knownEntries() || []).map((e) => e.id);
-    expect(registryIds().filter((id) => ids.indexOf(id) < 0).join(",")).toBe("");
-    expect(ids.filter((id) => registryIds().indexOf(id) < 0).join(",")).toBe("");
+    expect(rows.diffNote("known", ids, registryIds())).toBe("");
   });
 
   test("題も説明も空でない", () => {
