@@ -40,8 +40,8 @@ const EXTRA_SRC = read(path.join("config", "extra-subjects.js"));
 //      新しい本数に書き替える (同じ1件でよい。2行は隣に置いてある)
 // 窓を開けたまま終わらせないこと。開いているあいだ、本数と顔ぶれの
 // 食い違いは1つも検出されない。
-const WIRING_IN_PROGRESS = true;
-const DECLARED_SUBJECT_COUNT = 11;
+const WIRING_IN_PROGRESS = false;
+const DECLARED_SUBJECT_COUNT = 12;
 
 // 本数が宣言と合っているか。合っていれば空、違えば理由を返す。
 // 空かどうかで見る形にしてあるのは、落ちたときに数が読めるようにするため。
