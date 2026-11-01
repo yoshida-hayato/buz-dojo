@@ -25,21 +25,14 @@ const exists = (rel) => fs.existsSync(path.join(ROOT, rel));
 
 const NL = String.fromCharCode(10);
 const GEN = read("_dev/gen-seo.py");
-const REGISTRY = read("subjects/registry.js");
+const rows = require("../test-helpers/subject-rows");
 const BASE_CSS = read("css/base.css");
 
+// 入口を持つ科目は2枚に分かれている (registry と extra-subjects)。
+// 台本 (_dev/gen-seo.py) は 2026-11-01 12:48便 から2枚とも読むので、
+// こちらも2枚とも読まないと、2枚目の科目の頁が無くても気づけない。
 function enabledIds() {
-  const out = [];
-  const parts = REGISTRY.split('id: "');
-  for (let i = 1; i < parts.length; i++) {
-    const end = parts[i].indexOf('"');
-    if (end < 0) continue;
-    const id = parts[i].slice(0, end);
-    if (id === "all" || out.indexOf(id) >= 0) continue;
-    if (parts[i].indexOf("enabled: true") < 0) continue;
-    out.push(id);
-  }
-  return out;
+  return rows.allSubjectIds();
 }
 
 // 台本と同じ読み方で subject.js から1つの字面を取る
