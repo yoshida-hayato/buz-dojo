@@ -74,3 +74,82 @@ describe("約束1: 2枚目のレジストリが、読む順番どおりに配線
     expect(body.indexOf(QUOTE + "extra-subjects.js" + QUOTE)).toBeGreaterThan(-1);
   });
 });
+describe("約束2: 足し方が、既に参照を持った側を壊さない", () => {
+  // 本物の行を注入して測る。一覧が空でも約束が効くようにするため。
+  const PROBE = [
+    { id: "zz-one", title: "p" },
+    { id: "zz-two", title: "p" },
+    { id: "zz-one", title: "p" },
+    { title: "id が無い行" },
+    null,
+  ];
+
+  test("mergeRows は同じ配列に push する (差し替えない)", () => {
+    const list = [{ id: "sap" }];
+    const held = list;
+    const got = extras.mergeRows(list, PROBE);
+    expect(got).toBe(held);
+    expect(list[0].id).toBe("sap");
+  });
+
+  test("同じ id は2度足さない", () => {
+    const list = [];
+    extras.mergeRows(list, PROBE);
+    const n = list.filter(function (r) {
+      return r.id === "zz-one";
+    }).length;
+    expect(n).toBe(1);
+  });
+
+  test("既に在る id は足さない", () => {
+    const list = [{ id: "zz-two" }];
+    extras.mergeRows(list, PROBE);
+    expect(list.length).toBe(2);
+    expect(extras.idsOf(list)).toEqual(["zz-two", "zz-one"]);
+  });
+
+  test("id が無い行と null は足さない", () => {
+    const list = [];
+    extras.mergeRows(list, PROBE);
+    expect(list.length).toBe(2);
+    list.forEach(function (r) {
+      expect(typeof r.id).toBe("string");
+      expect(r.id.length).toBeGreaterThan(0);
+    });
+  });
+
+  test("idsOf は id を持つ行だけを、順番どおりに数える", () => {
+    expect(extras.idsOf(PROBE)).toEqual(["zz-one", "zz-two", "zz-one"]);
+    expect(extras.idsOf(null)).toEqual([]);
+  });
+
+  // mergeInto が EXTRA_SUBJECTS 以外の物を足していないことまで見る。
+  // 一覧が空のときは「足さない壊し方」は観測できない (何も起きないので
+  // 正しい振る舞いと区別が付かない)。足す壊し方だけが捕まる。
+  test("mergeInto は EXTRA_SUBJECTS の行だけを足す", () => {
+    const list = [];
+    extras.mergeInto(list);
+    const want = extras.EXTRA_SUBJECTS.filter(function (r) {
+      return r && r.id;
+    });
+    expect(list.length).toBe(want.length);
+    list.forEach(function (row, n) {
+      expect(row).toBe(want[n]);
+    });
+    expect(extras.idsOf(list)).toEqual(extras.ids());
+    expect(extras.ids()).toEqual(extras.idsOf(extras.EXTRA_SUBJECTS));
+  });
+});
+
+describe("約束3: 2枚のレジストリの id が重ならない", () => {
+  test("registry と extra-subjects に同じ id が無い", () => {
+    const reg = registryIds();
+    expect(reg.length).toBeGreaterThan(5);
+    extras.ids().forEach(function (id) {
+      expect(reg.indexOf(id)).toBe(-1);
+    });
+  });
+});
+
+// ここから下は、2枚目に科目が1本でも入った日に効く。
+// 空のうちは何も主張しないが、1本入れると足し忘れを名指しで落とす。
