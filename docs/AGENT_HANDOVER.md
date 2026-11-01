@@ -644,6 +644,33 @@ false で、DECLARED_SUBJECT_COUNT が 11 であること。true のまま入っ
 - ビジキャリの申込の1文の重複は 00:48便 で閉じた。3枚のカードから帯に1本へ移し、
   カードは 245px から 204px になって他科目と高さが揃った (実測)
 
+- 手元でテストを走らせる道具。18:48便 は npm のレジストリに出られず
+  (proxy が CONNECT に 403)、jest を入れられなかった。describe と test と
+  beforeEach と expect の17種だけを実装した最小のランナーを書いて走らせた。
+  81ファイル839件まで数えられた。要るのは次の5つだけである。
+  (1) describe は入れ子で名前を積むだけ、test は後で走らせる配列に積む
+  (2) expect は toBe toEqual toContain toMatch toBeGreaterThan(OrEqual)
+  toBeLessThan(OrEqual) toBeUndefined toBeDefined toBeNull toBeTruthy
+  toBeFalsy toHaveLength toThrow と not
+  (3) test.each は表を受けて、名前の %s を引数で置き換えて1件ずつ積む形。
+  これが無いと7枚が読み込みで落ちる
+  (4) jest.fn と jest.resetModules と jest.spyOn。jest.mock は未対応でよい
+  (使う7枚を飛ばす。飛ばした7枚で72件ぶん数えられない)
+  (5) 走らせる前に python3 _dev/sync-shared.py を自分で呼ぶこと。
+  jest の pretest が呼んでいるので、忘れると料金の写しが古いまま通り、
+  並びの食い違いを1件見落とす (18:48便 に実測した)
+  この道具を repo (_dev) に置くことは、まだやっていない。置くなら正規表現を
+  indexOf と split に書き直す必要がある (円記号がパッチの口を通らない)
+
+- 次の主題の候補。(a) 科目B の問題を24問から増やす。100問までは無料のまま
+  なので、値付けの判断が要らない。足したら config/pricing.js の
+  questionCount も直すこと (忘れると fe-kamoku-b-questions が落ちる)。
+  いま薄いのは 情報セキュリティ (4問しか無い。実際の科目Bは20問のうち
+  4問前後がここなので比率は合っているが、絶対数が足りない)。
+  (b) 保留の一覧の次の3枚 (screens-contact 184行 / subject-config 167行)。
+  (c) 科目B の着地頁 (guides) を1枚書く。科目Bは競合が過去問を持っていない
+  市場なので、無料の自作問題という形が正面から一致する唯一の場所である
+
 ## 繰り返した失敗の型
 
 1. 自分の手札と事業の能力を混同する。「私の道具に無い」を「事業にできない」と読む
