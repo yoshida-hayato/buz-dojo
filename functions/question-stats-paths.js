@@ -19,6 +19,7 @@ const FALLBACK_SUBJECT_IDS = [
   "ai-ontology-intro",
   "ai-ontology-core",
   "fe-kamoku-b",
+  "fe-kamoku-a",
 ];
 
 function listSubjectIds() {
