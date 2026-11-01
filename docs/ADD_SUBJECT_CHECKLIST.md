@@ -81,9 +81,50 @@ bc- の行が先に在ったので、専門2科目の問題は全部 biz-career 
 - question-stats-paths.js の SUBJECT_IDS — 2026-10-26 18:48便 で
   導出に替えた (サーバは料金の正本から、画面は registry から)
 
-## 塞いでいたもの、いま塞いでいるもの (2026-11-01 12:48便 に更新)
+## 本数の関門と、3波の順番 (2026-11-01 18:48便 に実測)
 
-塞ぎは2つあった。2つめは外れた。
+科目を1本足すと、本数と顔ぶれが「2枚のレジストリ」の側と
+「index.html の題の表・フッターの入口・帯の表・料金の表・接頭の表」の側で
+同時に変わる。パッチは1件ずつ全テストを通すので、どちらを先に出しても
+途中の1手で必ず落ちる。だから窓を使う。
+
+1. functions/test-helpers/subject-rows.js の WIRING_IN_PROGRESS を true に
+   する (1件)。これで本数と顔ぶれの食い違いを見る約束が全部黙る
+2. 配線を全部入れる。順番は自由になる。レジストリの2枚目の行だけは最後に
+   出すこと (extra-subject-wiring の約束4 が、他の配線が全部そろって
+   いることを要求する)
+3. WIRING_IN_PROGRESS を false に戻し、DECLARED_SUBJECT_COUNT を新しい本数に
+   書き替える (1件。2行は隣に置いてあるので1件で済む)
+
+窓を開けたまま終わらせないこと。開いているあいだ、本数も顔ぶれも
+1つも検出されない。18:48便 は35件をこの順で出し、1件ずつまっさらな clone に
+当てて、途中のどの状態でも全テストが通ることを先に確かめた。
+
+## 自前の問題データを持つ科目 (2026-11-01 18:48便 に1本目を足した)
+
+fe-kamoku-b が1本目である。よその repo にマスタが無い科目は、ここが違う。
+
+- contentBase はこのドメインの道にする (/data/(科目id))。コロンを含めると
+  extra-subject-wiring が落ちる
+- 問題データは data/(科目id)/questions.js に置く。firebase.json の ignore に
+  data は入っていないので、そのまま配信される。judgment と order と contrast
+  の3つは任意で、404 なら空配列に落ちるのが正しい道である
+- contentVersionUrl は書かない。master の version が無いので APP_VERSION に
+  落ちる。これで正しい
+- functions/subject-catalog.js の URL 表には足さない。master が無いので
+  問い合わせ先が無く、config/pricing.js の静的な questionCount が正本になる。
+  subject-content-urls が、2枚目に宣言が在る科目だけをこの約束から除ける
+- だから問題を足したら questionCount を手で直すこと。忘れると科目カードの
+  全N問 が黙って嘘になる。fe-kamoku-b-questions が件数の一致を見張っている
+- 問題文のコード囲み (バッククォート3個) はパッチの口を通らないので、
+  文字コードから組む (data/fe-kamoku-b/questions.js の febCode と febText)。
+  画面側の formatRichText が囲みを pre と code に変える。これは元から在る
+- _dev/sync-catalog.js の counts には足す。数える先は PERSONAL ではなく
+  ROOT である。writeCatalog は呼ばない (書く先が無い)
+
+## 塞いでいたもの (2026-11-01 18:48便 に2つとも外れた)
+
+塞ぎは2つあった。2つとも外れた。
 
 1. (いまも塞いでいる) 問題データの本体。公開問題の原文を、社員の取得の口が
    書き写さない (3度実測した)。それ以上に、量そのものが無い。基本情報の
