@@ -20,6 +20,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const rows = require("../test-helpers/subject-rows");
 
 const pricing = require("../../config/pricing.js");
 
