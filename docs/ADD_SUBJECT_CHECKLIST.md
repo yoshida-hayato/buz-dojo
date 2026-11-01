@@ -15,9 +15,14 @@ config/pricing.js にだけ足して、全テストを走らせた。
 
 ## 手で触るところ (忘れると、名前を挙げた見張りが落ちる)
 
-1. subjects/registry.js — 科目の行。
-   パッチでは触れない (ブリッジは subjects/ 配下で subject.js しか
-   受け付けない)。社長か、学習道場からの同期の側でやる
+1. 科目の行。置き場が2つある。
+   (a) マスタが外に在る科目 → subjects/registry.js。パッチでは触れない
+   (ブリッジは subjects/ 配下で subject.js しか受け付けない)。
+   社長か、学習道場からの同期の側でやる
+   (b) 問題データをこちら側に持つ科目 → config/extra-subjects.js。
+   こちらは社員が足せる (2026-11-01 12:48便 に置いた)。レジストリの直後に
+   読まれ、同じ配列に push される。足し忘れは extra-subject-wiring が
+   名指しで落とす。社長が 11:31 に b と答えたので、この道が開いた
 2. subjects/(科目id)/subject.js — branding と段位。
    忘れると subject-static-about が (科目id):no-subject-js と言う
 3. config/pricing.js — SUBJECT_CATALOG の行 (questionCount と sourceType)。
