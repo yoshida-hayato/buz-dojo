@@ -192,27 +192,45 @@ async function renderStatsAsync() {
   }
   if (box) box.innerHTML = html;
 
-  try {
-    StatsAnalysis.renderRecentAccuracyTrend($("stats-acc-trend"), stats);
-    const inputTrend = $("stats-input-acc-trend");
-    if (inputTrend) {
-      if (showInputStats) {
-        inputTrend.classList.remove("hidden");
-        StatsAnalysis.renderInputAccuracyTrend(inputTrend, stats);
-      } else {
-        inputTrend.innerHTML = "";
-        inputTrend.classList.add("hidden");
-      }
+  const accTrend = $("stats-acc-trend");
+  drawStatsBlock(accTrend, "選択式の推移", function () {
+    StatsAnalysis.renderRecentAccuracyTrend(accTrend, stats);
+  });
+
+  const inputTrend = $("stats-input-acc-trend");
+  drawStatsBlock(inputTrend, "記述式の推移", function () {
+    if (!inputTrend) return;
+    if (showInputStats) {
+      inputTrend.classList.remove("hidden");
+      StatsAnalysis.renderInputAccuracyTrend(inputTrend, stats);
+    } else {
+      inputTrend.innerHTML = "";
+      inputTrend.classList.add("hidden");
     }
-    StatsAnalysis.renderCategoryAccuracy($("stats-by-category"), stats, allTime.pct);
-    StatsAnalysis.renderPriorityStats($("stats-by-priority"), stats);
-    StatsAnalysis.renderModuleAccuracy($("stats-by-module"), stats, allTime.pct);
+  });
+
+  const byCategory = $("stats-by-category");
+  drawStatsBlock(byCategory, "カテゴリ別", function () {
+    StatsAnalysis.renderCategoryAccuracy(byCategory, stats, allTime.pct);
+  });
+
+  const byPriority = $("stats-by-priority");
+  drawStatsBlock(byPriority, "優先度別", function () {
+    StatsAnalysis.renderPriorityStats(byPriority, stats);
+  });
+
+  const byModule = $("stats-by-module");
+  drawStatsBlock(byModule, "モジュール別", function () {
+    StatsAnalysis.renderModuleAccuracy(byModule, stats, allTime.pct);
+  });
+
+  const reviewBox = $("stats-review-top");
+  drawStatsBlock(reviewBox, "優先復習", function () {
     const reviewTop = StatsAnalysis.getReviewPriorities(stats, StatsAnalysis.REVIEW_TOP);
-    StatsAnalysis.renderReviewTop($("stats-review-top"), reviewTop);
-    $("stats-review-quiz-btn").classList.toggle("hidden", reviewTop.length === 0);
-  } catch (e) {
-    console.warn("成績グラフ描画に失敗:", e);
-  }
+    StatsAnalysis.renderReviewTop(reviewBox, reviewTop);
+    const btn = $("stats-review-quiz-btn");
+    if (btn) btn.classList.toggle("hidden", reviewTop.length === 0);
+  });
 
   if (typeof ActivityCalendar !== "undefined") {
     ActivityCalendar.render($("stats-activity-cal"), stats.daily || {});
