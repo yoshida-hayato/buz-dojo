@@ -467,7 +467,8 @@
   (page.evaluate の中から修飾なしで代入する)
 - 最初の画面に出るものの見た目は、最初に読む CSS に置くこと。index.html が
   最初に読むのは base.css と header.css と subjects.css の3枚だけで、
-  quiz.css と style.css は画面に入ったときに後から足される
+  quiz.css と rank.css は画面に入ったときに後から足される
+  (style.css はどこからも読まれない。上の 確定している事実 を読むこと)
 - 手元のテストは node _dev/tools/jest-run.js。00:48便 の時点で
   62ファイル / 579通過 / 0落ち。拾うのは test.js で終わる名前だけなので、
   テストの足場は functions/test-helpers に置く (jest は __tests__ の中の
