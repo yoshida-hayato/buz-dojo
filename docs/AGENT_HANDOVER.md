@@ -279,10 +279,11 @@
   最初に読むのは base.css と header.css と subjects.css の3枚だけで、
   quiz.css と rank.css は画面に入ったときに後から足される
   (style.css はどこからも読まれない。上の 確定している事実 を読むこと)
-- 手元のテストは node _dev/tools/jest-run.js。00:48便 の時点で
-  62ファイル / 579通過 / 0落ち。拾うのは test.js で終わる名前だけなので、
-  テストの足場は functions/test-helpers に置く (jest は __tests__ の中の
-  .js を全部テスト扱いして、テストが無いファイルで落ちる)
+- 手元のテストは node scripts/minijest.js (名前の一部を渡すと絞れる)。
+  2026-11-08 00:48便 の時点で 97ファイル1030件、落ちるものは0件。
+  _dev/tools/jest-run.js はもう使わない (11/7 06:48便 が repo の側に移した)。
+  拾うのは test.js で終わる名前だけなので、テストの足場は
+  functions/test-helpers に置く (__tests__ の中の .js は全部テスト扱いになる)
 - 科目カードの実測 (390幅)。有料204px / 無料202px / ビジキャリの3枚だけ245px。
   無料は 学習する 1本 (286px)、有料は 無料で学習 176px と 購入する 100px
 - 金額をボタンの見える字に入れない (buy-button-label のガード、実測済み)
