@@ -8,6 +8,7 @@
       "firestore.rules",
       "firestore.indexes.json",
       "README.md",
+      "css/style.css",
       "docs/**",
       "scripts/**",
       "src/**",
