@@ -694,7 +694,7 @@ function finishAnswer(isCorrect, givenText) {
 
   resetQuestionReportForm();
   $("question-report").open = false;
-  if (QuestionReports.isAvailable()) {
+  if (questionReportPanelAvailable()) {
     $("question-report").classList.remove("hidden");
   } else {
     $("question-report").classList.add("hidden");
