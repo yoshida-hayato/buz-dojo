@@ -320,7 +320,13 @@ function choiceAttemptedCount(stats) {
 
 /** 現存問題のうち、記述式で1回以上挑戦した問題数 */
 function inputAttemptedCount(stats) {
-  const valid = new Set(QUIZ_DATA.map((q) => q.id));
+  // 分母は tcodeQuestionCount (記述式の問題だけ) なので、数える側も
+  // 記述式の問題に絞る。種別が記述式から外れた問題の古い ia が残っていると、
+  // ID が現存していても分母を超える (実測: 現IDで800件 / 619 = 129.2%)。
+  // 同じ絞りを inputMasteredIdSet が既に持っているので、形をそろえる。
+  const valid = new Set(
+    QUIZ_DATA.filter((q) => INPUT_CATEGORIES.has(q.category)).map((q) => q.id)
+  );
   let matched = 0;
   let any = 0;
   for (const [id, s] of Object.entries(stats.q || {})) {
@@ -328,7 +334,7 @@ function inputAttemptedCount(stats) {
     any += 1;
     if (valid.has(id)) matched += 1;
   }
-  return matched > 0 ? matched : any;
+  return clampToExisting(matched > 0 ? matched : any, tcodeQuestionCount());
 }
 
 // ===== 段位 =====
