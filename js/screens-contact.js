@@ -31,7 +31,17 @@ function getRegisteredAnswerText(q) {
   return `${q.entry.code} — ${q.entry.name}`;
 }
 
+// 指摘に載せる問題文。利用者が実際に見た字面を記録する。
+// entry.name をそのまま返すと、コード→機能 の向きと略称では name が
+// 答えそのものなので、問題文の欄に答えが入る (2026-11-08 に実測)。
+// 復習リストが使う wrongItemQuestionLabel は向きと形を全部見ていて、
+// しかもタグを含まない素の字面を返すので、それをそのまま借りる。
+// quiz-builder が読めていない場合に備えて typeof の門を置く。
 function getQuestionDisplayText(q) {
+  if (typeof wrongItemQuestionLabel === "function") {
+    const label = wrongItemQuestionLabel(q);
+    if (label) return String(label);
+  }
   const e = q.entry;
   if (e.name) return e.name;
   return e.code || e.id;
