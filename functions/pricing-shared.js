@@ -107,7 +107,7 @@
     },
     "fe-kamoku-b": {
       title: "基本情報技術者試験 科目B",
-      questionCount: 60,
+      questionCount: 100,
       sourceType: SOURCE_ORIGINAL,
     },
     "fe-kamoku-a": {
