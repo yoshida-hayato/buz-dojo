@@ -63,7 +63,7 @@ function formatRichText(s) {
         .replace(/\r\n|\r|\n/g, "<br>");
     }
   }
-  return html;
+  return wrapCodeLines(html);
 }
 
 // コード囲みの中身を1行ずつ span で包み、行ごとのぶら下げ字下げを付ける。
