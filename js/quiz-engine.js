@@ -574,6 +574,22 @@ function moduleLabel(key) {
   return MODULES[key] || key;
 }
 
+// 問題指摘の面を出せるか。
+// js/question-reports.js は後から読む側 (ensureQuestionReports) で、
+// 読込に失敗しても startQuizAsync は console.warn だけで先へ進む。
+// つまり QuestionReports が未定義のまま回答の処理へ来る筋が在る。
+// 素で QuestionReports.isAvailable() を呼ぶと、そこで
+// ReferenceError が投げて finishAnswer の残りが走らず、解説カードも
+// 次の問題へ も出ないまま画面が止まる (2026-11-07 に Chromium で実測。
+// 幅390、Math.random を固定して同じ問題で比べると、解説カードは
+// 358x496 から 0x0、次の問題へ も 139x47 から 0x0 になった)。
+// 同じファイルの QuestionStats 側は2つの typeof の門が6つの使用を
+// 覆っていて、ここだけ抜けていた。判断をこの1箇所に寄せる。
+function questionReportPanelAvailable() {
+  if (typeof QuestionReports === "undefined") return false;
+  return !!QuestionReports.isAvailable();
+}
+
 /** 正誤確定後の共通処理（成績記録とフィードバック表示） */
 function finishAnswer(isCorrect, givenText) {
   const q = quiz.questions[quiz.idx];
