@@ -26,7 +26,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..", "..");
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 
-const FILES = ["css/admin.css", "css/style.css"];
+const FILES = ["css/admin.css"];
 const SELECTOR = ".admin-tabs {";
 
 // 規則の中身 (開きかっこから閉じかっこまで) を取り出す。無ければ null。
