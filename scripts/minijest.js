@@ -122,3 +122,81 @@ function eq(a, b) {
 function matchers(actual, no) {
   function assert(ok, what, want) {
     if (no ? !ok : ok) return;
+    const head = no ? "expect(受け取った値).not." : "expect(受け取った値).";
+    throw new Error(head + what + NL + "  受け取った値: " + show(actual) + (want === undefined ? "" : NL + "  期待した値: " + show(want)));
+  }
+  const api = {
+    toBe: function (v) { assert(actual === v || (actual !== actual && v !== v), "toBe", v); },
+    toEqual: function (v) { assert(eq(actual, v), "toEqual", v); },
+    toStrictEqual: function (v) { assert(eq(actual, v), "toStrictEqual", v); },
+    toContain: function (v) {
+      const ok = Array.isArray(actual) ? actual.indexOf(v) >= 0 : String(actual).indexOf(String(v)) >= 0;
+      assert(ok, "toContain", v);
+    },
+    toContainEqual: function (v) {
+      const ok = Array.isArray(actual) && actual.some(function (x) { return eq(x, v); });
+      assert(ok, "toContainEqual", v);
+    },
+    toMatch: function (v) {
+      const ok = typeof v === "string" ? String(actual).indexOf(v) >= 0 : v.test(String(actual));
+      assert(ok, "toMatch", v);
+    },
+    toHaveLength: function (v) { assert(actual && actual.length === v, "toHaveLength", v); },
+    toHaveProperty: function (k) { assert(actual != null && Object.prototype.hasOwnProperty.call(actual, k), "toHaveProperty", k); },
+    toBeGreaterThan: function (v) { assert(actual > v, "toBeGreaterThan", v); },
+    toBeGreaterThanOrEqual: function (v) { assert(actual >= v, "toBeGreaterThanOrEqual", v); },
+    toBeLessThan: function (v) { assert(actual < v, "toBeLessThan", v); },
+    toBeLessThanOrEqual: function (v) { assert(actual <= v, "toBeLessThanOrEqual", v); },
+    toBeCloseTo: function (v, digits) {
+      const d = digits === undefined ? 2 : digits;
+      const diff = actual > v ? actual - v : v - actual;
+      assert(diff < Math.pow(10, -d) / 2, "toBeCloseTo", v);
+    },
+    toBeDefined: function () { assert(actual !== undefined, "toBeDefined"); },
+    toBeUndefined: function () { assert(actual === undefined, "toBeUndefined"); },
+    toBeNull: function () { assert(actual === null, "toBeNull"); },
+    toBeNaN: function () { assert(actual !== actual, "toBeNaN"); },
+    toBeTruthy: function () { assert(!!actual, "toBeTruthy"); },
+    toBeFalsy: function () { assert(!actual, "toBeFalsy"); },
+    toBeInstanceOf: function (v) { assert(actual instanceof v, "toBeInstanceOf", v ? v["name"] : ""); },
+    toThrow: function (want) {
+      let threw = false;
+      let msg = "";
+      try {
+        actual();
+      } catch (e) {
+        threw = true;
+        msg = e && e.message ? e.message : String(e);
+      }
+      const ok = threw && (want === undefined || msg.indexOf(String(want)) >= 0);
+      assert(ok, "toThrow", want);
+    },
+    toHaveBeenCalled: function () {
+      assert(!!(actual && actual.mock) && actual.mock.calls.length > 0, "toHaveBeenCalled");
+    },
+    toHaveBeenCalledTimes: function (v) {
+      assert(!!(actual && actual.mock) && actual.mock.calls.length === v, "toHaveBeenCalledTimes", v);
+    },
+    toHaveBeenCalledWith: function () {
+      const want = Array.prototype.slice.call(arguments);
+      const ok = !!(actual && actual.mock) && actual.mock.calls.some(function (c) { return eq(c, want); });
+      assert(ok, "toHaveBeenCalledWith", want);
+    },
+  };
+  return api;
+}
+
+function expect(actual) {
+  const api = matchers(actual, false);
+  api.not = matchers(actual, true);
+  return api;
+}
+expect.any = function (ctor) { return { __any: ctor }; };
+
+// ---- jest の代用 -------------------------------------------------------
+let mockFactories = {};
+let mockCache = {};
+
+function makeMockFn(impl) {
+  let body = impl;
+  const fn = function () {
