@@ -200,3 +200,100 @@ let mockCache = {};
 function makeMockFn(impl) {
   let body = impl;
   const fn = function () {
+    const args = Array.prototype.slice.call(arguments);
+    fn.mock.calls.push(args);
+    const out = body ? body.apply(this, args) : undefined;
+    fn.mock.results.push({ type: "return", value: out });
+    return out;
+  };
+  fn._isMockFunction = true;
+  fn.mock = { calls: [], results: [], instances: [] };
+  fn.mockImplementation = function (f) { body = f; return fn; };
+  fn.mockReturnValue = function (v) { body = function () { return v; }; return fn; };
+  fn.mockReturnValueOnce = function (v) {
+    const prev = body;
+    let used = false;
+    body = function () {
+      if (!used) { used = true; return v; }
+      return prev ? prev.apply(this, arguments) : undefined;
+    };
+    return fn;
+  };
+  fn.mockResolvedValue = function (v) { body = function () { return Promise.resolve(v); }; return fn; };
+  fn.mockRejectedValue = function (v) { body = function () { return Promise.reject(v); }; return fn; };
+  fn.mockClear = function () { fn.mock.calls = []; fn.mock.results = []; return fn; };
+  fn.mockReset = function () { body = undefined; return fn.mockClear(); };
+  return fn;
+}
+
+// 自分で読み込んだものだけ忘れる。node_modules とこのランナーは残す。
+function resetModules() {
+  Object.keys(require.cache).forEach(function (key) {
+    if (key.indexOf(ROOT) !== 0) return;
+    if (key.indexOf(path.join(ROOT, "node_modules")) === 0) return;
+    if (key === __filename) return;
+    delete require.cache[key];
+  });
+}
+
+const jest = {
+  fn: makeMockFn,
+  // 依頼の字面で覚える。jest と違い、巻き上げはしない (呼ばれた時点から効く)。
+  // 試験対象を require するのは mock の宣言より後なので、現にこれで足りる。
+  mock: function (request, factory) {
+    mockFactories[request] = factory || function () { return {}; };
+    delete mockCache[request];
+    resetModules();
+  },
+  unmock: function (request) { delete mockFactories[request]; delete mockCache[request]; },
+  resetModules: resetModules,
+  clearAllMocks: function () {},
+  resetAllMocks: function () {},
+  restoreAllMocks: function () {},
+  spyOn: function (obj, name) {
+    const orig = obj[name];
+    const spy = makeMockFn(typeof orig === "function" ? orig.bind(obj) : undefined);
+    spy.mockRestore = function () { obj[name] = orig; return spy; };
+    obj[name] = spy;
+    return spy;
+  },
+  setTimeout: function () {},
+};
+
+// require を横取りして、宣言された依頼を差し替える。
+const realLoad = Module._load;
+Module._load = function (request, parent, isMain) {
+  if (Object.prototype.hasOwnProperty.call(mockFactories, request)) {
+    // 1つの依頼に1つの実体を返す。毎回作り直すと、試験が覗く控えと
+    // 試験対象が書き込む控えが別物になり、黙って undefined が出る
+    // (2026-11-07 に6件これで落ちた)。
+    if (!Object.prototype.hasOwnProperty.call(mockCache, request)) {
+      const made = mockFactories[request];
+      mockCache[request] = typeof made === "function" ? made() : made;
+    }
+    return mockCache[request];
+  }
+  return realLoad.apply(this, arguments);
+};
+
+// ---- 走らせる ----------------------------------------------------------
+function isThenable(v) { return v && typeof v.then === "function"; }
+
+async function callMaybeAsync(fn) {
+  const out = fn();
+  if (isThenable(out)) await out;
+}
+
+const counts = { files: 0, pass: 0, fail: 0, skipped: [] };
+const failures = [];
+
+async function walk(node, trail, chain) {
+  const path2 = node.label ? trail.concat([node.label]) : trail;
+  const stack = chain.concat([node]);
+  for (const fn of node.once) await callMaybeAsync(fn);
+  for (const t of node.tests) {
+    const full = path2.concat([t.label]).join(" > ");
+    try {
+      for (const s of stack) for (const fn of s.before) await callMaybeAsync(fn);
+      await callMaybeAsync(t.fn);
+      for (let i = stack.length - 1; i >= 0; i -= 1) {
