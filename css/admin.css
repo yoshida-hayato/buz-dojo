@@ -73,6 +73,8 @@
   font-weight: 700;
   margin-bottom: 10px;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .report-answers {
   font-size: 13px;
