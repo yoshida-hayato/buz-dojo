@@ -501,10 +501,18 @@
   (1) お問い合わせで4文字だけ書いて送ると出る赤い字は、画面を離れて戻っても
   残る。showContactScreen のリセットが is-success のときだけだからである。
   送信はできるので実害は小さい。直すなら is-success の判定を外す
-  (2) Firebase が読めない状態でお問い合わせ画面を1回開くと、そのセッションの
-  あいだ送信ボタンが死んだままになる。app.js が initContactForm を呼ぶ前に
-  __contactFormInited を立てるので、あとから回復しても聞き手が付かない。
-  直すなら init が成功してから旗を立てる。踏むのは gstatic が読めない人だけ
+  (2) (11/8 00:48便 に読み直して、直さないと決めた) お問い合わせの旗を
+  init の成功より先に立てている件。形は確かに逆だが、直しても誰も救えない。
+  旗が立つのは ensureSiteInquiries の await の後なので、自前の js の読込が
+  失敗した場合は旗が立たずにやり直せる。立ったまま死ぬのは
+  SiteInquiries.isAvailable() が偽のときだけで、その偽は firebase が
+  未定義であることと同じである (FirebaseApp.ready が見ているのは firebase と
+  FIREBASE CONFIG の2つ)。firebase は index.html が素の script タグで
+  読んでいて、再試行の道が1つも無い。つまり「あとから回復する」経路が存在せず、
+  旗を直しても同じセッションでは二度と利用可能にならない。
+  直すのは、firebase の読込を後から再試行する形にする日でよい。
+  同じ形は ensureQuestionReports にも在り (旗は questionReportsInited)、
+  repo 全体でこの2箇所だけである (grep で数えた)
   (3) direction が code2name の科目 (SAP の用語など) では、管理画面の
   問題文の欄に entry の name (つまり利用者が答えるべき答え) が出て、利用者が
   実際に見た字面は 問題コード の欄にしか無い。科目A と科目B では正しい。
