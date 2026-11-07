@@ -311,8 +311,11 @@ function choiceAttemptedCount(stats) {
     any += 1;
     if (valid.has(id)) matched += 1;
   }
-  // 現行マスタと ID が一致しない旧詳細だけのときは件数を落とさない
-  return matched > 0 ? matched : any;
+  // 現行マスタと ID が一致しない旧詳細だけのときは件数を落とさない。
+  // ただし現存の件数は超えない。成績画面は この数 / QUIZ_DATA.length を
+  // そのまま並べるので、超えると 5071 / 4951 の行が出る
+  // (2026-11-08 に本物の rank.js で実測。旧詳細5071件で 102.4%)。
+  return clampToExisting(matched > 0 ? matched : any, QUIZ_DATA.length);
 }
 
 /** 現存問題のうち、記述式で1回以上挑戦した問題数 */
