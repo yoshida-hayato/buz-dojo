@@ -100,12 +100,18 @@ function applySubjectSettingVisibility() {
   if (answerModeSelect) {
     if (!usesInput) {
       answerModeSelect.dataset.neutralized = "1";
+      // 対応科目を離れるときは、利用者が手で選んだ印も落とす。
+      // 残すと、戻ったときに既定へ復元する下の2本がどちらも通らず、
+      // 中立化した 選択式 が居座る。
+      delete answerModeSelect.dataset.userSet;
       answerModeSelect.value = "choice";
-    } else if (answerModeSelect.dataset.neutralized === "1") {
-      answerModeSelect.value = defaultAnswerModeForSubject();
-      delete answerModeSelect.dataset.neutralized;
-    } else if (!answerModeSelect.dataset.userSet) {
-      answerModeSelect.value = defaultAnswerModeForSubject();
+    } else if (answerModeDefaultReady()) {
+      if (answerModeSelect.dataset.neutralized === "1") {
+        answerModeSelect.value = defaultAnswerModeForSubject();
+        delete answerModeSelect.dataset.neutralized;
+      } else if (!answerModeSelect.dataset.userSet) {
+        answerModeSelect.value = defaultAnswerModeForSubject();
+      }
     }
   }
   const directionSelect = document.getElementById("direction-select");
