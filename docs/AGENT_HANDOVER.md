@@ -683,23 +683,11 @@
   足す手順は (1) ガードの FEB_COUNT_WINDOW_OPEN を true にする
   (2) append で足す (1件200行まで) (3) config/pricing.js の questionCount を直す
   (4) 窓を false に戻す、の順である。窓を開けたまま便を終わらせないこと
-- 手元でテストを走らせる道具 (以下は 18:48便 の記録)。18:48便 は npm の
-  レジストリに出られず (proxy が CONNECT に 403)、jest を入れられなかった。describe と test と
-  beforeEach と expect の17種だけを実装した最小のランナーを書いて走らせた。
-  81ファイル839件まで数えられた。要るのは次の5つだけである。
-  (1) describe は入れ子で名前を積むだけ、test は後で走らせる配列に積む
-  (2) expect は toBe toEqual toContain toMatch toBeGreaterThan(OrEqual)
-  toBeLessThan(OrEqual) toBeUndefined toBeDefined toBeNull toBeTruthy
-  toBeFalsy toHaveLength toThrow と not
-  (3) test.each は表を受けて、名前の %s を引数で置き換えて1件ずつ積む形。
-  これが無いと7枚が読み込みで落ちる
-  (4) jest.fn と jest.resetModules と jest.spyOn。jest.mock は未対応でよい
-  (使う7枚を飛ばす。飛ばした7枚で72件ぶん数えられない)
-  (5) 走らせる前に python3 _dev/sync-shared.py を自分で呼ぶこと。
+- テストを走らせる前に python3 _dev/sync-shared.py を自分で呼ぶこと。
   jest の pretest が呼んでいるので、忘れると料金の写しが古いまま通り、
-  並びの食い違いを1件見落とす (18:48便 に実測した)
-  この道具を repo (_dev) に置くことは、まだやっていない。置くなら正規表現を
-  indexOf と split に書き直す必要がある (円記号がパッチの口を通らない)
+  並びの食い違いを1件見落とす (18:48便 に実測した)。npm は使えない
+  (11/7 06:48便 の時点で registry の名前解決が通らない。proxy の設定では
+  なく経路が無い)。だから jest は入らず、scripts/minijest.js で走らせる
 
 - 次の主題の候補 (11/8 00:48便 に書き替えた)。
   (a) 科目B の問題を60問から増やす。100問までは無料のままなので値付けの
