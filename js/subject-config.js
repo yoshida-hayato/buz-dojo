@@ -71,6 +71,17 @@ function subjectUsesDirection() {
   return !!(CATEGORIES && CATEGORIES.tcode);
 }
 
+// 解答方式の既定を、いま計算してよいか。
+// applySubjectConfig は QuizStorage.useSubject より先に走るので
+// (js/screens-subjects.js)、科目を切り替えた直後の1回目は
+// QuizStorage の保存値がまだ前の科目のものである。
+// 2回目は initSettingsUI から正しい保存値で走るので、1回目は見送る。
+function answerModeDefaultReady() {
+  if (typeof QuizStorage === "undefined") return false;
+  if (!CURRENT_SUBJECT || !CURRENT_SUBJECT.id) return false;
+  return QuizStorage.subjectId === CURRENT_SUBJECT.id;
+}
+
 /** 科目に応じて不要セレクトを隠し、ヒント文言を差し替える */
 function applySubjectSettingVisibility() {
   const usesInput = subjectUsesInput();
