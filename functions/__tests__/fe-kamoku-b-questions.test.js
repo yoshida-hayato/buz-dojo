@@ -63,7 +63,7 @@ function declaredKeys(key) {
 // 必ず通る。その間だけ true にし、pricing を直したら false に戻すこと。
 // 窓が開いているあいだ、件数の食い違いは1つも検出されない。
 // 開けたまま便を終わらせないこと (2026-11-07 に、この形で24問を足した)。
-const FEB_COUNT_WINDOW_OPEN = false;
+const FEB_COUNT_WINDOW_OPEN = true;
 
 const QUIZ = loadQuiz();
 
