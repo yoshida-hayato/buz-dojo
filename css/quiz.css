@@ -521,6 +521,15 @@
   white-space: normal;
 }
 
+.code-block:has(.code-line) {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.code-block .code-line {
+  display: block;
+  min-height: 1.55em;
+}
+
 /* 並べ替え */
 .reorder-board {
   margin: 0 0 14px;
