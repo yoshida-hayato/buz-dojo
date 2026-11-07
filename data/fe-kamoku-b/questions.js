@@ -2570,3 +2570,102 @@ QUIZ_DATA.push(
     ),
   }
 );
+
+// ---- 関数と再帰 (追加) -------------------------------------------------
+QUIZ_DATA.push(
+  {
+    id: "feb-sc-fn-014",
+    category: "scenario",
+    module: "関数と再帰",
+    code: "B4-14",
+    priority: 2,
+    name: febText(
+      "配列 a の要素が順に 4、9、2、7 のとき、次の関数の saidai(1, 4) の戻り値と、saidai が呼ばれた回数 (最初の saidai(1, 4) を含む) を順に並べたものはどれか。添字は 1 から始まる。割り算は商の整数部分を返すものとする。",
+      febCode(
+        "〇整数型: saidai(整数型: hidari, 整数型: migi)",
+        "  if (hidari が migi と等しい)",
+        "    return a[hidari]",
+        "  endif",
+        "  整数型: naka ← (hidari + migi) ÷ 2",
+        "  整数型: hidariGawa ← saidai(hidari, naka)",
+        "  整数型: migiGawa ← saidai(naka + 1, migi)",
+        "  if (hidariGawa が migiGawa より大きい)",
+        "    return hidariGawa",
+        "  endif",
+        "  return migiGawa"
+      )
+    ),
+    choices: ["9 と 7", "9 と 4", "9 と 3", "7 と 7"],
+    explanation: febText(
+      "範囲を半分に割り、それぞれの最大を求めて大きいほうを返す。(1,4) が (1,2) と (3,4) に分かれ、さらに1要素まで割れる。",
+      "呼ばれた回数は、要素1つの回が 4 回と、分ける回が 3 回で、合わせて 7 回である。n 個の要素なら 2 × n - 1 回になる。",
+      "答えの 9 は繰返しで1回なめても出る。それでも分割して解く形を覚える価値が在るのは、マージソートや二分探索と同じ骨組みだからである。"
+    ),
+  },
+  {
+    id: "feb-sc-fn-015",
+    category: "scenario",
+    module: "関数と再帰",
+    code: "B4-15",
+    priority: 2,
+    name: febText(
+      "昇順に並んだ配列 a の要素が順に 2、5、8、12、16、23、38 のとき、次の関数の sagasu(23, 1, 7) の戻り値と、sagasu が呼ばれた回数 (最初の呼び出しを含む) を順に並べたものはどれか。添字は 1 から始まる。割り算は商の整数部分を返すものとする。",
+      febCode(
+        "〇整数型: sagasu(整数型: target, 整数型: hidari, 整数型: migi)",
+        "  if (hidari が migi より大きい)",
+        "    return -1",
+        "  endif",
+        "  整数型: naka ← (hidari + migi) ÷ 2",
+        "  if (a[naka] が target と等しい)",
+        "    return naka",
+        "  endif",
+        "  if (a[naka] が target より小さい)",
+        "    return sagasu(target, naka + 1, migi)",
+        "  endif",
+        "  return sagasu(target, hidari, naka - 1)"
+      )
+    ),
+    choices: ["6 と 2", "6 と 3", "23 と 2", "4 と 2"],
+    explanation: febText(
+      "1回目は (1, 7) で中央の添字が 4、a[4] は 12 で 23 より小さいので右半分 (5, 7) を呼ぶ。2回目の中央は添字 6 で、a[6] が 23 と一致するのでそこで返る。",
+      "だから戻り値は位置の 6 で、呼ばれた回数は 2 回である。無い値を探した場合は範囲が空になる回まで入れて最悪 4 回で、要素数が増えても半分ずつしか進まない。",
+      "6 と 3 は見つかった後にもう1回呼ぶと数えた場合、23 と 2 は値を返すと読んだ場合、4 と 2 は1回目の中央の添字を答えた場合である。"
+    ),
+  },
+  {
+    id: "feb-sc-fn-016",
+    category: "scenario",
+    module: "関数と再帰",
+    code: "B4-16",
+    priority: 2,
+    name: febText(
+      "次の2つの手続は、どちらも n を 2 で割りながら余りを出力する。syutsu(13) と syutsu2(13) が出力する数を順に並べたものはどれか。割り算は商の整数部分を返すものとする。",
+      febCode(
+        "〇syutsu(整数型: n)",
+        "  if (n が 0 と等しい)",
+        "    return",
+        "  endif",
+        "  n を 2 で割った余り を出力する",
+        "  syutsu(n ÷ 2)",
+        "",
+        "〇syutsu2(整数型: n)",
+        "  if (n が 0 と等しい)",
+        "    return",
+        "  endif",
+        "  syutsu2(n ÷ 2)",
+        "  n を 2 で割った余り を出力する"
+      )
+    ),
+    choices: [
+      "1 0 1 1 と 1 1 0 1",
+      "1 1 0 1 と 1 0 1 1",
+      "1 0 1 1 と 1 0 1 1",
+      "1 1 0 1 と 1 1 0 1",
+    ],
+    explanation: febText(
+      "13 を 2 で割り続けると、余りは 1、0、1、1 の順に出る。syutsu は出力してから次を呼ぶので、この順にそのまま出る。",
+      "syutsu2 は先に次を呼び、戻ってきてから出力する。だから逆順の 1 1 0 1 になり、これが 13 の2進表記そのものである。",
+      "2進表記を作るには、余りを後ろから並べる必要が在る。呼び出しの前と後のどちらに出力を置くかだけで、並びが逆になる (B4-13 と同じ形)。"
+    ),
+  }
+);
