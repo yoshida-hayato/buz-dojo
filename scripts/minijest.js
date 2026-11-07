@@ -297,3 +297,63 @@ async function walk(node, trail, chain) {
       for (const s of stack) for (const fn of s.before) await callMaybeAsync(fn);
       await callMaybeAsync(t.fn);
       for (let i = stack.length - 1; i >= 0; i -= 1) {
+        for (const fn of stack[i].after) await callMaybeAsync(fn);
+      }
+      counts.pass += 1;
+    } catch (e) {
+      counts.fail += 1;
+      failures.push({ label: full, message: e && e.message ? e.message : String(e) });
+    }
+  }
+  for (const kid of node.kids) await walk(kid, path2, stack);
+  for (const fn of node.onceAfter) await callMaybeAsync(fn);
+}
+
+async function runFile(file) {
+  rootNode = newNode("");
+  cursor = rootNode;
+  mockFactories = {};
+  mockCache = {};
+  resetModules();
+  counts.files += 1;
+  try {
+    require(file);
+  } catch (e) {
+    counts.fail += 1;
+    failures.push({ label: path.basename(file) + " (読み込み)", message: e && e.message ? e.message : String(e) });
+    return;
+  }
+  await walk(rootNode, [path.basename(file)], []);
+}
+
+async function main() {
+  const filter = process.argv[2] || "";
+  // jest の pretest と同じ同期を先に走らせる。忘れると写しが古いまま通る。
+  try {
+    child.execFileSync("python3", [path.join(ROOT, "_dev", "sync-shared.py")], { cwd: ROOT, stdio: "pipe" });
+  } catch (e) {
+    process.stdout.write("sync-shared.py が走らなかった: " + (e && e.message ? e.message : String(e)) + NL);
+  }
+  const files = fs.readdirSync(TEST_DIR).filter(function (f) {
+    return f.length > 8 && f.slice(-8) === ".test.js" && (!filter || f.indexOf(filter) >= 0);
+  }).sort();
+  for (const f of files) await runFile(path.join(TEST_DIR, f));
+  process.stdout.write(NL);
+  failures.forEach(function (f) {
+    process.stdout.write("落ちた: " + f.label + NL + "  " + f.message.split(NL).join(NL + "  ") + NL + NL);
+  });
+  process.stdout.write(counts.files + "ファイル " + (counts.pass + counts.fail) + "件 / 通った " + counts.pass + " / 落ちた " + counts.fail + NL);
+  process.exit(counts.fail > 0 ? 1 : 0);
+}
+
+global["describe"] = describe;
+global["test"] = test;
+global["it"] = test;
+global["expect"] = expect;
+global["jest"] = jest;
+global["beforeEach"] = function (fn) { cursor.before.push(fn); };
+global["afterEach"] = function (fn) { cursor.after.push(fn); };
+global["beforeAll"] = function (fn) { cursor.once.push(fn); };
+global["afterAll"] = function (fn) { cursor.onceAfter.push(fn); };
+
+main();
