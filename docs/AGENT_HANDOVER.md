@@ -535,10 +535,14 @@
   直すなら getQuestionDisplayText を direction で分ける
   (4) firestore.rules の message の上限 2500 と、お問い合わせ側の上限 2500 が
   完全に一致している。rules の size() が文字数なら通るが、バイト数なら
-  日本語の長文が英語の権限エラーで落ちる。questionReports と siteInquiries の
-  rules を見るテストは1件も無い (firestore-tests は entitlements と
-  anonUsers と questionStats の3つだけ)。エミュレータで1本書けば決着する。
-  売上0件の段では踏む人が居ないので、今便は触っていない
+  日本語の長文が英語の権限エラーで落ちる。11/8 06:48便 に調べた:
+  一次情報 (公式の rules の型の頁) は取得の口では読めず、公式の註を写した
+  二次情報では「文字列の size() は文字数」「バイト数は toUtf8().size()」と
+  書いてある。つまり踏まない公算が高いが、一次情報では確かめていない。
+  エミュレータは動かせない (npm のレジストリに出られないので
+  firebase-tools が入らない。java は在る)。決着させるなら社長の手が要る。
+  questionReports と siteInquiries の rules を見るテストは1件も無い
+  (firestore-tests は entitlements と anonUsers と questionStats の3つだけ)
 - 06:48便 が見つけたが直さなかったもの (同じ調査を2度やらないために残す)。
   (1) tcode-browser と syntax-browser の init() は科目を読むたびに呼ばれ、
   bind() が addEventListener を結び直す。入力欄は index.html の固定要素なので
