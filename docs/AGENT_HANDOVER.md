@@ -754,9 +754,27 @@
   歩いた。chapter-progress は無傷。ブラウザ2枚は件数の行を直し、ついでに
   科目の切り替えで前の科目のデータが残る件が出た (こちらが本題だった)。
   ショートカット確認も同じ型だったので3枚とも閉じた
-- 次に歩くのは screens-stats 217 と screens-contact 184 と subject-config 167
-  である。screens-stats には 18:48便 が見つけた未解決 (グラフ5つが1つの try に
-  同居し、1つ投げると残りが黙って空になる) が在るので、そこから入ればよい
+- (18:48便 で閉じた) screens-contact 184 と subject-config 167 の2枚。
+  screens-stats は 12:48便 で閉じている。つまりこの一覧は歩き終わった。
+  残りで名前を見ているテストが薄いのは admin 側だけで、社長しか使わない
+- 18:48便 が歩いて見つけ、直さなかったもの (同じ調査を2度やらないために残す)。
+  (1) お問い合わせで4文字だけ書いて送ると出る赤い字は、画面を離れて戻っても
+  残る。showContactScreen のリセットが is-success のときだけだからである。
+  送信はできるので実害は小さい。直すなら is-success の判定を外す
+  (2) Firebase が読めない状態でお問い合わせ画面を1回開くと、そのセッションの
+  あいだ送信ボタンが死んだままになる。app.js が initContactForm を呼ぶ前に
+  __contactFormInited を立てるので、あとから回復しても聞き手が付かない。
+  直すなら init が成功してから旗を立てる。踏むのは gstatic が読めない人だけ
+  (3) direction が code2name の科目 (SAP の用語など) では、管理画面の
+  問題文の欄に entry の name (つまり利用者が答えるべき答え) が出て、利用者が
+  実際に見た字面は 問題コード の欄にしか無い。科目A と科目B では正しい。
+  直すなら getQuestionDisplayText を direction で分ける
+  (4) firestore.rules の message の上限 2500 と、お問い合わせ側の上限 2500 が
+  完全に一致している。rules の size() が文字数なら通るが、バイト数なら
+  日本語の長文が英語の権限エラーで落ちる。questionReports と siteInquiries の
+  rules を見るテストは1件も無い (firestore-tests は entitlements と
+  anonUsers と questionStats の3つだけ)。エミュレータで1本書けば決着する。
+  売上0件の段では踏む人が居ないので、今便は触っていない
 - 06:48便 が見つけたが直さなかったもの (同じ調査を2度やらないために残す)。
   (1) tcode-browser と syntax-browser の init() は科目を読むたびに呼ばれ、
   bind() が addEventListener を結び直す。入力欄は index.html の固定要素なので
