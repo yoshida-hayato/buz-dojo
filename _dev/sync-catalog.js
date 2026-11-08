@@ -81,6 +81,7 @@ const counts = {
   // (問い合わせ先が無く、config/pricing.js の静的な値が正本である)。
   "fe-kamoku-b": evalSubjectTotal(path.join(ROOT, "data/fe-kamoku-b")),
   "fe-kamoku-a": evalSubjectTotal(path.join(ROOT, "data/fe-kamoku-a")),
+  "ap-kamoku-b": evalSubjectTotal(path.join(ROOT, "data/ap-kamoku-b")),
 };
 
 function writeCatalog(filePath, count) {
