@@ -635,8 +635,8 @@ function finishAnswer(isCorrect, givenText) {
       q.entry && q.entry.module
     );
   }
-  if (CURRENT_SUBJECT && typeof Entitlement !== "undefined") {
-    Entitlement.recordAnswer(CURRENT_SUBJECT.id);
+  if (answerSubject && typeof Entitlement !== "undefined") {
+    Entitlement.recordAnswer(answerSubject);
   }
 
   const qsAfter = QuizStorage.load().q[questionId];
