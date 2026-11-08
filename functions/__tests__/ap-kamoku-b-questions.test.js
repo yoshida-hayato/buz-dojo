@@ -203,3 +203,49 @@ describe("パッチの口を通る字面だけで書かれている", () => {
     expect(SRC.indexOf("String.fromCharCode(10)")).toBeGreaterThan(-1);
   });
 });
+describe("画面に出したときに、事例の囲みが pre になる", () => {
+  const formatRichText = (function () {
+    const sandbox = { String, Array, Object, JSON, Math, RegExp, console };
+    vm.createContext(sandbox);
+    vm.runInContext(read(path.join("js", "dom-util.js")), sandbox, { filename: "dom-util" });
+    return vm.runInContext("formatRichText", sandbox);
+  })();
+
+  const PRE_OPEN = LT + 'pre class="code-block"' + GT;
+
+  test("囲みを持つ問題は pre に変わる", () => {
+    const withFence = QUIZ.filter(function (q) {
+      return q.name.indexOf(BACKTICK + BACKTICK + BACKTICK) >= 0;
+    });
+    expect(withFence.length).toBeGreaterThan(0);
+    const bad = withFence.filter(function (q) {
+      return formatRichText(q.name).indexOf(PRE_OPEN) < 0;
+    }).map(function (q) {
+      return q.id;
+    });
+    expect(bad.join(",")).toBe("");
+  });
+
+  test("描いた後にバッククォートが1つも残らない", () => {
+    const bad = QUIZ.filter(function (q) {
+      return formatRichText(q.name).indexOf(BACKTICK) >= 0 ||
+        formatRichText(q.explanation).indexOf(BACKTICK) >= 0;
+    }).map(function (q) {
+      return q.id;
+    });
+    expect(bad.join(",")).toBe("");
+  });
+});
+
+describe("本試験の形を subject.js に書き残している", () => {
+  // 次にこの科目を触る人が、記述式の試験を択一に置き換えてある前提を
+  // 知らずに「記述の練習になる」と書かないようにするための見張り。
+  test("記述式であることと、置き換えてあることが書いてある", () => {
+    expect(SUBJECT_SRC.indexOf("記述式")).toBeGreaterThan(-1);
+    expect(SUBJECT_SRC.indexOf("択一")).toBeGreaterThan(-1);
+  });
+
+  test("分野の区切りが公式の表記ではないと書いてある", () => {
+    expect(SUBJECT_SRC.indexOf("公式の表記ではない")).toBeGreaterThan(-1);
+  });
+});
