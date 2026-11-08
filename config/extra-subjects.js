@@ -57,6 +57,20 @@
       depthTier: "basic",
       cardEyebrow: "基礎・知識",
     },
+    {
+      id: "ap-kamoku-b",
+      title: "応用情報 科目B",
+      shortTitle: "応用情報B",
+      description:
+        "応用情報技術者試験の科目B (旧 午後試験) を、11分野の事例問題でそろえた自作問題です。本試験は記述式で、ここでは択一にしてあります",
+      path: "subjects/ap-kamoku-b",
+      contentBase: "/data/ap-kamoku-b",
+      contentMaster: "ビジネス道場（自前の問題データ）",
+      enabled: true,
+      accent: "#7c3aed",
+      depthTier: "depth",
+      cardEyebrow: "応用・判断",
+    },
   ];
 
   // 足す側の中身を引数で受ける純粋な形にしてある。
