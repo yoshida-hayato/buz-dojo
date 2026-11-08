@@ -1,5 +1,14 @@
 /** クイズ進行・回答処理 */
 
+// この回答をどの科目の成績に積むかを決める唯一の場所。
+// 問題が自分の科目を持っていればそれを使い、無ければ開いている科目にする。
+// 問題 id の接頭からの当て推量はしない (接頭の表に当たらない id は既定の
+// 科目へ流れるので、1つ食い違うだけでその科目の成績が黙って混ざる)。
+function answerSubjectId(q) {
+  if (q && q.subjectId) return String(q.subjectId);
+  return CURRENT_SUBJECT && CURRENT_SUBJECT.id ? CURRENT_SUBJECT.id : "";
+}
+
 // ===== クイズ進行 =====
 function startQuiz(settings, options = {}) {
   void startQuizAsync(settings, options);
