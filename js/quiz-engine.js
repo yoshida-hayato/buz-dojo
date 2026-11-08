@@ -50,9 +50,14 @@ async function startQuizAsync(settings, options = {}) {
 
   const statsNow = QuizStorage.load();
   quiz = {
-    questions: slots.map((slot) =>
-      buildQuestion(slot.entry, settings, slot.forceInputMode)
-    ),
+    questions: slots.map((slot) => {
+      const built = buildQuestion(slot.entry, settings, slot.forceInputMode);
+      // ミックス出題では、その問題がどの科目のデータから来たかを問題自身に
+      // 持たせる。通常の出題では開いている科目と必ず同じなので、ここは
+      // 本番の動きを1つも変えない。
+      built.subjectId = slot.subjectId || answerSubjectId(null);
+      return built;
+    }),
     idx: 0,
     correctCount: 0,
     wrongs: [],
