@@ -15,8 +15,12 @@
   1,303 から 1,928 バイト (fe-kamoku-a 59,920/46、fe-kamoku-b 134,608/100、
   ap-kamoku-b 92,555/48)。全科目を素で読むと8MB前後になる
 - 大域 QUIZ_DATA を読んでいるのは js の17ファイル・のべ114箇所
-- 答えを記録する入口は js/quiz-engine.js の2行だけである
-  (QuizStorage.record と Entitlement.recordAnswer)
+- 答えを記録する入口は js/quiz-engine.js の4箇所である
+  (2026-11-09 00:48便 に数え直した。12:48便 は2箇所と書いたが足りない)。
+  成績 QuizStorage.record / 日次枠 Entitlement.recordAnswer /
+  章の進み ChapterProgress.recordCorrect / みんなの正答率の statsMeta。
+  読み物レッスン (js/screens-lesson.js) にも章の進みを積む5つめが在るが、
+  レッスンが在るのは ai-ontology-intro だけで、ミックスの経路ではない
 - 有料は7科目 (sap 1980 / biz-career 710 / biz-pm-planning 640 /
   biz-pm-operation 400 / windows-shortcuts 430 / excel-functions 320 /
   ai-ontology-core 290)。無料は6科目
