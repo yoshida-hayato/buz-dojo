@@ -77,3 +77,129 @@ describe("自前の問題データが読める形で在る", () => {
     expect(pricing.priceForSubject(SUBJECT_ID)).toBe(0);
   });
 });
+describe("1問ずつの形がそろっている", () => {
+  test("id が重複せず、全部この科目の接頭で始まる", () => {
+    const seen = {};
+    const bad = [];
+    QUIZ.forEach(function (q) {
+      if (!q || !q.id) bad.push("no-id");
+      else if (seen[q.id]) bad.push("dup:" + q.id);
+      else seen[q.id] = true;
+      if (q && q.id && q.id.indexOf("apb-") !== 0) bad.push("prefix:" + q.id);
+    });
+    expect(bad.join(",")).toBe("");
+  });
+
+  test("id から科目を当てる表が、この科目を指す", () => {
+    const wrong = QUIZ.filter(function (q) {
+      return statsPaths.guessSubjectId(q.id) !== SUBJECT_ID;
+    }).map(function (q) {
+      return q.id;
+    });
+    expect(wrong.join(",")).toBe("");
+  });
+
+  test("肢は4つで、同じ字面が2つ無い", () => {
+    const bad = [];
+    QUIZ.forEach(function (q) {
+      if (!Array.isArray(q.choices) || q.choices.length !== 4) {
+        bad.push("count:" + q.id);
+        return;
+      }
+      const seen = {};
+      q.choices.forEach(function (c) {
+        if (typeof c !== "string" || !c.length) bad.push("empty:" + q.id);
+        if (seen[c]) bad.push("dup:" + q.id);
+        seen[c] = true;
+      });
+    });
+    expect(bad.join(",")).toBe("");
+  });
+
+  test("問題文と解説が空でない", () => {
+    const thin = QUIZ.filter(function (q) {
+      return !q.name || q.name.length < 10 || !q.explanation || q.explanation.length < 20;
+    }).map(function (q) {
+      return q.id;
+    });
+    expect(thin.join(",")).toBe("");
+  });
+
+  test("分類と分野が subject.js の宣言に在る", () => {
+    const cats = declaredKeys("categories");
+    const mods = declaredKeys("modules");
+    expect(cats.length).toBeGreaterThan(0);
+    expect(mods.length).toBeGreaterThan(0);
+    const bad = [];
+    QUIZ.forEach(function (q) {
+      if (cats.indexOf(q.category) < 0) bad.push("cat:" + q.id + ":" + q.category);
+      if (mods.indexOf(q.module) < 0) bad.push("mod:" + q.id + ":" + q.module);
+    });
+    expect(bad.join(",")).toBe("");
+  });
+
+  test("宣言した分野すべてに3問以上在る", () => {
+    // 1問しか無い分野を絞りに出すと、同じ問題が繰り返されるだけになる。
+    const used = {};
+    QUIZ.forEach(function (q) {
+      used[q.module] = (used[q.module] || 0) + 1;
+    });
+    const thin = declaredKeys("modules").filter(function (m) {
+      return (used[m] || 0) < 3;
+    }).map(function (m) {
+      return m + ":" + (used[m] || 0);
+    });
+    expect(thin.join(",")).toBe("");
+  });
+});
+
+describe("肢の長さが正解の合図になっていない", () => {
+  // 2026-11-08 12:48便 に実測して直した。最初に書いた48問は、32問
+  // (67パーセント) で正解が単独でいちばん長い肢だった。これだと
+  // 中身を読まずに「長いものを選ぶ」だけで3分の2に当たるので、
+  // 択一に置き換えた練習の値打ちがほぼ消える。
+  // 直したあとは5問 (10パーセント) である。同じ条件で測った他の科目は
+  // fe-kamoku-b が14問/100問、fe-kamoku-a が10問/46問。
+  // 4肢なので、偏りが無ければ4分の1前後に落ちる。
+  function soleExtreme(pick) {
+    return QUIZ.filter(function (q) {
+      const lens = q.choices.map(function (c) {
+        return c.length;
+      });
+      const rest = lens.slice(1);
+      return pick(lens[0], rest);
+    }).map(function (q) {
+      return q.id;
+    });
+  }
+
+  test("正解が単独でいちばん長い問題が、全体の4分の1未満である", () => {
+    const hits = soleExtreme(function (first, rest) {
+      return first > Math.max.apply(null, rest);
+    });
+    // 直し方: 当たった問題の誤りの肢を1つ、正解より長くなるまで具体化する。
+    //   肢を削って短くするのではなく、誤りの肢を本物らしくするほうを選ぶ
+    //   (誤りの肢が薄いと、それ自体が別の合図になる)。
+    expect(hits.length).toBeLessThan(QUIZ.length / 4);
+  });
+
+  test("正解が単独でいちばん短い問題も、全体の4分の1未満である", () => {
+    const hits = soleExtreme(function (first, rest) {
+      return first < Math.min.apply(null, rest);
+    });
+    expect(hits.length).toBeLessThan(QUIZ.length / 4);
+  });
+});
+
+describe("パッチの口を通る字面だけで書かれている", () => {
+  test("素のバッククォートもアスタリスクも円記号も無い", () => {
+    expect(SRC.indexOf(BACKTICK)).toBe(-1);
+    expect(SRC.indexOf(STAR)).toBe(-1);
+    expect(SRC.indexOf(YEN)).toBe(-1);
+  });
+
+  test("文字コードから組む足場が在る", () => {
+    expect(SRC.indexOf("String.fromCharCode(96, 96, 96)")).toBeGreaterThan(-1);
+    expect(SRC.indexOf("String.fromCharCode(10)")).toBeGreaterThan(-1);
+  });
+});
