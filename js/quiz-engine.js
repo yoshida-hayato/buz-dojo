@@ -716,7 +716,7 @@ function finishAnswer(isCorrect, givenText) {
     $("question-report").classList.add("hidden");
   }
   quiz.lastFeedback = { isCorrect, givenText };
-  showQuestionGlobalRate(questionId, isCorrect, !!q.inputMode);
+  showQuestionGlobalRate(questionId, isCorrect, !!q.inputMode, answerSubjectId(q));
   $("next-btn").textContent = quiz.idx === quiz.questions.length - 1 ? "結果を見る" : "次の問題へ";
 
   const card = $("feedback-card");
