@@ -611,6 +611,7 @@ function finishAnswer(isCorrect, givenText) {
   q._answered = true;
 
   const questionId = q.entry.id;
+  const answerSubject = answerSubjectId(q);
   if (isCorrect) quiz.correctCount += 1;
   else quiz.wrongs.push({ q, given: givenText });
 
