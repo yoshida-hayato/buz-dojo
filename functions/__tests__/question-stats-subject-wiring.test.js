@@ -102,6 +102,21 @@ describe("接頭の表は2枚で、同じ中身である", () => {
     expect(stray.join(",")).toBe("");
   });
 
+  // 逆向き (レジストリ から 表) は、2026-11-08 18:48便 まで見張りが無かった。
+  // 表から ws- の行を外しても全1059件が通ることを実測して足した。
+  // マスタが外に在る10科目は、問題 id を手元で読めないので、
+  // 「その科目の id が本当にその接頭で始まるか」はここでは見られない。
+  // ここで見られるのは「科目に接頭が割り当てられているか」だけである。
+  test("既定でない科目は全部、接頭の表に在る (漏れると成績が既定の科目へ流れる)", () => {
+    const pointed = server.ID_PREFIXES.map((row) => row[1]);
+    const orphan = rows.WIRING_IN_PROGRESS
+      ? []
+      : IDS.filter(function (id) {
+          return id !== server.DEFAULT_SUBJECT_ID && pointed.indexOf(id) < 0;
+        });
+    expect(orphan.join(",")).toBe("");
+  });
+
   test("既定の科目もレジストリに在る", () => {
     expect(IDS).toContain(server.DEFAULT_SUBJECT_ID);
     expect(clientModule(true).DEFAULT_SUBJECT_ID).toBe(server.DEFAULT_SUBJECT_ID);
