@@ -27,6 +27,7 @@ const QuestionStatsPaths = (function () {
     "ai-ontology-core",
     "fe-kamoku-b",
     "fe-kamoku-a",
+    "ap-kamoku-b",
   ];
 
   function listSubjectIds() {
