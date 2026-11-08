@@ -85,9 +85,15 @@ test("模試では1問ごとの解説を出さない。復帰は解説を書く�
 test("成績の記録と習得の判定は、模試の復帰より前に済んでいる", () => {
   const guardAt = ENGINE.indexOf("ExamMode.isExamQuiz()");
   const recordAt = ENGINE.indexOf("QuizStorage.record(questionId");
-  const answerAt = ENGINE.indexOf("Entitlement.recordAnswer(CURRENT_SUBJECT.id)");
+  const answerAt = ENGINE.indexOf("Entitlement.recordAnswer(");
   const masteredAt = ENGINE.indexOf("quiz.sessionNewChoiceMastered.set(");
+  // 下から押さえる4行。indexOf の -1 は何より小さいので、これが無いと
+  // 見ている行が消えても toBeLessThan は通る (2026-11-09 00:48便 に実測。
+  // 日次枠の記録を丸ごと消しても、このファイルの9件は9件とも通った)。
+  expect(guardAt).toBeGreaterThan(-1);
   expect(recordAt).toBeGreaterThan(-1);
+  expect(answerAt).toBeGreaterThan(-1);
+  expect(masteredAt).toBeGreaterThan(-1);
   expect(recordAt).toBeLessThan(guardAt);
   expect(answerAt).toBeLessThan(guardAt);
   expect(masteredAt).toBeLessThan(guardAt);
