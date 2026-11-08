@@ -314,7 +314,7 @@ function paintQuestionGlobalRate(el, label, stat, isInput) {
 }
 
 /** 全ユーザの平均正答率をフィードバックに表示（記述式は選択式と別集計） */
-function showQuestionGlobalRate(questionId, isCorrect, isInput) {
+function showQuestionGlobalRate(questionId, isCorrect, isInput, subjectId) {
   const el = $("question-global-rate");
   if (!el || typeof QuestionStats === "undefined" || !QuestionStats.isAvailable()) {
     if (el) el.classList.add("hidden");
