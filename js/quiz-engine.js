@@ -620,11 +620,12 @@ function finishAnswer(isCorrect, givenText) {
   const wasChoiceMastered = !q.inputMode && QuizStorage.isChoiceMastered(qsBefore);
   const wasInputMastered = !!q.inputMode && (qsBefore?.ik || 0) >= 2;
 
-  QuizStorage.record(questionId, isCorrect, !!q.inputMode);
+  QuizStorage.record(questionId, isCorrect, !!q.inputMode, answerSubject);
   let chapterResult = null;
   if (
     isCorrect &&
     CURRENT_SUBJECT &&
+    answerSubject === CURRENT_SUBJECT.id &&
     typeof ChapterProgress !== "undefined" &&
     ChapterProgress.hasTextbook(CURRENT_SUBJECT)
   ) {
