@@ -57,7 +57,7 @@ function declaredKeys(key) {
 // 何問も足す便は、件数が pricing の questionCount と一致しない中間の状態を
 // 必ず通る。その間だけ true にし、pricing を直したら false に戻すこと。
 // 開けたまま便を終わらせないこと。
-const APB_COUNT_WINDOW_OPEN = true;
+const APB_COUNT_WINDOW_OPEN = false;
 
 const QUIZ = loadQuiz();
 
