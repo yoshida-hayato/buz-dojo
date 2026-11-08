@@ -332,7 +332,7 @@ function showQuestionGlobalRate(questionId, isCorrect, isInput, subjectId) {
 
   // 自分の回答を書き込む前の集計を表示（prefetch済みなら即時）
   const statsMeta = {
-    subjectId: CURRENT_SUBJECT && CURRENT_SUBJECT.id ? CURRENT_SUBJECT.id : "",
+    subjectId: subjectId || answerSubjectId(null),
   };
   const cached = QuestionStats.peek(questionId);
   if (cached) {
