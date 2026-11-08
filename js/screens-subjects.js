@@ -353,6 +353,7 @@ const CATALOG_GROUP_OF = {
   "ai-ontology-core": "system",
   "fe-kamoku-b": "exam",
   "fe-kamoku-a": "exam",
+  "ap-kamoku-b": "exam",
 };
 // 表に無い科目 (新設した直後など) は registry の depthTier から寄せる。
 // 落とさないことを優先する。depthTier はこの既定値のためだけに残っている
