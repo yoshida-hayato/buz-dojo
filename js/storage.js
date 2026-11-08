@@ -263,7 +263,23 @@ const QuizStorage = {
   },
 
   /** 1問分の結果を記録する。isInput=true なら記述式（Tコード入力）としても集計する */
-  record(questionId, isCorrect, isInput) {
+  record(questionId, isCorrect, isInput, expectedSubjectId) {
+    // ミックス出題で、別の科目の問題がこの控えへ流れ込むのを止める。
+    // 控えは開いている1科目ぶんしか無い (useSubject が差し替える) ので、
+    // 宛先が違う答えは黙って積まずに捨てて、理由を残す。
+    // 第2段で本当の書き分けを足すまでの土台である。
+    if (
+      expectedSubjectId &&
+      this.subjectId &&
+      String(expectedSubjectId) !== String(this.subjectId)
+    ) {
+      console.warn("成績の書き先が開いている科目と違うので記録しません", {
+        expected: String(expectedSubjectId),
+        open: String(this.subjectId),
+        questionId,
+      });
+      return this.stats;
+    }
     const s = this.stats;
     const qsBefore = s.q[questionId] ? { ...s.q[questionId] } : null;
     const wasChoiceMastered = qsBefore ? this.isChoiceMastered(qsBefore) : false;
