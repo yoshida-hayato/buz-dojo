@@ -74,7 +74,11 @@ describe("自前の問題データが読める形で在る", () => {
 
   test("問題数が無料の上限を超えていない (超える日は値付けを決め直す)", () => {
     expect(QUIZ.length).toBeLessThanOrEqual(100);
-    expect(pricing.priceForSubject(SUBJECT_ID)).toBe(0);
+    // priceForSubject は (科目id, 問題数) の2引数である。問題数を省くと
+    //   中で priceForQuestionCount(undefined) になり、何を渡しても 0 が返る。
+    //   つまり1引数で呼ぶ限り、この約束は何も確かめていない
+    //   (2026-11-08 12:48便 に実測して気づいた)。件数を渡す側を使う。
+    expect(pricing.getSubjectPriceYen(SUBJECT_ID)).toBe(0);
   });
 });
 describe("1問ずつの形がそろっている", () => {
