@@ -60,6 +60,7 @@ const QuestionStatsPaths = (function () {
     ["ao-", "ai-ontology-core"],
     ["feb-", "fe-kamoku-b"],
     ["fea-", "fe-kamoku-a"],
+    ["apb-", "ap-kamoku-b"],
   ];
 
   const DEFAULT_SUBJECT_ID = "sap";
