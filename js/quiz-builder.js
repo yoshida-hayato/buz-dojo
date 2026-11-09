@@ -59,11 +59,15 @@ function normalizeCode(s) {
 
 /** Tコード問題の誤答解説用インデックス（クイズ問題 + Tコード一覧） */
 let tcodeIndex = null;
+// 索引をどの母集団から作ったか。母集団が差し替わったら作り直す。
+let tcodeIndexSrc = null;
 
-function ensureTcodeIndex() {
-  if (tcodeIndex) return;
+function ensureTcodeIndex(poolSrc) {
+  const srcPool = entryPool(poolSrc);
+  if (tcodeIndex && tcodeIndexSrc === srcPool) return;
+  tcodeIndexSrc = srcPool;
   tcodeIndex = { byCode: new Map(), byName: new Map(), refByCode: new Map() };
-  for (const e of QUIZ_DATA) {
+  for (const e of srcPool) {
     if (!e || e.category !== "tcode" || !e.code) continue;
     try {
       tcodeIndex.byCode.set(normalizeCode(e.code), e);
