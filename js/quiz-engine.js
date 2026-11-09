@@ -51,7 +51,12 @@ async function startQuizAsync(settings, options = {}) {
   const statsNow = QuizStorage.load();
   quiz = {
     questions: slots.map((slot) => {
-      const built = buildQuestion(slot.entry, settings, slot.forceInputMode);
+      const built = buildQuestion(
+        slot.entry,
+        settings,
+        slot.forceInputMode,
+        slot.pool
+      );
       // ミックス出題では、その問題がどの科目のデータから来たかを問題自身に
       // 持たせる。通常の出題では開いている科目と必ず同じなので、ここは
       // 本番の動きを1つも変えない。
