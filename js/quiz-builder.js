@@ -106,7 +106,7 @@ function firstSentence(text) {
  */
 function tcodeWrongChoiceNote(q, givenText) {
   if (!givenText || q.entry.category !== "tcode") return "";
-  ensureTcodeIndex();
+  ensureTcodeIndex(q.pool);
 
   if (q.direction === "code2name") {
     const wrongEntry = tcodeIndex.byName.get(givenText);
