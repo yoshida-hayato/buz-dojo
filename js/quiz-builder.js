@@ -541,7 +541,7 @@ function buildQuestion(entry, settings, forceInputMode, poolSrc) {
   };
 
   // 紛らわしい順に並べる（毎回同じ組み合わせにならないよう少しだけ乱数を混ぜる）
-  const candidates = QUIZ_DATA
+  const candidates = srcPool
     .filter((q) => q.category === entry.category && q.id !== entry.id && !distractorExcluded(q))
     .map((c) => ({ c, s: similarityScore(entry, c) + Math.random() * 1.5 }))
     .sort((x, y) => y.s - x.s)
