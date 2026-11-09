@@ -248,10 +248,10 @@ function buildFeedbackExplanation(q, isCorrect, givenText) {
  */
 function quizEntryWrongChoiceNote(q, givenText) {
   if (!givenText || q.entry.category === "tcode") return "";
-  if (typeof QUIZ_DATA === "undefined") return "";
-  let hit = QUIZ_DATA.find((e) => e && e.id !== q.entry.id && e.code === givenText);
+  const srcPool = entryPool(q.pool);
+  let hit = srcPool.find((e) => e && e.id !== q.entry.id && e.code === givenText);
   if (!hit && (q.direction === "code2name" || q.direction === "judgment")) {
-    hit = QUIZ_DATA.find((e) => e && e.id !== q.entry.id && e.name === givenText);
+    hit = srcPool.find((e) => e && e.id !== q.entry.id && e.name === givenText);
   }
   if (!hit) return "";
   if (q.entry.category === "shortcut" && hit.category === "shortcut" && hit.module !== q.entry.module) {
