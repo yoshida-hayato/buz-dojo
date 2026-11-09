@@ -61,6 +61,9 @@ async function startQuizAsync(settings, options = {}) {
       // 持たせる。通常の出題では開いている科目と必ず同じなので、ここは
       // 本番の動きを1つも変えない。
       built.subjectId = slot.subjectId || answerSubjectId(null);
+      // 誤答と解説を引く母集団も、その問題の科目のものを持ち回す。
+      // 渡されていなければ entryPool が開いている科目の QUIZ_DATA に落ちる。
+      if (Array.isArray(slot.pool)) built.pool = slot.pool;
       return built;
     }),
     idx: 0,
