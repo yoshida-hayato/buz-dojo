@@ -559,7 +559,7 @@ function buildQuestion(entry, settings, forceInputMode, poolSrc) {
     const forceIds = Array.isArray(entry.distractorForceIds) ? entry.distractorForceIds : [];
     for (const fid of forceIds) {
       if (distractors.length >= slots - 1) break;
-      const fc = QUIZ_DATA.find((q) => q && q.id === fid && q.category === entry.category);
+      const fc = srcPool.find((q) => q && q.id === fid && q.category === entry.category);
       if (!fc || used.has(fc[field])) continue;
       used.add(fc[field]);
       distractors.push(fc[field]);
