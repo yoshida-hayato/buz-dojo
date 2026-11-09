@@ -504,7 +504,7 @@ function buildQuestion(entry, settings, forceInputMode, poolSrc) {
 
   // ショートカット「機能→キー」: Ctrl / Shift / F11 のように1トークンずつ選ぶ
   if (entry.category === "shortcut" && direction === "name2code" && !inputMode) {
-    const partDefs = buildShortcutPartDefs(entry);
+    const partDefs = buildShortcutPartDefs(entry, srcPool);
     if (partDefs && partDefs.length) {
       const parts = partDefs.map((p) => {
         const choices = shuffle([p.answer, ...p.wrongs]);
