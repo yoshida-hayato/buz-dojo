@@ -369,7 +369,8 @@ function buildShortcutPartDefs(entry, poolSrc) {
  * 用語・ショートカットは表記ゆれで正誤判定が不安定になるため、選択式のまま出題する。
  * ショートカットの「機能→キー」は略語と同様、トークンを1つずつ選ばせる。
  */
-function buildQuestion(entry, settings, forceInputMode) {
+function buildQuestion(entry, settings, forceInputMode, poolSrc) {
+  const srcPool = entryPool(poolSrc);
   // parts 形式: 略称は正式名称を1語ずつ、ショートカットはキーを1つずつ選ぶ
   if (entry.parts) {
     const isShortcutParts = entry.category === "shortcut";
