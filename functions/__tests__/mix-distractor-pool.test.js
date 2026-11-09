@@ -195,3 +195,96 @@ test("誤答の解説も、QUIZ_DATA ではなく問題が持つ母集団から�
   expect(ctx.quizEntryWrongChoiceNote(withoutPool, "用語B")).toBe("");
   expect(sap.length).toBe(7);
 });
+
+test("Tコードの索引は、母集団が差し替わったら作り直す", () => {
+  const ctx = loadBuilder(realApbRows());
+  const poolA = [
+    { id: "t-AA01", category: "tcode", code: "AA01", name: "甲の処理", explanation: "甲である。続き" },
+    { id: "t-AA02", category: "tcode", code: "AA02", name: "乙の処理", explanation: "乙である。続き" },
+  ];
+  const poolB = [
+    { id: "t-BB01", category: "tcode", code: "BB01", name: "丙の処理", explanation: "丙である。続き" },
+    { id: "t-BB02", category: "tcode", code: "BB02", name: "丁の処理", explanation: "丁である。続き" },
+  ];
+  const qA = { entry: poolA[0], direction: "name2code", pool: poolA };
+  const qB = { entry: poolB[0], direction: "name2code", pool: poolB };
+  const noteA = ctx.tcodeWrongChoiceNote(qA, "AA02");
+  expect(noteA.indexOf("乙である。")).toBeGreaterThan(-1);
+  // ここで索引を作り直さないと、poolB の BB02 を引けない (古い実装はこれで落ちる)
+  const noteB = ctx.tcodeWrongChoiceNote(qB, "BB02");
+  expect(noteB.indexOf("丁である。")).toBeGreaterThan(-1);
+  // 戻っても引ける
+  const noteA2 = ctx.tcodeWrongChoiceNote(qA, "AA02");
+  expect(noteA2.indexOf("乙である。")).toBeGreaterThan(-1);
+});
+
+test("quiz-engine は母集団を buildQuestion に渡し、問題にも持たせる", () => {
+  const callAt = ENGINE.indexOf("buildQuestion(");
+  expect(callAt).toBeGreaterThan(-1);
+  const callEnd = ENGINE.indexOf(");", callAt);
+  expect(callEnd).toBeGreaterThan(callAt);
+  const call = ENGINE.slice(callAt, callEnd);
+  // 第4引数が母集団であること。字面ではなく、呼び出しの中に在ることを見る
+  expect(call.indexOf("slot.pool")).toBeGreaterThan(-1);
+  expect(call.indexOf("slot.forceInputMode")).toBeGreaterThan(-1);
+  expect(call.indexOf("slot.forceInputMode")).toBeLessThan(call.indexOf("slot.pool"));
+  // 組んだ問題にも持たせること (解説の経路が q.pool を見る)。
+  // 字面が在ることではなく、その1行を実際に走らせて効いているかを見る
+  // (失敗の型7。1度目の壊し方の確かめで、ここを if (false) にしても
+  // 字面の検査は素通りした)。
+  const assignAt = ENGINE.indexOf("built.pool = slot.pool");
+  expect(assignAt).toBeGreaterThan(-1);
+  expect(assignAt).toBeGreaterThan(callAt);
+  const rows = sapRows();
+  expect(runPoolAssign({ pool: rows })).toBe(rows);
+  expect(runPoolAssign({})).toBe(undefined);
+});
+
+test("ショートカットのトークンも、渡した母集団から集める", () => {
+  // parts を持たないショートカットの問題は buildShortcutPartDefs を通る。
+  // 母集団が別科目だと、その科目のキーが1つも混ざらない。
+  const ctx = loadBuilder(realApbRows());
+  const pool = [
+    { id: "ws-x-001", category: "shortcut", module: "Excel", code: "Ctrl+Shift+ZZZ", name: "甲", priority: 1 },
+    { id: "ws-x-002", category: "shortcut", module: "Excel", code: "Ctrl+YYY", name: "乙", priority: 1 },
+    { id: "ws-x-003", category: "shortcut", module: "Excel", code: "Alt+XXX", name: "丙", priority: 1 },
+  ];
+  const q = ctx.buildQuestion(pool[0], SETTINGS, false, pool);
+  expect(q.isShortcutParts).toBe(true);
+  const all = [];
+  for (const part of q.parts) {
+    for (const c of part.choices) all.push(c);
+  }
+  // 母集団にしか無いトークンが誤答候補に入っていること
+  const fromPool = ["YYY", "XXX"].filter((t) => all.indexOf(t) > -1);
+  expect(fromPool.length).toBeGreaterThan(0);
+  // 母集団を渡さないと、ap-kamoku-b には shortcut が1件も無いので入らない
+  const bare = ctx.buildQuestion(pool[0], SETTINGS, false);
+  const bareAll = [];
+  for (const part of bare.parts) {
+    for (const c of part.choices) bareAll.push(c);
+  }
+  expect(["YYY", "XXX"].filter((t) => bareAll.indexOf(t) > -1).length).toBe(0);
+});
+
+test("quiz-builder の中で QUIZ_DATA を読むのは entryPool だけである", () => {
+  const lines = BUILDER.split(NL);
+  const fnHead = "function entryPool(src) {";
+  let inFn = false;
+  const leftovers = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.indexOf(fnHead) === 0) {
+      inFn = true;
+      continue;
+    }
+    if (inFn) {
+      if (trimmed === "}") inFn = false;
+      continue;
+    }
+    if (trimmed.indexOf("//") === 0) continue;
+    if (trimmed.indexOf("QUIZ_DATA") > -1) leftovers.push(trimmed);
+  }
+  expect(inFn).toBe(false);
+  expect(leftovers).toEqual([]);
+});
