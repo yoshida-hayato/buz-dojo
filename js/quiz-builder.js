@@ -326,9 +326,9 @@ function splitShortcutTokens(code) {
 }
 
 /** 全ショートカット問題からトークン候補を集める（誤答用） */
-function shortcutTokenPool() {
+function shortcutTokenPool(poolSrc) {
   const tokens = new Set();
-  for (const q of QUIZ_DATA) {
+  for (const q of entryPool(poolSrc)) {
     if (q.category !== "shortcut") continue;
     for (const t of splitShortcutTokens(q.code)) tokens.add(t);
   }
