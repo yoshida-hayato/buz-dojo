@@ -344,10 +344,10 @@ function shortcutTokenPool(poolSrc) {
  * ショートカット1問分の parts（略語問題と同じ形式）を自動生成する。
  * 各トークンについて、他ショートカットのトークンから誤答5個を取る。
  */
-function buildShortcutPartDefs(entry) {
+function buildShortcutPartDefs(entry, poolSrc) {
   const answers = splitShortcutTokens(entry.code);
   if (!answers.length) return null;
-  const pool = shortcutTokenPool();
+  const pool = shortcutTokenPool(poolSrc);
   return answers.map((answer) => {
     const wrongs = shuffle(pool.filter((t) => t !== answer)).slice(0, 5);
     while (wrongs.length < 5) {
