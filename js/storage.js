@@ -410,9 +410,7 @@ const QuizStorage = {
 
   /** 記述式で習得済み（記述式だけ2回以上連続正解中）の問題ID */
   inputMasteredIds() {
-    return Object.entries(this.stats.q)
-      .filter(([, s]) => (s.ik || 0) >= 2)
-      .map(([id]) => id);
+    return [...this._selectionSetsFrom(this.stats.q).inputMastered];
   },
 
   /**
