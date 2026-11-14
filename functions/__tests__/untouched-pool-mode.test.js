@@ -132,6 +132,7 @@ describe("出題対象: まだ一度も解いていない問題のみ", () => {
         wrongIds: () => [],
         answeredIds: () => ["q1", "q2", "q3", "q4", "q5"],
       },
+      buildPoolFrom: BUILD_POOL_FROM,
       QUIZ_DATA: DATA,
       MODULE_FILTERABLE: new Set(["term"]),
       INPUT_CATEGORIES: new Set(),
