@@ -303,6 +303,7 @@ window.AdminQuestionStatsShared = (function () {
   }
 
   return {
+    looksLikeHtmlResponse,
     subjectTitle,
     guessSubjectId,
     fetchAllQuestionStats,
