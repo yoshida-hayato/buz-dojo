@@ -40,7 +40,7 @@ const LEDGER = [
   {
     file: "subject-loader.js",
     count: 3,
-    why: "evalDataScript (門は呼び元の loadDataScript) と loadQuizBundle (門は fetchText) と loadSubjectSummary (呼び元0件の死んだ関数。画面から呼ぶ日が来たら門を通すこと)",
+    why: "evalDataScript (門は呼び元2つ。loadDataScript と、2026-11-15 に足した fetchSubjectDefinition。後者の効きは mix-subject-data-gate が見ている) と fetchQuizBundle (門は fetchText) と loadSubjectSummary (呼び元0件の死んだ関数。画面から呼ぶ日が来たら門を通すこと。ミックスは fetchSubjectDefinition を通るので、この道は生きていない)",
   },
 ];
 
