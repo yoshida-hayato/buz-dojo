@@ -96,21 +96,20 @@ describe("壊れた入力で落ちない", () => {
 });
 
 describe("この埋めが要る理由 (出題プールの出どころ)", () => {
-  // ミックス出題 第2段 の途中。buildPool を、集合を受ける buildPoolFrom と
-  // 大域を集める薄い包みに分ける波の途中である。分ける前は
-  // QUIZ_DATA.filter( が、分けた後は entries.filter( が本体に在る。
-  // 最後の波で後者だけに締め直すこと (緩めたまま終わらせない)。
+  // 出題プールは buildPoolFrom が渡された集合を絞って作り、QUIZ_DATA を
+  // 渡すのは薄い包み (buildPool) の1箇所だけである。だから judgment /
+  // order / contrast の問題は、subject-loader.js が QUIZ_DATA に混ぜ戻さない
+  // かぎり1問も出ない。その混ぜ戻しが在ることは下の1件が見ている。
   test("出題プールの出どころが QUIZ_DATA の1本だけである", () => {
     const src = fs.readFileSync(SETTINGS_SRC, "utf8");
-    const from = src.indexOf("function buildPool");
+    const from = src.indexOf("function buildPoolFrom(");
     const to = src.indexOf("function updatePoolCount(");
     expect(from).toBeGreaterThan(0);
     const body = src.slice(from, to);
-    // 出どころが QUIZ_DATA であること。絞る相手は、分ける前後で名前が変わる
-    expect(body).toContain("QUIZ_DATA");
-    const filtersOne =
-      body.indexOf("QUIZ_DATA.filter(") !== -1 || body.indexOf("entries.filter(") !== -1;
-    expect(filtersOne).toBe(true);
+    // 絞る相手は渡された集合である
+    expect(body).toContain("entries.filter(");
+    // QUIZ_DATA を渡す所がちょうど1箇所である
+    expect(body.split("entries: QUIZ_DATA").length - 1).toBe(1);
     expect(body).not.toContain("JUDGMENT_DATA");
     expect(body).not.toContain("ORDER_DATA");
     expect(body).not.toContain("CONTRAST_DATA");
