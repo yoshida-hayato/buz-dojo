@@ -1111,7 +1111,59 @@ const QuizStorage = {
    * - 小さい側でも数百超で一致ならコピー疑い（完全一致パスでカバー）
    * - 規模が大きい方をソース、小さい側を汚染
    */
-  _pairIndicatesCopyPollution(candidateId, candidate, sourceId, source) {
+  // 他科目の成績と、問題 id が1件も重なっていないかを数える。
+  // 読めないとき (q が無い・標本が小さい) は null を返す。null は「否定できない」で
+  // あって「重なっていない」ではない。ここを混ぜると、読めないだけで検出が無効になる。
+  _questionIdOverlap(stats, peerId, peersById) {
+    const mineQ = stats && stats.q;
+    if (!mineQ || typeof mineQ !== "object") return null;
+    const mineKeys = Object.keys(mineQ);
+    if (mineKeys.length < 20) return null;
+    let peerQ = null;
+    const given = peersById && peersById[peerId];
+    if (given && given.q && typeof given.q === "object") peerQ = given.q;
+    if (!peerQ) {
+      const key = this._knownSubjectStorageKey(peerId);
+      const full = key ? this._loadFromKey(key) : null;
+      if (full && full.q && typeof full.q === "object") peerQ = full.q;
+    }
+    if (!peerQ) return null;
+    const peerKeys = Object.keys(peerQ);
+    if (peerKeys.length < 20) return null;
+    const mineSet = new Set(mineKeys);
+    let shared = 0;
+    for (const k of peerKeys) {
+      if (mineSet.has(k)) shared += 1;
+    }
+    return { shared, mine: mineKeys.length, peer: peerKeys.length };
+  },
+
+  // 自分の累計が、自分の q で説明できるか。
+  // 写しの事故は累計だけが膨らみ、q は自分のぶんしか無い (_countersInflatedVsQ が
+  // 見ているのと同じ形)。だから「q で説明できる」は、累計が借り物でない証拠になる。
+  _countersExplainedByOwnQ(stats) {
+    const q = stats && stats.q;
+    if (!q || typeof q !== "object") return false;
+    if (Object.keys(q).length === 0) return false;
+    const fromQ = this._countersFromQ(q, null);
+    if (fromQ.answered <= 0) return false;
+    if ((Number(stats.answered) || 0) > fromQ.answered) return false;
+    if ((Number(stats.correct) || 0) > fromQ.correct) return false;
+    return true;
+  },
+
+  // 問題 id が1件も重ならず、かつ自分の累計が自分の q で説明できるなら写しではない。
+  // ミックス出題で2科目が並んで伸びた形がこれである (実測は
+  // mix-stats-pollution-risk に在る)。どちらかが読めない・膨らんでいるときは
+  // 否定しない。つまり検出は従来どおり効く。
+  _questionIdsProveNotCopy(stats, peerId, peersById) {
+    const overlap = this._questionIdOverlap(stats, peerId, peersById);
+    if (!overlap) return false;
+    if (overlap.shared > 0) return false;
+    return this._countersExplainedByOwnQ(stats);
+  },
+
+  _pairIndicatesCopyPollution(candidateId, candidate, sourceId, source, peersById) {
     if (!candidateId || !sourceId || candidateId === sourceId || !candidate || !source) {
       return false;
     }
