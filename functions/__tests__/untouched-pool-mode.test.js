@@ -21,6 +21,20 @@ const STORAGE = fs.readFileSync(path.join(ROOT, "js", "storage.js"), "utf8");
 
 const FN = "function buildPool(settings) {";
 
+// buildPool は、集合を受ける buildPoolFrom に組むのを任せている
+// (ミックス出題 第2段)。切り出して走らせるので、ctx に一緒に入れる。
+// 分ける前の形では見つからず undefined になり、そのときは使われない。
+// 円記号がパッチの口を通らないので、改行は符号から組む
+const NLX = String.fromCharCode(10);
+const PURE_FN = "function buildPoolFrom(settings, source) {";
+function loadPure() {
+  const j = UI.indexOf(PURE_FN);
+  if (j < 0) return undefined;
+  const src = UI.slice(j, UI.indexOf(NLX + "}" + NLX, j) + 3);
+  return new Function(src + NLX + ";return buildPoolFrom;")();
+}
+const BUILD_POOL_FROM = loadPure();
+
 // q1 未挑戦 / q2 選択式で挑戦して不正解 / q3 2回連続正解 (習得) /
 // q4 記述式だけ挑戦 / q5 未挑戦
 const STATS = {
