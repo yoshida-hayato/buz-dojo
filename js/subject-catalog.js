@@ -67,6 +67,15 @@ const SubjectCatalog = (function () {
       const res = await fetch(url, { cache: "no-store", mode: "cors" });
       if (!res.ok) throw new Error("catalog fetch failed");
       const text = await res.text();
+      // 自前の問題データを持つ科目には catalog.js が無く、rewrite が 200 で頁を
+      // 返す。評価すると SyntaxError になるので、無いものとして件数に落とす。
+      if (
+        typeof SubjectLoader !== "undefined" &&
+        SubjectLoader.looksLikeHtmlResponse &&
+        SubjectLoader.looksLikeHtmlResponse(text)
+      ) {
+        return fallbackCount(subjectId);
+      }
       const count = new Function(
         text + "\n;return typeof SUBJECT_CONTENT_CATALOG!=='undefined'?SUBJECT_CONTENT_CATALOG:null;"
       )();
