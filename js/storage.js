@@ -1236,7 +1236,7 @@ const QuizStorage = {
 
     const peers = this._collectPeerSummaries(subjectId, peersById);
     for (const [peerId, peer] of Object.entries(peers)) {
-      if (this._pairIndicatesCopyPollution(subjectId, stats, peerId, peer)) {
+      if (this._pairIndicatesCopyPollution(subjectId, stats, peerId, peer, peersById)) {
         return true;
       }
     }
