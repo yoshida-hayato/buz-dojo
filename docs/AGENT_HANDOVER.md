@@ -106,6 +106,16 @@
   外すと現に結果が変わる。見張りは4枚17件で、13通りとも落ちる
 - 取りこぼしの grep。QUIZ_DATA に代入する所は repo 全体で2箇所
   (clearGlobals と包み)、loadSubject の呼び元は1件だけである
+- (主題3) 出題の絞りに要る集合を、開いていない科目からも読めるようにした。
+  4つの一覧 (wrongIds / answeredIds / choiceMasteredIds / inputMasteredIds)
+  は this.stats.q しか見ないので、開いている1科目ぶんしか作れなかった。
+  規則の正本を QuizStorage._selectionSetsFrom 1つに寄せ、端末の控えから
+  他科目の q を読む selectionSetsFor(subjectId) を足した。4つの一覧は
+  その包みになり、stats.q を直に走査する所は repo 全体で0件になった
+- 測った数字。40通りの成績 (欄が欠けた形を含む) で、4つの一覧とも直す前と
+  顔ぶれが1件も違わない。返る4つの名前は buildPoolFrom が読む欄と同じなので、
+  画面はこれをそのまま科目ごとの集合に渡せる。10通りに壊して10通りとも落ち、
+  直す前の storage.js では7件とも落ちる (mix-peer-selection-sets)
 
 - 18:48便 (11/14) は11件出し、50件の枠に入って全部通った。主題は
   成績の混入検出で、ミックスで2科目が並んで伸びると片方の成績が空に戻る
