@@ -306,7 +306,11 @@ const SubjectLoader = (function () {
       // ?v= 付きなら force-cache（マスタ更新時は version が変わる）
       const res = await fetch(withBust(src), { cache: "force-cache", mode: "cors" });
       if (!res.ok) throw new Error("fetch failed: " + src);
-      return res.text();
+      const text = await res.text();
+      if (looksLikeHtmlResponse(text)) {
+        throw new Error("JS ではなく頁が返りました: " + src);
+      }
+      return text;
     }
 
     async function fetchOptional(src, fallback) {
