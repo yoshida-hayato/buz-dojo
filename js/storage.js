@@ -395,9 +395,7 @@ const QuizStorage = {
   // なので、一度も見ていない問題と、何度も解いたが詰まっている問題が混ざる。
   // 4,951問の SAP のような科目で、新しい地面だけを踏みたいときに要る。
   answeredIds() {
-    return Object.entries(this.stats.q)
-      .filter(([, s]) => (s.a || 0) > 0 || (s.ia || 0) > 0)
-      .map(([id]) => id);
+    return [...this._selectionSetsFrom(this.stats.q).answeredIds];
   },
 
   /** 習得済み（選択式で2回以上連続正解中）の問題ID ※段位用 */
