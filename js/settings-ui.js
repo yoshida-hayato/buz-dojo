@@ -444,75 +444,19 @@ function buildPoolFrom(settings, source) {
   return slots;
 }
 
+// 開いている1科目ぶんの集合を大域と DOM から集めて渡す。
+// ミックスの画面は、ここを通さず buildPoolFrom を科目ごとに呼ぶ。
 function buildPool(settings) {
-  let includeSet = null;
-  const choiceMastered = new Set(QuizStorage.choiceMasteredIds());
-  const inputMastered = new Set(QuizStorage.inputMasteredIds());
-  const mode = settings.answerMode || "choice";
-
-  const onlyIdsMode = Array.isArray(settings.onlyIds) && settings.onlyIds.length > 0;
-  if (onlyIdsMode) {
-    // 特定 ID だけ出す（結果画面の「一番つまずいた問題」復習など）
-    includeSet = new Set(settings.onlyIds);
-  } else if (settings.poolMode === "wrong") {
-    includeSet = new Set(QuizStorage.wrongIds());
-  }
-
-  // まだ一度も解いていない問題のみ。除外の集合なので includeSet とは別に持つ。
-  const excludeSet =
-    !onlyIdsMode && settings.poolMode === "untouched"
-      ? new Set(QuizStorage.answeredIds())
-      : null;
-
-  // モジュールチップが無い／未生成のときは絞らない（空配列で全問除外になるのを防ぐ）
-  const moduleInputs = document.querySelectorAll('input[name="module"]');
-  const hasModuleFilter =
-    !onlyIdsMode &&
-    moduleInputs.length > 0 &&
-    settings.categories.some((c) => MODULE_FILTERABLE.has(c));
-
-  const base = QUIZ_DATA.filter((q) => {
-    if (includeSet && !includeSet.has(q.id)) return false;
-    if (excludeSet && excludeSet.has(q.id)) return false;
-    if (onlyIdsMode) return true;
-    if (!settings.categories.includes(q.category)) return false;
-    if (!settings.priorities.includes(q.priority)) return false;
-    if (
-      hasModuleFilter &&
-      MODULE_FILTERABLE.has(q.category) &&
-      settings.modules !== "all" &&
-      !settings.modules.includes(q.module)
-    ) {
-      return false;
-    }
-    return true;
+  return buildPoolFrom(settings, {
+    entries: QUIZ_DATA,
+    choiceMastered: new Set(QuizStorage.choiceMasteredIds()),
+    inputMastered: new Set(QuizStorage.inputMasteredIds()),
+    wrongIds: new Set(QuizStorage.wrongIds()),
+    answeredIds: new Set(QuizStorage.answeredIds()),
+    inputCategories: INPUT_CATEGORIES,
+    moduleFilterable: MODULE_FILTERABLE,
+    hasModuleInputs: document.querySelectorAll('input[name="module"]').length > 0,
   });
-
-  const slots = [];
-  for (const q of base) {
-    const isInputCat = INPUT_CATEGORIES.has(q.category);
-    if (mode === "both" && isInputCat) {
-      const choiceOk =
-        settings.poolMode !== "unmastered" || !choiceMastered.has(q.id);
-      const inputOk =
-        settings.poolMode !== "unmastered" || !inputMastered.has(q.id);
-      if (choiceOk) slots.push({ entry: q, forceInputMode: false });
-      if (inputOk) slots.push({ entry: q, forceInputMode: true });
-      continue;
-    }
-
-    // 選択式のみ / 記述式のみ / 両方でも非入力カテゴリ
-    if (settings.poolMode === "unmastered") {
-      if (mode === "input" && isInputCat) {
-        if (inputMastered.has(q.id)) continue;
-      } else if (choiceMastered.has(q.id)) {
-        continue;
-      }
-    }
-    const forceInputMode = mode === "input" && isInputCat;
-    slots.push({ entry: q, forceInputMode });
-  }
-  return slots;
 }
 
 function updatePoolCount() {
