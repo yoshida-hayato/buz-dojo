@@ -112,10 +112,12 @@ Tコードの索引、用語の誤答解説、ショートカットのトーク�
 
 残っている側 (次に取る人へ)。
 
-- buildPool (js/settings-ui.js) は大域の QUIZ_DATA を絞り、習得済みと
-  間違えた問題と解いた問題を QuizStorage の「開いている1科目」から取る。
-  ミックスでは科目ごとの集合が要る。純粋な関数に割って、テストから本物の
-  行を注入できる形にすること (失敗の型15)
+- buildPool (js/settings-ui.js) は 2026-11-14 12:48便 に閉じた。
+  大域と DOM を読む薄い包みと、集合を引数で受ける buildPoolFrom に割った。
+  buildPoolFrom は大域を1つも読まない (大域を渡さない器で走らせて確かめた)。
+  本番の動きは変わらない (3科目の実データで 出題対象4 x 解答方式3 x 絞り2 の
+  72組、2,582枠が1件も違わない)。見張りは mix-build-pool-source (8件、
+  10通りに壊して10通りとも落ちた)
 - QuizStorage に、開いていない科目の控えを同期で読む口が要る。素材は
   在る (_knownSubjectStorageKey と _loadFromKey と _writeLocal は
   どれも localStorage だけを見て cloud を読み直さない)
