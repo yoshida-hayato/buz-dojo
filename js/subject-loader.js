@@ -499,5 +499,6 @@ const SubjectLoader = (function () {
     evalDataScript,
     loadDataScript,
     clearGlobals,
+    looksLikeHtmlResponse,
   };
 })();
