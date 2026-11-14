@@ -382,6 +382,7 @@ const SubjectLoader = (function () {
     window.JUDGMENT_DATA = judgment;
     window.ORDER_DATA = order;
     window.CONTRAST_DATA = contrast;
+    return { quiz, judgment, order, contrast };
   }
 
   /** Tコード／構文など科目追加データ（ホーム表示後に呼ぶ） */
