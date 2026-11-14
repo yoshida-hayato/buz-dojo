@@ -442,7 +442,12 @@ const QuizStorage = {
 
     // 他科目へ SAP サマリがコピーされた汚染だけ除去（SAP 本体は触らない）
     let forceZero = false;
-    if (this._looksLikeSapPollution(this.subjectId, before)) {
+    // before は累計だけの写しで q を持たない。q を持たない成績は問題 id の
+    // 重なりを測れないので、混入検出の門が開かず、ミックス出題で並んで伸びた
+    // 2科目がここで空に戻る (18:48便 に実測。400問が0問になった)。
+    // this.stats はこの時点でまだ書き替えていないので、累計は before と同じで
+    // q だけが余分に見える。だから渡すのはこちらである。
+    if (this._looksLikeSapPollution(this.subjectId, s)) {
       forceZero = true;
     } else if (
       this.subjectId &&
