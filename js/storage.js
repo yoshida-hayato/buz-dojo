@@ -405,9 +405,7 @@ const QuizStorage = {
 
   /** 選択式で習得済み（選択式だけ2回以上連続正解中） */
   choiceMasteredIds() {
-    return Object.entries(this.stats.q)
-      .filter(([, s]) => this.isChoiceMastered(s))
-      .map(([id]) => id);
+    return [...this._selectionSetsFrom(this.stats.q).choiceMastered];
   },
 
   /** 記述式で習得済み（記述式だけ2回以上連続正解中）の問題ID */
