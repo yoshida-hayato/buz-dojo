@@ -302,7 +302,19 @@ const SubjectLoader = (function () {
    * また questions.js 末尾が各追加データを連結するため、先にグローバルを用意する。
    * fetch + Function で同一スコープ評価し、window に載せる。
    */
+  // 大域に載せる薄い包み。ミックス出題は fetchQuizBundle を直に呼び、
+  // 読んだ束を自分で持つ (大域は1科目ぶんしか置けない)。
   async function loadQuizBundle(contentBase, bust) {
+    const b = await fetchQuizBundle(contentBase, bust);
+    window.QUIZ_DATA = b.quiz;
+    window.JUDGMENT_DATA = b.judgment;
+    window.ORDER_DATA = b.order;
+    window.CONTRAST_DATA = b.contrast;
+    return b;
+  }
+
+  // 取得と評価だけをする。大域には1つも書かない
+  async function fetchQuizBundle(contentBase, bust) {
     const withBust = (url) =>
       url + (url.includes("?") ? "&" : "?") + "v=" + encodeURIComponent(bust);
 
