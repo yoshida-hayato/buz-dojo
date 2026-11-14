@@ -444,6 +444,63 @@ function buildPoolFrom(settings, source) {
   return slots;
 }
 
+// ミックス出題の出題枠。科目ごとの集合 (sources) を受け取り、科目ごとに
+// buildPoolFrom を呼んで、出てきた枠に「どの科目か」と「誤答と解説を引く
+// 母集団」を押す。quiz-engine は slot.subjectId と slot.pool を既に読む
+// (2026-11-09 の第1段と第2段で入れた口) ので、ここが埋まれば科目をまたいで
+// 出題しても、成績の宛先も誤答の母集団も科目ごとに正しくなる。
+//
+// 絞りは科目の単位だけにする。分野 (category) と優先度は科目ごとに別物なので、
+// 開いている科目の絞りを他科目に当てると、当たらない科目が丸ごと0問になる。
+// だから科目ごとに、その科目が現に持つ分野と優先度を全部通す。
+// 解答方式は選択式に固定する。記述式を持つのは sap だけで、採点の規則が
+// 科目ごとに違うためである。モジュールの絞りも切る (チップは開いている
+// 科目のものなので、他科目には当たらない)。
+// 門はこの4行 (answerMode / categories / priorities / modules) だけにしてある。
+// 2026-11-15 に、記述式のカテゴリを空にする門と、枠の forceInputMode を
+// 偽で潰す門と、hasModuleInputs を偽にする門も置いてみた。3つとも、
+// 外しても結果が1件も動かなかった (上の4行が先に効くため)。
+// 動かない門は、次の人が「要らない」と読んで本物のほうを消す筋になるので
+// 置かない (失敗の型15 と 型20)。
+// 混ぜる順はここでは決めない (呼び元が orderPoolAvoidingRecent に渡す)。
+function distinctFieldValues(entries, field) {
+  const out = [];
+  const seen = new Set();
+  entries.forEach((q) => {
+    if (!q) return;
+    const v = q[field];
+    if (v === undefined || v === null || seen.has(v)) return;
+    seen.add(v);
+    out.push(v);
+  });
+  return out;
+}
+
+function buildMixedPoolFrom(settings, sources) {
+  const list = Array.isArray(sources) ? sources : [];
+  const out = [];
+  list.forEach((src) => {
+    if (!src || !src.subjectId) return;
+    const entries = Array.isArray(src.entries) ? src.entries : [];
+    const perSubject = Object.assign({}, settings, {
+      answerMode: "choice",
+      categories: distinctFieldValues(entries, "category"),
+      priorities: distinctFieldValues(entries, "priority"),
+      modules: "all",
+    });
+    const slots = buildPoolFrom(perSubject, Object.assign({}, src, { entries }));
+    slots.forEach((slot) => {
+      out.push({
+        entry: slot.entry,
+        forceInputMode: slot.forceInputMode,
+        subjectId: src.subjectId,
+        pool: entries,
+      });
+    });
+  });
+  return out;
+}
+
 // 開いている1科目ぶんの集合を大域と DOM から集めて渡す。
 // ミックスの画面は、ここを通さず buildPoolFrom を科目ごとに呼ぶ。
 function buildPool(settings) {
