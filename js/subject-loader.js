@@ -407,6 +407,50 @@ const SubjectLoader = (function () {
     );
   }
 
+  // subject.js を取得して隔離した器で評価する。大域には1つも書かない。
+  // 同一ドメインの道なので、無いファイルにも 200 で頁が返りうる。評価の前に
+  // 門を通す (2026-11-09 に社長が本番で踏んだ形と同じ)。
+  async function fetchSubjectDefinition(localBase, bust) {
+    const src = localBase + "/subject.js";
+    const url = src + (src.includes("?") ? "&" : "?") + "v=" + encodeURIComponent(bust);
+    const res = await fetch(url, { cache: "force-cache", mode: "cors" });
+    if (!res.ok) throw new Error("fetch failed: " + src);
+    const code = await res.text();
+    if (looksLikeHtmlResponse(code)) {
+      throw new Error("JS ではなく頁が返りました: " + src);
+    }
+    const subject = evalDataScript(code, ["SUBJECT"]).SUBJECT;
+    if (!subject) throw new Error("SUBJECT が定義されていません");
+    return subject;
+  }
+
+  // ミックス出題用。いま開いている科目を1つも動かさずに、別の科目を読む。
+  // loadSubject との違いは、大域にも localStorage にも書かないことである。
+  // loadSubject は SUBJECT / QUIZ_DATA / CHANGELOG / 選択中の科目 / loadedId の
+  // 5つを動かす (2026-11-15 に実測)。ミックスで12科目を順に読むと、
+  // 利用者が選んでいた科目が最後の1本に置き換わる。
+  async function loadSubjectData(id) {
+    const meta = findMeta(id);
+    if (!meta || !meta.enabled) throw new Error("科目が見つかりません: " + id);
+    const localBase = meta.path.endsWith("/") ? meta.path.slice(0, -1) : meta.path;
+    const contentBase = resolveContentBase(meta);
+    const bust = await resolveCacheBust(meta);
+    const [subject, bundle] = await Promise.all([
+      fetchSubjectDefinition(localBase, bust),
+      fetchQuizBundle(contentBase, bust),
+    ]);
+    return {
+      meta,
+      subject,
+      quiz: bundle.quiz,
+      judgment: bundle.judgment,
+      order: bundle.order,
+      contrast: bundle.contrast,
+      contentBase,
+      bust,
+    };
+  }
+
   async function loadSubject(id) {
     const meta = findMeta(id);
     if (!meta || !meta.enabled) throw new Error("科目が見つかりません: " + id);
