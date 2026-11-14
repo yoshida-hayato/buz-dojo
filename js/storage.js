@@ -1170,6 +1170,8 @@ const QuizStorage = {
     if (this._preferPollutionSourceId(candidateId, candidate, sourceId, source) !== sourceId) {
       return false;
     }
+    // 問題 id が1件も重ならないなら写しではない。ミックス出題の誤爆を止める門
+    if (this._questionIdsProveNotCopy(candidate, sourceId, peersById)) return false;
     const candAns = Number(candidate.answered) || 0;
     if (candAns >= 100 && this._isExactCounterFingerprintMatch(candidate, source)) {
       return true;
