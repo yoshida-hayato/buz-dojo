@@ -211,6 +211,24 @@ const SubjectLoader = (function () {
     "abap-syntax.js",
   ];
 
+  // 同一ドメインに置いた問題データは、無くても 404 にならない。Firebase Hosting の
+  // catch-all rewrite が 200 で index.html を返すので res.ok は真になり、その本文を
+  // new Function に渡した瞬間に SyntaxError (Unexpected token の山かっこ) で落ちる。
+  // 2026-11-09 に社長が本番で踏み (基本情報と応用情報の両方)、2026-11-14 に
+  // 取得の口で /data/fe-kamoku-b/judgment-questions.js が頁そのものを返すことを
+  // 実測した。マスタがよその repo に在る10科目は本物の 404 が返るので踏まない。
+  // 見るのは本文の先頭だけにしてある。応答の型を条件に入れると、よその
+  // マスタが型を間違えて配信していた場合に、動いていた科目を止めてしまう
+  // (失敗の型13: よその repo の書き方がそろっていると思わないこと)。
+  // JS の原文が山かっこで始まることは無いので、本文だけで足りる。
+  // trim は先頭の見えない字 (BOM を含む) も落とすので、別に剥がす手は要らない
+  // (2026-11-14 に実測。剥がす行を足したら、外しても誰も落ちなかった)。
+  const HTML_FIRST_CHAR_CODE = 60;
+  function looksLikeHtmlResponse(text) {
+    const head = String(text || "").slice(0, 512).trim();
+    return head.charCodeAt(0) === HTML_FIRST_CHAR_CODE;
+  }
+
   function isDataScript(src) {
     const tail = String(src).split("?")[0].split("/").pop();
     return DATA_SCRIPT_FILES.indexOf(tail) !== -1;
