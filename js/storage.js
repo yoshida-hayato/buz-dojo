@@ -1255,6 +1255,7 @@ const QuizStorage = {
     const peers = this._collectPeerSummaries(subjectId, peersById);
     for (const [peerId, peer] of Object.entries(peers)) {
       if (!this._isNearCounterFingerprintMatch(stats, peer)) continue;
+      if (this._questionIdsProveNotCopy(stats, peerId, peersById)) continue;
       if (this._preferPollutionSourceId(subjectId, stats, peerId, peer) === peerId) {
         return true;
       }
