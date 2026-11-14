@@ -360,6 +360,90 @@ function getSettings() {
  *   - 選択式枠: 選択式習得済みなら載せない
  *   - 記述式枠: 記述式習得済みなら載せない
  */
+// 出題プールを組む所。大域と DOM を読む所 (buildPool) と、集合を受けて
+// 組む所 (buildPoolFrom) に分けてある。
+//
+// なぜ分けるか (ミックス出題 第2段。docs/MIX_MODE_DESIGN.md)。
+// 全科目ミックスでは科目ごとの問題と科目ごとの成績が要るのに、ここは
+// 開いている1科目の QUIZ_DATA と QuizStorage だけを見ていた。
+// 混ぜるには、どの集合を使うかを呼ぶ側が決められないといけない。
+// buildPoolFrom は大域を1つも読まない。見張りは mix-build-pool-source。
+function buildPoolFrom(settings, source) {
+  const src = source || {};
+  const entries = src.entries || [];
+  const choiceMastered = src.choiceMastered || new Set();
+  const inputMastered = src.inputMastered || new Set();
+  const wrongIds = src.wrongIds || new Set();
+  const answeredIds = src.answeredIds || new Set();
+  const inputCategories = src.inputCategories || new Set();
+  const moduleFilterable = src.moduleFilterable || new Set();
+  const hasModuleInputs = !!src.hasModuleInputs;
+
+  let includeSet = null;
+  const mode = settings.answerMode || "choice";
+
+  const onlyIdsMode = Array.isArray(settings.onlyIds) && settings.onlyIds.length > 0;
+  if (onlyIdsMode) {
+    // 特定 ID だけ出す（結果画面の「一番つまずいた問題」復習など）
+    includeSet = new Set(settings.onlyIds);
+  } else if (settings.poolMode === "wrong") {
+    includeSet = wrongIds;
+  }
+
+  // まだ一度も解いていない問題のみ。除外の集合なので includeSet とは別に持つ。
+  const excludeSet =
+    !onlyIdsMode && settings.poolMode === "untouched" ? answeredIds : null;
+
+  // モジュールチップが無い／未生成のときは絞らない（空配列で全問除外になるのを防ぐ）
+  const hasModuleFilter =
+    !onlyIdsMode &&
+    hasModuleInputs &&
+    settings.categories.some((c) => moduleFilterable.has(c));
+
+  const base = entries.filter((q) => {
+    if (includeSet && !includeSet.has(q.id)) return false;
+    if (excludeSet && excludeSet.has(q.id)) return false;
+    if (onlyIdsMode) return true;
+    if (!settings.categories.includes(q.category)) return false;
+    if (!settings.priorities.includes(q.priority)) return false;
+    if (
+      hasModuleFilter &&
+      moduleFilterable.has(q.category) &&
+      settings.modules !== "all" &&
+      !settings.modules.includes(q.module)
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  const slots = [];
+  for (const q of base) {
+    const isInputCat = inputCategories.has(q.category);
+    if (mode === "both" && isInputCat) {
+      const choiceOk =
+        settings.poolMode !== "unmastered" || !choiceMastered.has(q.id);
+      const inputOk =
+        settings.poolMode !== "unmastered" || !inputMastered.has(q.id);
+      if (choiceOk) slots.push({ entry: q, forceInputMode: false });
+      if (inputOk) slots.push({ entry: q, forceInputMode: true });
+      continue;
+    }
+
+    // 選択式のみ / 記述式のみ / 両方でも非入力カテゴリ
+    if (settings.poolMode === "unmastered") {
+      if (mode === "input" && isInputCat) {
+        if (inputMastered.has(q.id)) continue;
+      } else if (choiceMastered.has(q.id)) {
+        continue;
+      }
+    }
+    const forceInputMode = mode === "input" && isInputCat;
+    slots.push({ entry: q, forceInputMode });
+  }
+  return slots;
+}
+
 function buildPool(settings) {
   let includeSet = null;
   const choiceMastered = new Set(QuizStorage.choiceMasteredIds());
