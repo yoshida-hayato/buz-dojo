@@ -2,6 +2,17 @@
  * 管理者向け questionStats 集計の共有ロジック
  */
 window.AdminQuestionStatsShared = (function () {
+  // JS の原文が山かっこで始まることは無い。同一ドメインに問題データを置いた科目
+  // (基本情報・応用情報) では、無いファイルにも Firebase Hosting の catch-all
+  // rewrite が 200 で index.html を返すので、評価する前にここで弾く。
+  // 正本は js/subject-loader.js の looksLikeHtmlResponse だが、この画面は
+  // subject-loader.js を読まないので同じ判定を1つ持つ。2つが食い違わないことは
+  // functions/__tests__/subject-data-html-fallback.test.js が突き合わせている。
+  const HTML_FIRST_CHAR_CODE = 60;
+  function looksLikeHtmlResponse(text) {
+    return String(text || "").slice(0, 512).trim().charCodeAt(0) === HTML_FIRST_CHAR_CODE;
+  }
+
   function subjectTitle(id) {
     if (!id) return "（科目なし）";
     if (typeof SUBJECT_REGISTRY !== "undefined") {
