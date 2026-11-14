@@ -96,13 +96,21 @@ describe("壊れた入力で落ちない", () => {
 });
 
 describe("この埋めが要る理由 (出題プールの出どころ)", () => {
-  test("buildPool は QUIZ_DATA だけを見ている", () => {
+  // ミックス出題 第2段 の途中。buildPool を、集合を受ける buildPoolFrom と
+  // 大域を集める薄い包みに分ける波の途中である。分ける前は
+  // QUIZ_DATA.filter( が、分けた後は entries.filter( が本体に在る。
+  // 最後の波で後者だけに締め直すこと (緩めたまま終わらせない)。
+  test("出題プールの出どころが QUIZ_DATA の1本だけである", () => {
     const src = fs.readFileSync(SETTINGS_SRC, "utf8");
-    const from = src.indexOf("function buildPool(");
+    const from = src.indexOf("function buildPool");
     const to = src.indexOf("function updatePoolCount(");
     expect(from).toBeGreaterThan(0);
     const body = src.slice(from, to);
-    expect(body).toContain("QUIZ_DATA.filter(");
+    // 出どころが QUIZ_DATA であること。絞る相手は、分ける前後で名前が変わる
+    expect(body).toContain("QUIZ_DATA");
+    const filtersOne =
+      body.indexOf("QUIZ_DATA.filter(") !== -1 || body.indexOf("entries.filter(") !== -1;
+    expect(filtersOne).toBe(true);
     expect(body).not.toContain("JUDGMENT_DATA");
     expect(body).not.toContain("ORDER_DATA");
     expect(body).not.toContain("CONTRAST_DATA");
