@@ -132,9 +132,27 @@ Tコードの索引、用語の誤答解説、ショートカットのトーク�
   導くので、崩すと影響はミックスだけに留まらない
 - 結果画面の習得チップは js/dom-util.js の getQuizEntry が大域の QUIZ_DATA を
   id で引く (quizEntryById に焼く)。別科目の問題 id は当たらない
-- 無料20問の枠は js/entitlement.js が QUIZ_DATA.length を科目の総数として
-  使う。canStart は開いている科目の数で見る。第1段で recordAnswer の側は
-  宛先に向いているので、残っているのは開始の判定である
+- 無料20問の枠。2026-11-14 12:48便 に読み直したら、この行はもともと
+  間違っていた。canStart (js/entitlement.js) は大域を1つも読まない。
+  引数の科目 id と localStorage の当日の使用数だけを見る。
+  entitlement.js の QUIZ_DATA.length は値付けの側 (resolveQuestionCount と
+  resolveQuestionCountAsync) で、しかも CURRENT SUBJECT の id と引数が
+  同じときだけ使う形に既に守られている。他科目なら SubjectCatalog に落ちる。
+  だから canStart も値付けも触らなくてよい。
+  本当に残っているのは呼ぶ側である。js/quiz-engine.js の startQuizAsync は
+  canStart(CURRENT SUBJECT.id, settings.count) と1科目ぶんだけ聞いて、
+  その答えで走り全体に蓋をする。枠は科目ごとに1日20問なので、
+  2科目を混ぜた走りでは2つ食い違いが出る。開いている科目に残りが20あって
+  40問を頼むと20問に削られる (本当は2科目で40ある)。逆に混ぜた別の科目の
+  残りが0でも蓋は開くので、recordAnswer は宛先ごとに正しく数えるのに
+  20問を越えて進める。第1段で記録の側は宛先に向いているから、
+  残っているのは「走りの中に在る科目ぶんを足して聞く」ことだけである。
+  ここは現に課金が動いている境目なので、画面が無く誰も踏めない段で
+  動きを変えないこと。いまの1科目ぶんの判定は 2026-11-14 12:48便 に
+  数字で固定した (functions/__tests__/free-quota-gate-single-subject.test.js、
+  12件、10通りに壊して10通りとも落ちた)。足し算に替える日は、この1枚の
+  落ち方で何が変わったかが読める。それまで canStart には試験が1件も
+  無かったので、まずそこを埋めた
 - 段位 (js/rank.js) は QUIZ_DATA.length を分母に19箇所で使うが、段位は
   科目ごとで書き先も科目ごとなので、ここは直さなくてよい
 - 解答方式 (選択式・記述式) と分類は科目ごとに違う。ミックスでは
