@@ -247,7 +247,11 @@ const SubjectLoader = (function () {
     const url = src + (src.includes("?") ? "&" : "?") + "v=" + encodeURIComponent(v);
     const res = await fetch(url, { cache: "force-cache", mode: "cors" });
     if (!res.ok) throw new Error("fetch failed: " + src);
-    const out = evalDataScript(await res.text(), names || DATA_SCRIPT_GLOBALS);
+    const body = await res.text();
+    if (looksLikeHtmlResponse(body)) {
+      throw new Error("JS ではなく頁が返りました: " + src);
+    }
+    const out = evalDataScript(body, names || DATA_SCRIPT_GLOBALS);
     (names || DATA_SCRIPT_GLOBALS).forEach((n) => {
       if (typeof out[n] !== "undefined") window[n] = out[n];
     });
