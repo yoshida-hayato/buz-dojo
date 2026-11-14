@@ -120,7 +120,16 @@ Tコードの索引、用語の誤答解説、ショートカットのトーク�
   10通りに壊して10通りとも落ちた)
 - QuizStorage に、開いていない科目の控えを同期で読む口が要る。素材は
   在る (_knownSubjectStorageKey と _loadFromKey と _writeLocal は
-  どれも localStorage だけを見て cloud を読み直さない)
+  どれも localStorage だけを見て cloud を読み直さない。3つとも中を読んで
+  確かめた)。ただし鍵の字が2つの道で決まることを承知しておくこと。
+  自分の科目を開くときは subject.js の storageKey をそのまま使い、
+  他科目は _knownSubjectStorageKey が id のハイフンを下線に替えて作る。
+  いま13科目とも一致しているが、宣言を落とすと12科目で食い違い、しかも
+  例外は出ない (_loadFromKey は無い鍵に空の成績を返す)。
+  2026-11-14 12:48便 に、この一致を見張りにした
+  (functions/__tests__/subject-storage-key-canonical.test.js、7件、
+  8通りに壊して8通りとも落ちた)。章進捗と節進捗も storageKey から
+  導くので、崩すと影響はミックスだけに留まらない
 - 結果画面の習得チップは js/dom-util.js の getQuizEntry が大域の QUIZ_DATA を
   id で引く (quizEntryById に焼く)。別科目の問題 id は当たらない
 - 無料20問の枠は js/entitlement.js が QUIZ_DATA.length を科目の総数として
