@@ -63,6 +63,7 @@ function poolIds(poolMode) {
   const ctx = {
     console,
     QuizStorage: storage,
+    buildPoolFrom: BUILD_POOL_FROM,
     QUIZ_DATA: DATA,
     MODULE_FILTERABLE: new Set(["term"]),
     INPUT_CATEGORIES: new Set(),
