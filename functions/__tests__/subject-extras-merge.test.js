@@ -22,7 +22,7 @@ const loaderSrc = fs.readFileSync(LOADER_SRC, "utf8");
 // 実際に配信される取りこぼし埋めの本体だけを切り出す
 function mergeBlock() {
   const from = loaderSrc.indexOf("const seenIds = new Set();");
-  const to = loaderSrc.indexOf("window.QUIZ_DATA = quiz;");
+  const to = loaderSrc.indexOf("// 取りこぼし埋め ここまで");
   expect(from).toBeGreaterThan(0);
   expect(to).toBeGreaterThan(from);
   return loaderSrc.slice(from, to);
