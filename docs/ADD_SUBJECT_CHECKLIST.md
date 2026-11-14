@@ -108,7 +108,16 @@ fe-kamoku-b が1本目である。よその repo にマスタが無い科目は�
   extra-subject-wiring が落ちる
 - 問題データは data/(科目id)/questions.js に置く。firebase.json の ignore に
   data は入っていないので、そのまま配信される。judgment と order と contrast
-  の3つは任意で、404 なら空配列に落ちるのが正しい道である
+  の3つは任意だが、置かない場合に 404 は返らない。この手順書は 2026-11-14 まで
+  「404 なら空配列に落ちるのが正しい道である」と書いていたが、それが間違いで、
+  8日間の障害になった。このドメインの道は catch-all rewrite が全部 index.html
+  に向けるので、無いファイルにも 200 と頁の本文が返る。つまり res.ok は
+  「ファイルが在る」を意味しない。空配列に落ちるのは、受け取る側が
+  js/subject-loader.js の looksLikeHtmlResponse (本文の先頭が山かっこか) を
+  通しているからである。マスタがよその repo に在る科目は本物の 404 が返るので、
+  この違いは「自前の問題データを持つ科目」だけに出る。
+  だから科目を足したら、その科目を実際に開いて1問解くところまで歩くこと。
+  見張りは subject-data-html-paths と fetched-body-eval-gate である
 - contentVersionUrl は書かない。master の version が無いので APP_VERSION に
   落ちる。これで正しい
 - functions/subject-catalog.js の URL 表には足さない。master が無いので
