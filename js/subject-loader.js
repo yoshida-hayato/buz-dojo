@@ -390,10 +390,6 @@ const SubjectLoader = (function () {
     }
 
     // 取りこぼし埋め ここまで (この印は subject-extras-merge が切り出しに使う)
-    window.QUIZ_DATA = quiz;
-    window.JUDGMENT_DATA = judgment;
-    window.ORDER_DATA = order;
-    window.CONTRAST_DATA = contrast;
     return { quiz, judgment, order, contrast };
   }
 
