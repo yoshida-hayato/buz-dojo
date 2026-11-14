@@ -47,3 +47,75 @@ function fixedRandom(start) {
   };
 }
 
+// openEntries は「いま開いている科目」の大域。渡さなければ空にする
+function load(openEntries, seed) {
+  const fakeMath = Object.create(Math);
+  fakeMath.random = fixedRandom(seed);
+  const sandbox = {
+    Math: fakeMath,
+    String, Number, Array, Object, JSON, Set, Map, Promise, Date, Function, RegExp,
+    console: { warn: () => {}, error: () => {}, log: () => {} },
+    document: {
+      querySelectorAll: () => [],
+      querySelector: () => null,
+      getElementById: () => null,
+    },
+    QUIZ_DATA: openEntries || [],
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  const ctx = vm.createContext(sandbox);
+  FILES.forEach((f) => {
+    vm.runInContext(fs.readFileSync(path.join(ROOT, "js", f), "utf8"), ctx);
+  });
+  return {
+    ctx,
+    win: sandbox,
+    buildMixedPoolFrom: vm.runInContext("buildMixedPoolFrom", ctx),
+    buildPoolFrom: vm.runInContext("buildPoolFrom", ctx),
+    buildQuestion: vm.runInContext("buildQuestion", ctx),
+  };
+}
+
+// buildPoolFrom が要る欄をすべて埋めた、科目1本ぶんの集合
+function source(subjectId, entries, over) {
+  return Object.assign({
+    subjectId,
+    entries,
+    choiceMastered: new Set(),
+    inputMastered: new Set(),
+    wrongIds: new Set(),
+    answeredIds: new Set(),
+    inputCategories: new Set(),
+    moduleFilterable: new Set(),
+    hasModuleInputs: false,
+  }, over || {});
+}
+
+// 自前の肢を持たない問題 (SAP の用語の形)。母集団が効くかを見るのに使う
+function termEntries(prefix, n) {
+  const out = [];
+  for (let i = 1; i <= n; i++) {
+    out.push({
+      id: prefix + i,
+      category: "term",
+      priority: 1,
+      code: prefix + "CODE" + i,
+      name: prefix + "語" + i,
+      question: prefix + "の説明" + i,
+      desc: prefix + "の説明" + i,
+    });
+  }
+  return out;
+}
+
+const BASE_SETTINGS = {
+  answerMode: "choice",
+  poolMode: "all",
+  categories: ["scenario"],
+  priorities: [1],
+  modules: "all",
+  count: "all",
+};
+
+module.exports = { load, source, entriesOf, termEntries, LOCAL_IDS, BASE_SETTINGS };
