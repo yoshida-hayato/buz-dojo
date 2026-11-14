@@ -353,9 +353,39 @@ const QuizStorage = {
 
   /** 一度でも間違えたことのある問題IDの一覧（「間違えた問題だけ」モードで使う） */
   wrongIds() {
-    return Object.entries(this.stats.q)
-      .filter(([, s]) => s.a > s.c)
-      .map(([id]) => id);
+    return [...this._selectionSetsFrom(this.stats.q).wrongIds];
+  },
+
+  // 問題ごとの成績 (q) から、出題の絞りに要る4つの集合をまとめて作る。
+  // 規則の正本はここ1つにする。下の4つの一覧はこれを呼ぶだけの包みで、
+  // ミックス出題は別の科目の q を渡して同じ規則を当てる。
+  _selectionSetsFrom(q) {
+    const choiceMastered = new Set();
+    const inputMastered = new Set();
+    const wrong = new Set();
+    const answered = new Set();
+    const rows = q && typeof q === "object" ? Object.entries(q) : [];
+    rows.forEach(([id, st]) => {
+      if (!st || typeof st !== "object") return;
+      if (this.isChoiceMastered(st)) choiceMastered.add(id);
+      if ((st.ik || 0) >= 2) inputMastered.add(id);
+      if (st.a > st.c) wrong.add(id);
+      if ((st.a || 0) > 0 || (st.ia || 0) > 0) answered.add(id);
+    });
+    return { choiceMastered, inputMastered, wrongIds: wrong, answeredIds: answered };
+  },
+
+  // ミックス出題用。開いている科目を差し替えずに、別の科目の集合を読む。
+  // useSubject と違ってクラウドを読み直さないので同期で済む (端末の控えだけ)。
+  // 混入検出 (_scrubPollutedStats) はここでは走らせない。あれは控えを
+  // 読み込むときの手当で、出題の絞りに当てると同じ成績を二度判定することになる。
+  selectionSetsFor(subjectId) {
+    if (subjectId && subjectId === this.subjectId) {
+      return this._selectionSetsFrom(this.stats.q);
+    }
+    const key = subjectId ? this._knownSubjectStorageKey(subjectId) : "";
+    const full = key ? this._loadFromKey(key) : null;
+    return this._selectionSetsFrom(full && full.q);
   },
 
   // 一度でも解いた問題IDの一覧（「まだ解いていない問題のみ」モードで使う）。
