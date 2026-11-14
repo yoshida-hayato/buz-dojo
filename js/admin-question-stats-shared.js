@@ -121,7 +121,10 @@ window.AdminQuestionStatsShared = (function () {
         }
         let jSrc = "var JUDGMENT_DATA = [];";
         try {
-          jSrc = await fetchText(base + "/judgment-questions.js");
+          const fetched = await fetchText(base + "/judgment-questions.js");
+          // 頁が返ったら、このファイルは無いものとして扱う。評価に混ぜると
+          // SyntaxError になり、その科目の問題名が1件も出なくなる。
+          if (!looksLikeHtmlResponse(fetched)) jSrc = fetched;
         } catch (_) {
           /* optional */
         }
