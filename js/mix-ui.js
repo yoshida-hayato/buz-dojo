@@ -128,3 +128,25 @@ const MixUI = (function () {
         text: typeof o.titleOf === "function" ? o.titleOf(sid) || sid : sid,
       },
     ];
+    if (e.category && Object.prototype.hasOwnProperty.call(cats, e.category)) {
+      out.push({ kind: "category", text: String(cats[e.category]) });
+    }
+    if (e.priority && prios[e.priority]) {
+      out.push({
+        kind: "priority",
+        text: String(prios[e.priority]),
+        priority: e.priority,
+      });
+    }
+    return out;
+  }
+
+  return {
+    listRowsFrom: listRowsFrom,
+    selectionSummary: selectionSummary,
+    foreignBadges: foreignBadges,
+    HEAVY_QUESTION_COUNT: HEAVY_QUESTION_COUNT,
+  };
+})();
+
+if (typeof window !== "undefined") window.MixUI = MixUI;
