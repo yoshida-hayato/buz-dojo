@@ -1102,3 +1102,34 @@
 @media (max-width: 560px) {
   .start-area #start-btn { width: 100%; min-height: 52px; }
 }
+
+.mix-group { border-top: 1px solid #e2e8f0; padding-top: 16px; }
+.mix-subject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mix-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: #ffffff;
+  cursor: pointer;
+}
+.mix-row input { width: 18px; height: 18px; flex: 0 0 auto; }
+.mix-row-name { flex: 1 1 auto; font-size: 14px; color: #1f2937; }
+.mix-row-meta { flex: 0 0 auto; font-size: 12px; color: #64748b; text-align: right; }
+.mix-row-current { background: #f1f5fb; }
+.mix-row-current .mix-row-name { font-weight: 600; }
+.mix-row-exhausted { background: #f8fafc; cursor: not-allowed; }
+.mix-row-exhausted .mix-row-name { color: #94a3b8; }
+.mix-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.mix-actions .secondary-btn { min-height: 44px; }
+.mix-progress { margin-top: 10px; font-size: 13px; color: #475569; }
+.badge-subject { background: #e8eefb; color: #1e3a8a; }
