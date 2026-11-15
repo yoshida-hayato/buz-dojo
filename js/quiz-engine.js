@@ -651,8 +651,10 @@ function finishAnswer(isCorrect, givenText) {
   if (isCorrect) quiz.correctCount += 1;
   else quiz.wrongs.push({ q, given: givenText });
 
-  const stats = QuizStorage.load();
-  const qsBefore = stats.q[questionId];
+  // 宛先の科目から読む。ミックスで他科目の問題に答えたとき、開いている
+  // 科目の q を見ると常に見つからず、習得の前後が both false になるので、
+  // 今回新しく習得した札が1件も出ない (2026-11-15 18:48便 に実測)。
+  const qsBefore = QuizStorage.questionStatsFor(answerSubject, questionId);
   const wasChoiceMastered = !q.inputMode && QuizStorage.isChoiceMastered(qsBefore);
   const wasInputMastered = !!q.inputMode && (qsBefore?.ik || 0) >= 2;
 
