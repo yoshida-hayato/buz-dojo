@@ -84,6 +84,10 @@ async function startQuizAsync(settings, options = {}) {
     // QuizStorage.record に渡すのに要る。通常の出題では偽なので、宛先が
     // 食い違う答えは従来どおり捨てられる (科目の切り替えの途中の保険)。
     mixed: !!mixedSlots,
+    // ミックス出題の範囲 (科目ごとの問題 id と、答える前の習得数)。
+    // 結果画面の習得ゲージが混ぜた科目ぶんで数えるのに要る。
+    // 通常の出題では null なので、ゲージは開いている科目だけを数える。
+    mixedScope: Array.isArray(options.mixedScope) ? options.mixedScope : null,
     settings,
     rankBefore: getRank(statsNow).name,
     // 経験値・習得ゲージ用: クイズ開始時点の成績スナップショット（q で前後比較する）
