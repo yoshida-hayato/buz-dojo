@@ -129,3 +129,128 @@ const MixScreen = (function () {
     return "";
   }
 
+  async function start() {
+    const ids = selectedIds();
+    const settings = getSettings();
+    const E = typeof Entitlement !== "undefined" ? Entitlement : null;
+    const gate = E ? E.canStartMixed(ids, settings.count) : { ok: true, caps: [] };
+    if (!gate.ok) {
+      say("");
+      if (typeof showFreeQuotaExhaustedAtStart === "function") {
+        showFreeQuotaExhaustedAtStart();
+      }
+      return;
+    }
+    let want = settings;
+    if (gate.cappedTo != null && Number.isFinite(gate.remaining)) {
+      const asked = settings.count === "all" ? Infinity : Number(settings.count) || 0;
+      if (gate.cappedTo < asked) {
+        if (!confirm("無料枠の都合で" + gate.cappedTo + "問にします。このまま開始しますか？")) {
+          return;
+        }
+      }
+      want = Object.assign({}, settings, { count: gate.cappedTo });
+    }
+    say("読み込み中 0 / " + ids.length + " 科目");
+    let res = null;
+    try {
+      res = await MixSession.collectSources(ids, {
+        onProgress: function (e) { say(progressText(e)); },
+      });
+    } catch (e) {
+      say("科目の読み込みに失敗しました");
+      return;
+    }
+    if (!res.sources.length) {
+      say("どの科目も読み込めませんでした");
+      return;
+    }
+    // 組む → 並べる → 落とす の順。落とすのを先にしてはいけない
+    let slots = buildMixedPoolFrom(want, res.sources);
+    slots = orderPoolAvoidingRecent(slots);
+    slots = capMixedSlotsByQuota(slots, gate.caps);
+    if (!slots.length) {
+      say("この条件では出題できる問題がありません");
+      return;
+    }
+    say("");
+    startQuiz(want, { mixedSlots: slots });
+  }
+
+  // 一覧は開いている科目ごとに1度だけ描く。updatePoolCount は出題設定を
+  // 触るたびに呼ばれるので、毎回描き直すと利用者が外した印が戻ってしまう。
+  let renderedFor = null;
+
+  function ensure() {
+    const box = el(LIST_ID);
+    if (!box) return;
+    const sid =
+      typeof CURRENT_SUBJECT !== "undefined" && CURRENT_SUBJECT
+        ? String(CURRENT_SUBJECT.id || "")
+        : "";
+    if (!sid) return;
+    wire();
+    if (renderedFor === sid) return;
+    renderedFor = sid;
+    // 科目が変わったら畳んだ状態に戻す
+    box.classList.add("hidden");
+    const startBtn = el("mix-start-btn");
+    if (startBtn) startBtn.classList.add("hidden");
+    const toggle = el("mix-toggle-btn");
+    if (toggle) toggle.textContent = OPEN_LABEL;
+    say("");
+    render();
+  }
+
+  function toggle() {
+    const box = el(LIST_ID);
+    const startBtn = el("mix-start-btn");
+    const btn = el("mix-toggle-btn");
+    if (!box) return;
+    const show = box.classList.contains("hidden");
+    box.classList.toggle("hidden", !show);
+    if (startBtn) startBtn.classList.toggle("hidden", !show);
+    if (btn) btn.textContent = show ? CLOSE_LABEL : OPEN_LABEL;
+    if (show) updateHint();
+  }
+
+  function wire() {
+    const box = el(LIST_ID);
+    if (box && box.dataset.mixWired !== "1") {
+      box.dataset.mixWired = "1";
+      box.addEventListener("change", updateHint);
+    }
+    const btn = el("mix-toggle-btn");
+    if (btn && btn.dataset.mixWired !== "1") {
+      btn.dataset.mixWired = "1";
+      btn.addEventListener("click", toggle);
+    }
+    const startBtn = el("mix-start-btn");
+    if (startBtn && startBtn.dataset.mixWired !== "1") {
+      startBtn.dataset.mixWired = "1";
+      startBtn.addEventListener("click", function () {
+        void start();
+      });
+    }
+  }
+
+  // 問題の札を描く。他科目の問題なら自分で描いて true を返し、
+  // 開いている科目の問題なら false を返す (呼び元が従来どおり描く)。
+  function paintQuestionMeta(q) {
+    const box = el("question-meta");
+    if (!box) return false;
+    const badges = MixUI.foreignBadges(q, {
+      currentId:
+        typeof CURRENT_SUBJECT !== "undefined" && CURRENT_SUBJECT
+          ? CURRENT_SUBJECT.id
+          : "",
+      categories: typeof CATEGORIES !== "undefined" ? CATEGORIES : {},
+      priorities: typeof PRIORITIES !== "undefined" ? PRIORITIES : {},
+      titleOf: subjectTitleOf,
+    });
+    if (!badges) return false;
+    box.innerHTML = "";
+    badges.forEach((bd) => {
+      const span = document.createElement("span");
+      span.className =
+        bd.kind === "priority" ? "badge priority-" + bd.priority : "badge";
