@@ -41,6 +41,9 @@ async function ensureQuizModules() {
     "js/screens-result.js",
     "js/firebase-app-util.js",
     "js/screens-contact.js",
+    "js/mix-session.js",
+    "js/mix-ui.js",
+    "js/mix-screen.js",
   ]);
 }
 
