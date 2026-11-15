@@ -652,7 +652,9 @@ function finishAnswer(isCorrect, givenText) {
   const wasChoiceMastered = !q.inputMode && QuizStorage.isChoiceMastered(qsBefore);
   const wasInputMastered = !!q.inputMode && (qsBefore?.ik || 0) >= 2;
 
-  QuizStorage.record(questionId, isCorrect, !!q.inputMode, answerSubject);
+  QuizStorage.record(questionId, isCorrect, !!q.inputMode, answerSubject, {
+    allowForeign: !!(quiz && quiz.mixed),
+  });
   let chapterResult = null;
   if (
     isCorrect &&
