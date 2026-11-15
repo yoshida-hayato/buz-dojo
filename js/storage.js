@@ -263,16 +263,28 @@ const QuizStorage = {
   },
 
   /** 1問分の結果を記録する。isInput=true なら記述式（Tコード入力）としても集計する */
-  record(questionId, isCorrect, isInput, expectedSubjectId) {
+  record(questionId, isCorrect, isInput, expectedSubjectId, opts) {
     // ミックス出題で、別の科目の問題がこの控えへ流れ込むのを止める。
     // 控えは開いている1科目ぶんしか無い (useSubject が差し替える) ので、
-    // 宛先が違う答えは黙って積まずに捨てて、理由を残す。
-    // 第2段で本当の書き分けを足すまでの土台である。
+    // 宛先が違う答えは既定では積まずに捨てて、理由を残す。
+    //
+    // ミックス出題だけは、呼び元が allowForeign を明示して渡す。そのときは
+    // 捨てずに recordForSubject へ回し、その科目の鍵へ当てる。既定で回さない
+    // のは、科目を切り替える途中の食い違いで書くと答えがよその科目へ
+    // 流れ込むからである (第1段がこの門を置いた理由)。
     if (
       expectedSubjectId &&
       this.subjectId &&
       String(expectedSubjectId) !== String(this.subjectId)
     ) {
+      if (opts && opts.allowForeign) {
+        return this.recordForSubject(
+          questionId,
+          isCorrect,
+          isInput,
+          expectedSubjectId
+        );
+      }
       console.warn("成績の書き先が開いている科目と違うので記録しません", {
         expected: String(expectedSubjectId),
         open: String(this.subjectId),
