@@ -51,7 +51,13 @@ async function startQuizAsync(settings, options = {}) {
   if (pool.length === 0) return;
 
   let slots = orderPoolAvoidingRecent(pool, options.avoidIds);
-  if (settings.count !== "all") slots = slots.slice(0, Number(settings.count));
+  // 頼んだ数が読めないときは全部にする。負の数をそのまま slice に渡すと
+  // 末尾から削る形になり、5問を頼んだ人に95問が出る (2026-11-15 に実測)。
+  // 無料枠の側は Entitlement の capWant が同じ規則で落としている。
+  if (settings.count !== "all") {
+    const want = Math.floor(Number(settings.count));
+    if (want > 0) slots = slots.slice(0, want);
+  }
 
   const statsNow = QuizStorage.load();
   quiz = {
