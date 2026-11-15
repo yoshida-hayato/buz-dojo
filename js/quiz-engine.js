@@ -21,7 +21,12 @@ async function startQuizAsync(settings, options = {}) {
     console.warn("クイズ補助スクリプトの読込に失敗:", e);
   }
 
-  if (CURRENT_SUBJECT && typeof Entitlement !== "undefined") {
+  // ミックス出題は、呼び元 (MixScreen) が科目ごとの枠を組み、科目ごとの
+  // 無料枠で落としたうえで渡してくる。1科目ぶんの門をここで当てると、
+  // 開いている科目の残りだけで全体が止まるので通さない。
+  const mixedSlots = Array.isArray(options.mixedSlots) ? options.mixedSlots : null;
+
+  if (!mixedSlots && CURRENT_SUBJECT && typeof Entitlement !== "undefined") {
     const gate = Entitlement.canStart(CURRENT_SUBJECT.id, settings.count);
     if (!gate.ok) {
       if (typeof showFreeQuotaExhaustedAtStart === "function") {
