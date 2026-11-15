@@ -261,12 +261,22 @@ const Entitlement = (function () {
     return "本日あと" + r + "問";
   }
 
+  // 頼んだ数を、出題できる枠の数に直す。1問未満や整数でない値は
+  // 「指定なし」と同じに扱って残りぜんぶにする。負の数をそのまま返すと
+  // 呼び元の slice が末尾から削る形になり、残り2問の人に95問を配る
+  // (2026-11-15 に実測した。無料枠の境目なので落とす側に倒す)。
+  function capWant(want, rem) {
+    const n = Math.floor(Number(want));
+    if (!(n > 0)) return rem;
+    return Math.min(n, rem);
+  }
+
   function canStart(subjectId, wantCount) {
     if (hasAccess(subjectId)) return { ok: true, remaining: Infinity };
     const rem = remainingFree(subjectId);
     const want = wantCount === "all" ? rem : Number(wantCount) || 0;
     if (rem <= 0) return { ok: false, remaining: 0, reason: "limit" };
-    return { ok: true, remaining: rem, cappedTo: Math.min(want || rem, rem) };
+    return { ok: true, remaining: rem, cappedTo: capWant(want, rem) };
   }
 
   // ミックス出題の無料枠。無料ぶんは科目ごとに1日20問なので、科目を混ぜた
