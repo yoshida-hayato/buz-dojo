@@ -343,6 +343,39 @@ const QuizStorage = {
     return s;
   },
 
+  // 他科目の1問を、その科目の控えへ当てる。ミックス出題の書き分けである。
+  // 開いている科目の控えと大域 (SUBJECT / QUIZ_DATA / 選択中の科目) は
+  // 1つも動かさない。useSubject を呼び替える形にしないのはそのためで、
+  // あれは1本読むたびに5つを動かす (2026-11-15 00:48便 に実測)。
+  //
+  // 段位の控え (rankName) は作り直さない。段位は現存問題数が要るので、
+  // 読み込んでいない科目では出せない。その科目を開いた時点で付け直される。
+  recordForSubject(questionId, isCorrect, isInput, subjectId) {
+    if (!subjectId) return null;
+    if (this.subjectId && String(subjectId) === String(this.subjectId)) {
+      return this.record(questionId, isCorrect, isInput, subjectId);
+    }
+    const key = this._knownSubjectStorageKey(subjectId);
+    if (!key) {
+      console.warn("他科目の成績の書き先が決まらないので記録しません", {
+        subjectId: String(subjectId),
+        questionId,
+      });
+      return null;
+    }
+    const s = this._loadFromKey(key);
+    this._applyAnswerToStats(s, questionId, isCorrect, isInput);
+    this._writeLocal(key, s);
+    if (typeof SubjectSummary !== "undefined") {
+      SubjectSummary.setLocal(subjectId, this._summaryFromStats(s));
+    }
+    this.invalidateStatsSummariesCache();
+    if (this.mode === "cloud") {
+      void this._cloudSaveAsyncForSubject(subjectId, s);
+    }
+    return s;
+  },
+
   /** 選択式で習得済みか（段位・成績用） */
   isChoiceMastered(s) {
     if (!s) return false;
