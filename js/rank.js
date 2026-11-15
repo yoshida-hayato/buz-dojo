@@ -625,3 +625,74 @@ function inputMasteredCount(stats) {
 function tcodeQuestionCount() {
   return QUIZ_DATA.filter((q) => INPUT_CATEGORIES.has(q.category)).length;
 }
+
+// ===== ミックス出題の範囲で習得を数える =====
+//
+// なぜ要るか (2026-11-15 18:48便 に本物の Chromium で実測)。3科目246問を
+// 混ぜて10問に答え、8問が新しく習得に届いた回で、今回新しく習得の札は
+// 8枚出るのにゲージは 0 から 3 / 100問 と出た。100 は開いている科目の
+// 問題数で、3 はそのうち開いている科目ぶんである。同じ画面の2箇所が
+// 違う数を言う形だったので、ゲージの側を混ぜた範囲に合わせる。
+//
+// 範囲は MixScreen が渡す (quiz.mixedScope)。通常の出題では空なので、
+// 下の3つはどれも開いている科目の数に落ちる。本番の通常の出題は1も動かない。
+function masteredScopeRows() {
+  if (typeof quiz === "undefined" || !quiz || quiz.mixed !== true) return null;
+  const rows = quiz.mixedScope;
+  return Array.isArray(rows) && rows.length ? rows : null;
+}
+
+// ゲージの分母。混ぜた科目の問題数を足す。
+function masteredScopeTotal() {
+  const rows = masteredScopeRows();
+  if (!rows) return typeof QUIZ_DATA === "undefined" ? 0 : QUIZ_DATA.length;
+  let n = 0;
+  rows.forEach((r) => {
+    n += Number(r && r.total) || 0;
+  });
+  return n;
+}
+
+// 1科目ぶん。その科目の控えで、いま習得済みの問題数を、その科目の
+// 現存問題だけに絞って数える。絞らないと、消された問題の古い成績が残る。
+function masteredCountInScopeRow(row) {
+  if (!row || !Array.isArray(row.ids) || typeof QuizStorage === "undefined") return 0;
+  const sets = QuizStorage.selectionSetsFor(row.subjectId);
+  const have = sets && sets.choiceMastered ? sets.choiceMastered : null;
+  if (!have) return 0;
+  let n = 0;
+  row.ids.forEach((id) => {
+    if (have.has(id)) n += 1;
+  });
+  return n;
+}
+
+// ゲージが出す3つの数。前と後を同じ式で数えるので、増えたぶんだけでなく
+// 習得が外れたぶんも出る (通常の出題の振る舞いと同じ)。
+// 前の数は科目ごとに MixScreen が答える前に数えたもので、後の数はいまの控えである。
+function masteredScopeNumbers(statsBefore, statsAfter) {
+  const rows = masteredScopeRows();
+  if (!rows) {
+    return {
+      before: masteredCount(statsBefore),
+      after: masteredCount(statsAfter),
+      total: typeof QUIZ_DATA === "undefined" ? 0 : QUIZ_DATA.length,
+    };
+  }
+  let before = 0;
+  let after = 0;
+  let total = 0;
+  rows.forEach((r) => {
+    before += Number(r && r.masteredBefore) || 0;
+    after += masteredCountInScopeRow(r);
+    total += Number(r && r.total) || 0;
+  });
+  return { before: before, after: after, total: total };
+}
+
+// 範囲に対する百分率。分母は masteredScopeTotal が決める。
+function masteredScopePct(count) {
+  const total = masteredScopeTotal();
+  if (total === 0) return 0;
+  return Math.round((Number(count) || 0) / total * 100);
+}
