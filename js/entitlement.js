@@ -269,6 +269,49 @@ const Entitlement = (function () {
     return { ok: true, remaining: rem, cappedTo: Math.min(want || rem, rem) };
   }
 
+  // ミックス出題の無料枠。無料ぶんは科目ごとに1日20問なので、科目を混ぜた
+  // ときに使える総数は「科目ごとの残りの足し算」になる。総量制にはしない
+  // (社長の回答 2026-10-18)。権利が在る科目と無料科目は上限が無いので、
+  // 1本でも混ざれば総数は Infinity である。
+  //
+  // 返すのは科目ごとの上限の一覧で、出題枠を落とす側 (capMixedSlotsByQuota)
+  // がこれを受ける。総数だけを返すと、残り3問の科目から10枠を取ってしまう
+  // (枠は科目ごとに消費されるので、総数では足りない)。
+  function mixedQuotaCaps(subjectIds) {
+    const ids = Array.isArray(subjectIds) ? subjectIds : [];
+    const seen = {};
+    const out = [];
+    ids.forEach((id) => {
+      const sid = id ? String(id) : "";
+      if (!sid) return;
+      if (Object.prototype.hasOwnProperty.call(seen, sid)) return;
+      seen[sid] = true;
+      out.push({ subjectId: sid, cap: remainingFree(sid) });
+    });
+    return out;
+  }
+
+  function mixedQuotaRemaining(subjectIds) {
+    const caps = mixedQuotaCaps(subjectIds);
+    let total = 0;
+    for (let i = 0; i < caps.length; i++) {
+      if (!Number.isFinite(caps[i].cap)) return Infinity;
+      total += caps[i].cap;
+    }
+    return total;
+  }
+
+  // canStart のミックス版。壁の出し方は1科目のときと同じ形にしてある
+  // (ok が偽なら壁、cappedTo が頼んだ数より小さければ確認)。
+  function canStartMixed(subjectIds, wantCount) {
+    const caps = mixedQuotaCaps(subjectIds);
+    const rem = mixedQuotaRemaining(subjectIds);
+    if (!(rem > 0)) return { ok: false, remaining: 0, reason: "limit", caps };
+    if (!Number.isFinite(rem)) return { ok: true, remaining: Infinity, caps };
+    const want = wantCount === "all" ? rem : Number(wantCount) || 0;
+    return { ok: true, remaining: rem, cappedTo: Math.min(want || rem, rem), caps };
+  }
+
   function recordAnswer(subjectId) {
     if (!subjectId || hasAccess(subjectId)) return;
     const map = loadUsage();
