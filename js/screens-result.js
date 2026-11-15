@@ -340,6 +340,7 @@ function renderMasteredNewList(newList, entries, label) {
 
 /** クイズ前→クイズ後の習得済み数をゲージでアニメーション表示 */
 function animateMasteredGauge(statsBefore, statsAfter) {
+  paintMasteredScopeLabel();
   const before = masteredCount(statsBefore);
   const after = masteredCount(statsAfter);
   const total = QUIZ_DATA.length;
