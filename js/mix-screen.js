@@ -254,3 +254,32 @@ const MixScreen = (function () {
       const span = document.createElement("span");
       span.className =
         bd.kind === "priority" ? "badge priority-" + bd.priority : "badge";
+      if (bd.kind === "subject") span.className = "badge badge-subject";
+      span.textContent = bd.text;
+      box.appendChild(span);
+    });
+    return true;
+  }
+
+  function subjectTitleOf(id) {
+    const hit = registryRows().filter(function (r) {
+      return r && String(r.id) === String(id);
+    })[0];
+    return hit ? String(hit.shortTitle || hit.title || id) : String(id);
+  }
+
+  return {
+    render: render,
+    ensure: ensure,
+    paintQuestionMeta: paintQuestionMeta,
+    subjectTitleOf: subjectTitleOf,
+    wire: wire,
+    toggle: toggle,
+    isMixed: isMixed,
+    start: start,
+    selectedIds: selectedIds,
+    progressText: progressText,
+  };
+})();
+
+if (typeof window !== "undefined") window.MixScreen = MixScreen;
