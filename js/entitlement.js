@@ -319,7 +319,7 @@ const Entitlement = (function () {
     if (!(rem > 0)) return { ok: false, remaining: 0, reason: "limit", caps };
     if (!Number.isFinite(rem)) return { ok: true, remaining: Infinity, caps };
     const want = wantCount === "all" ? rem : Number(wantCount) || 0;
-    return { ok: true, remaining: rem, cappedTo: Math.min(want || rem, rem), caps };
+    return { ok: true, remaining: rem, cappedTo: capWant(want, rem), caps };
   }
 
   function recordAnswer(subjectId) {
