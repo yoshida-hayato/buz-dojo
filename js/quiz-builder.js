@@ -721,3 +721,28 @@ function buildWrongItemHtml(q, given, index) {
     `</article>`
   );
 }
+// ミックス出題で他科目の問題を間違えると、下の一覧の札が素の分野キー
+// (tcode) のまま出る。分野の表 (CATEGORIES) は開いている科目のものしか
+// 無いからである (2026-11-15 に本物の Chromium で実測。問題の札と同じ形で、
+// これが2箇所目である)。
+//
+// 札を組む行は囲み付きの文字列なので、パッチの口を通らず直に触れない。
+// だから読む表のほうを差し替える。開いている科目の問題では大域とまったく
+// 同じ表を返すので、本番の動きは1つも変わらない。
+function wrongItemCategoryTable(q) {
+  const base = typeof CATEGORIES !== "undefined" && CATEGORIES ? CATEGORIES : {};
+  const sid = q && q.subjectId ? String(q.subjectId) : "";
+  const openId =
+    typeof CURRENT_SUBJECT !== "undefined" && CURRENT_SUBJECT
+      ? String(CURRENT_SUBJECT.id || "")
+      : "";
+  const cat = q && q.entry ? q.entry.category : "";
+  if (!sid || !openId || sid === openId || !cat) return base;
+  // 分野の代わりに科目の題を出す。混ぜたときに知りたいのはそちらである。
+  const out = Object.assign({}, base);
+  out[cat] =
+    typeof MixScreen !== "undefined" && MixScreen.subjectTitleOf
+      ? MixScreen.subjectTitleOf(sid)
+      : sid;
+  return out;
+}
