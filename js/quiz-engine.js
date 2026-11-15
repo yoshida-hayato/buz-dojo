@@ -118,7 +118,16 @@ function renderQuestion() {
     metaHtml += `<span class="badge badge-module">${escapeHtml(modLabel)}</span>`;
   }
   metaHtml += `<span class="badge priority-${e.priority}">${escapeHtml(PRIORITIES[e.priority])}</span>`;
-  $("question-meta").innerHTML = metaHtml;
+  // ミックス中に他科目の問題が出たときだけ、札を描く所を譲る。
+  // 開いている科目の問題では paintQuestionMeta が偽を返すので、
+  // 下の1行がそのまま効く (本番の動きは1つも変わらない)。
+  if (
+    typeof MixScreen === "undefined" ||
+    !MixScreen.paintQuestionMeta ||
+    !MixScreen.paintQuestionMeta(q)
+  ) {
+    $("question-meta").innerHTML = metaHtml;
+  }
 
   $("question-text").innerHTML = questionText(q);
 
