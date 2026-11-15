@@ -57,3 +57,58 @@ test("3 quiz-engine が、渡された範囲を quiz に持たせている", () 
   expect(b - a).toBeLessThan(400);
 });
 
+test("4 ゲージの3つの数が、範囲の数え方から来ている", () => {
+  expect(countOf(SR, "const nums = masteredScopeNumbers(statsBefore, statsAfter);")).toBe(1);
+  expect(countOf(SR, "const before = nums.before;")).toBe(1);
+  expect(countOf(SR, "const after = nums.after;")).toBe(1);
+  expect(countOf(SR, "const total = nums.total;")).toBe(1);
+  // 開いている科目に固定した数え方が、ゲージの中に残っていないこと
+  const at = SR.indexOf("function animateMasteredGauge(");
+  expect(at).toBeGreaterThan(-1);
+  const end = SR.indexOf("function animateInputMasteredGauge(");
+  expect(end).toBeGreaterThan(at);
+  const body = SR.slice(at, end);
+  expect(body.indexOf("masteredCount(")).toBe(-1);
+  expect(body.indexOf("QUIZ_DATA.length")).toBe(-1);
+});
+
+test("5 ゲージの分母が、範囲の問題数から来ている", () => {
+  expect(countOf(RANK, "const total = masteredScopeTotal();")).toBe(1);
+  expect(countOf(RANK, "return masteredScopePct(count);")).toBe(1);
+  // masteredPct の中に開いている科目の問題数が残っていないこと。
+  // 呼び元はゲージの4箇所だけなので、ここを戻すとゲージの百分率だけが
+  // 分母違いになり、数と割合が食い違う画面になる。
+  const at = RANK.indexOf("function masteredPct(count) {");
+  expect(at).toBeGreaterThan(-1);
+  const end = RANK.indexOf("function inputMasteredPct(", at);
+  expect(end).toBeGreaterThan(at);
+  const body = RANK.slice(at, end);
+  expect(body.indexOf("QUIZ_DATA.length")).toBe(-1);
+  expect(body.indexOf("masteredScopePct(count)")).toBeGreaterThan(-1);
+  // 割り算の本体が、範囲の分母を使っていること
+  const pat = RANK.indexOf("function masteredScopePct(count) {");
+  expect(pat).toBeGreaterThan(-1);
+  const pbody = RANK.slice(pat, pat + 300);
+  expect(pbody.indexOf("masteredScopeTotal()")).toBeGreaterThan(-1);
+  expect(pbody.indexOf("QUIZ_DATA.length")).toBe(-1);
+});
+
+test("6 範囲の数え方の4つが、どれも1つだけ在る", () => {
+  for (const name of [
+    "function masteredScopeRows() {",
+    "function masteredScopeTotal() {",
+    "function masteredCountInScopeRow(row) {",
+    "function masteredScopeNumbers(statsBefore, statsAfter) {",
+  ]) {
+    expect(countOf(RANK, name)).toBe(1);
+  }
+});
+
+test("7 見出しが、範囲の本数から文面を組んでいる", () => {
+  expect(countOf(SR, "const rows = quiz.mixedScope;")).toBe(1);
+  const at = SR.indexOf("function paintMasteredScopeLabel() {");
+  expect(at).toBeGreaterThan(-1);
+  const body = SR.slice(at, at + 900);
+  expect(body.indexOf("Array.isArray(rows) ? rows.length : 0")).toBeGreaterThan(-1);
+  expect(body.indexOf("n > 0 ?")).toBeGreaterThan(-1);
+});
