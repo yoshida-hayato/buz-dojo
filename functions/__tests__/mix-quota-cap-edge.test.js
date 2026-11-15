@@ -114,3 +114,25 @@ describe("枠の足し算: 科目 id が特別な字でも継承した値を拾�
     expect(h.cap(odd, caps).length).toBe(2);
   });
 });
+
+describe("枠の足し算: 上限の一覧そのものが壊れていても落ちない", () => {
+  // この1件は scripts/dead-gate-scan.js が見つけた。
+  // caps の行を捨てる門 (row が無い / subjectId が無い) を外しても、
+  // 全試験が通っていた。壊れた一覧を渡す試験が1件も無かったためである。
+  // 門は現に効いている (外すと null の行で落ちる) ので、入力を足した。
+  test("一覧に null や科目名の無い行が混ざっても、投げない", () => {
+    const h = harness();
+    const caps = [null, { cap: 5 }, { subjectId: IDS[0], cap: 4 }, undefined];
+    const out = h.cap(h.slots, caps);
+    expect(out.length).toBe(4);
+    expect(countBySubject(out)[IDS[0]]).toBe(4);
+  });
+
+  test("科目名の無い行は、上限の一覧に1つも入らない", () => {
+    const h = harness();
+    const odd = h.slots.slice(0, 3).map((s) =>
+      Object.assign({}, s, { subjectId: "undefined" })
+    );
+    expect(h.cap(odd, [{ cap: 9 }]).length).toBe(0);
+  });
+});
