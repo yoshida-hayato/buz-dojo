@@ -420,6 +420,23 @@ const QuizStorage = {
     return { choiceMastered, inputMastered, wrongIds: wrong, answeredIds: answered };
   },
 
+  // ミックス出題用。開いている科目を差し替えずに、1問ぶんの成績を読む。
+  // 結果画面の「今回新しく習得」は、答える前と後の2回これを読む。開いている
+  // 科目の q を見ると、他科目の問題は常に見つからないので、習得したことが
+  // 1件も記録されない (問題 id は科目ごとに接頭が別なので必ず外れる)。
+  //
+  // 他科目のときだけ端末の控えを読み直す。1問につき2回読むので、
+  // ミックスで他科目に当たった回数ぶんだけ JSON を解く。通常の出題では
+  // 1度も読まない (開いている科目は this.stats で済む)。
+  questionStatsFor(subjectId, questionId) {
+    if (!subjectId || subjectId === this.subjectId) {
+      return this.stats.q[questionId];
+    }
+    const key = this._knownSubjectStorageKey(subjectId);
+    const full = key ? this._loadFromKey(key) : null;
+    return full && full.q ? full.q[questionId] : undefined;
+  },
+
   // ミックス出題用。開いている科目を差し替えずに、別の科目の集合を読む。
   // useSubject と違ってクラウドを読み直さないので同期で済む (端末の控えだけ)。
   // 混入検出 (_scrubPollutedStats) はここでは走らせない。あれは控えを
