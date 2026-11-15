@@ -47,7 +47,7 @@ async function startQuizAsync(settings, options = {}) {
     }
   }
 
-  const pool = buildPool(settings);
+  const pool = mixedSlots || buildPool(settings);
   if (pool.length === 0) return;
 
   let slots = orderPoolAvoidingRecent(pool, options.avoidIds);
