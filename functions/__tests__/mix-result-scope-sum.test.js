@@ -107,3 +107,63 @@ test("科目 id が無い行と、空の一覧は落とす", () => {
   expect(f([]).length).toBe(0);
 });
 
+test("ミックスでは、分母が混ぜた科目の問題数の合計になる", () => {
+  const scope = [
+    { subjectId: "a", total: 100, ids: ["a1", "a2"], masteredBefore: 7 },
+    { subjectId: "b", total: 100, ids: ["b1"], masteredBefore: 30 },
+    { subjectId: "c", total: 46, ids: ["c1"], masteredBefore: 12 },
+  ];
+  const L = loadNumbers({ mixed: true, mixedScope: scope },
+    { a: ["a1", "a2"], b: ["b1"], c: ["c1"] }, 100);
+  expect(L.denom()).toBe(246);
+  const n = L.numbers({ n: 7 }, { n: 7 });
+  expect(n.total).toBe(246);
+  expect(n.before).toBe(49);
+  expect(n.after).toBe(4);
+});
+
+test("後の数は、いまの控えから科目ごとに数え直す", () => {
+  const scope = [
+    { subjectId: "a", total: 10, ids: ["a1", "a2", "a3"], masteredBefore: 1 },
+    { subjectId: "b", total: 10, ids: ["b1", "b2"], masteredBefore: 0 },
+  ];
+  const L = loadNumbers({ mixed: true, mixedScope: scope },
+    { a: ["a1", "a2"], b: ["b2"] }, 10);
+  const n = L.numbers({ n: 1 }, { n: 1 });
+  expect(n.before).toBe(1);
+  expect(n.after).toBe(3);
+  expect(n.total).toBe(20);
+});
+
+test("範囲に無い id が控えで習得済みでも、後の数には入れない", () => {
+  const scope = [{ subjectId: "a", total: 2, ids: ["a1", "a2"], masteredBefore: 0 }];
+  const L = loadNumbers({ mixed: true, mixedScope: scope }, { a: ["a1", "a9", "a8"] }, 2);
+  expect(L.numbers({ n: 0 }, { n: 0 }).after).toBe(1);
+});
+
+test("ふつうの出題では、開いている科目だけを数える", () => {
+  const L = loadNumbers({ mixed: false, mixedScope: null }, {}, 100);
+  expect(L.denom()).toBe(100);
+  const n = L.numbers({ n: 9 }, { n: 12 });
+  expect(n.before).toBe(9);
+  expect(n.after).toBe(12);
+  expect(n.total).toBe(100);
+});
+
+test("mixed が真でなければ、範囲が在っても使わない", () => {
+  const scope = [{ subjectId: "a", total: 999, ids: ["a1"], masteredBefore: 5 }];
+  for (const q of [{ mixed: false, mixedScope: scope }, { mixed: 1, mixedScope: scope },
+                   { mixedScope: scope }, {}, null]) {
+    const L = loadNumbers(q, { a: ["a1"] }, 100);
+    expect(L.denom()).toBe(100);
+    expect(L.numbers({ n: 3 }, { n: 4 }).after).toBe(4);
+  }
+});
+
+test("ミックスだが範囲が空なら、開いている科目だけを数える", () => {
+  for (const scope of [[], null, undefined, "x"]) {
+    const L = loadNumbers({ mixed: true, mixedScope: scope }, {}, 77);
+    expect(L.denom()).toBe(77);
+    expect(L.numbers({ n: 2 }, { n: 5 }).after).toBe(5);
+  }
+});
