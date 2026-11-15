@@ -633,3 +633,43 @@ function resolveInputMode(entry, settings, forceInputMode) {
   if (!INPUT_CATEGORIES.has(entry.category)) return false;
   return (settings.answerMode || "choice") === "input";
 }
+
+// ミックス出題の「範囲」を作る。結果画面の習得ゲージが、混ぜた科目ぶんで
+// 数えるのに要る (rank.js の masteredScopeNumbers が受ける)。
+//
+// 範囲に入れるのは読めた科目だけである。選ばれていても読めなかった科目は、
+// その科目の問題数が分からないので分母に入れられない。
+//
+// masteredBefore は、答える前にその科目の控えで習得済みだった問題数である。
+// 呼び元 (MixSession) が科目を読んだ時点の集合を持っているので、ここで
+// その科目の現存問題だけに絞って数える。後の数は結果画面がいまの控えから
+// 同じ絞りで数えるので、前と後が同じ式になる。
+function mixedScopeFrom(sources) {
+  const list = Array.isArray(sources) ? sources : [];
+  const out = [];
+  list.forEach((src) => {
+    if (!src || !src.subjectId) return;
+    const entries = Array.isArray(src.entries) ? src.entries : [];
+    const ids = [];
+    const seen = Object.create(null);
+    entries.forEach((e) => {
+      if (!e || !e.id || seen[e.id]) return;
+      seen[e.id] = 1;
+      ids.push(e.id);
+    });
+    let mastered = 0;
+    const had = src.choiceMastered;
+    if (had && typeof had.has === "function") {
+      ids.forEach((id) => {
+        if (had.has(id)) mastered += 1;
+      });
+    }
+    out.push({
+      subjectId: src.subjectId,
+      total: ids.length,
+      ids: ids,
+      masteredBefore: mastered,
+    });
+  });
+  return out;
+}
