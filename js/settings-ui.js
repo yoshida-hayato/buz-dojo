@@ -501,6 +501,50 @@ function buildMixedPoolFrom(settings, sources) {
   return out;
 }
 
+// ミックス出題の枠の足し算。科目ごとの上限 (caps) を超えた枠を落とす。
+// 無料ぶんは科目ごとに1日20問なので、混ぜた出題枠をそのまま配ると、
+// 残り3問の科目から10問出て、7問ぶんは回答のたびに壁へ当たる。
+// Entitlement.mixedQuotaCaps が返す一覧をそのまま受ける。
+//
+// 並びは変えない。呼び元が orderPoolAvoidingRecent に通した後の順で渡すので、
+// ここで並べ直すと混ざり方が崩れる。先頭から見て、その科目の上限に達した
+// 枠だけを落とす。
+//
+// 落とす側 (fail closed) に倒してある。科目の分からない枠と、一覧に無い
+// 科目の枠は出さない。ここは現に課金が動いている境目なので、迷ったら
+// 出さないほうが安い。
+function capMixedSlotsByQuota(slots, caps) {
+  const list = Array.isArray(slots) ? slots : [];
+  // Object.create(null) にするのは、科目 id が toString や constructor と
+  // 同じ字でも継承した値を拾わないため。
+  const limit = Object.create(null);
+  (Array.isArray(caps) ? caps : []).forEach((row) => {
+    if (!row || !row.subjectId) return;
+    limit[String(row.subjectId)] = row.cap;
+  });
+  const used = Object.create(null);
+  const out = [];
+  list.forEach((slot) => {
+    const sid = slot && slot.subjectId ? String(slot.subjectId) : "";
+    const cap = limit[sid];
+    // 門はこの3行だけ。上限なしは Infinity だけで表し、それ以外は
+    // 数として読めて、かつ使った数が届いていない科目だけを通す。
+    // 一覧に無い科目と、科目の分からない枠は、上限が未定義になるので
+    // ここで落ちる。名前を見る門を別に置くと、外しても結果が1件も動かない
+    // 飾りになる (2026-11-15 に実測。失敗の型15 と 00:48便 の件)。
+    // 素の比較1本で書いてはいけない。n >= NaN は常に偽なので、壊れた上限が
+    // 「上限なし」に化ける。ここは現に課金が動いている境目なので、
+    // 読めない上限は1枠も出さない側に倒す。
+    if (cap !== Infinity) {
+      if (typeof cap !== "number" || !Number.isFinite(cap)) return;
+      if ((used[sid] || 0) >= cap) return;
+    }
+    used[sid] = (used[sid] || 0) + 1;
+    out.push(slot);
+  });
+  return out;
+}
+
 // 開いている1科目ぶんの集合を大域と DOM から集めて渡す。
 // ミックスの画面は、ここを通さず buildPoolFrom を科目ごとに呼ぶ。
 function buildPool(settings) {
