@@ -134,3 +134,101 @@ function restoreLeftovers() {
     const b = path.join(BACKUP_DIR, f);
     if (fs.existsSync(target)) {
       fs.writeFileSync(target, fs.readFileSync(b, "utf8"));
+      n++;
+      console.log("前の走りの書き替えを戻した: " + path.basename(target));
+    }
+    fs.unlinkSync(b);
+  });
+  return n;
+}
+
+// 2つ同時に走らせてはいけない。両方が同じファイルを書き替えるので、
+// 片方の控えがもう片方の書き替えを原本として保存し、戻しても直らない
+// (2026-11-15 に実測。これで js/billing.js に1行残った)。
+const LOCK = path.join(ROOT, ".dead-gate-backup", "running.lock");
+
+function takeLock() {
+  if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR);
+  if (fs.existsSync(LOCK)) {
+    const owner = fs.readFileSync(LOCK, "utf8").trim();
+    console.log("もう1つ走っている (" + owner + ")。");
+    console.log("本当に走っていないなら " + LOCK + " を消してから始めること。");
+    return false;
+  }
+  fs.writeFileSync(LOCK, String(process.pid));
+  return true;
+}
+
+function dropLock() {
+  if (fs.existsSync(LOCK)) fs.unlinkSync(LOCK);
+}
+
+function main() {
+  const filter = process.argv[2] || "";
+  const files = fs
+    .readdirSync(JS_DIR)
+    .filter((f) => f.lastIndexOf(".js") === f.length - 3)
+    .filter((f) => !filter || f.indexOf(filter) >= 0);
+
+  // 錠を先に取る。順番が逆だと、2つめの走りが1つめの書き替えを
+  // 「前の走りの残り」として戻してしまう (2026-11-15 に実測)。
+  if (!takeLock()) process.exit(1);
+  restoreLeftovers();
+
+  const base = runSuite();
+  const baseFails = failCount(base.out);
+  if (baseFails !== 0) {
+    console.log("走らせる前から " + baseFails + "件 落ちている。先に直すこと");
+    process.exit(1);
+  }
+  console.log("土台は全通。走査する js は " + files.length + "枚");
+  console.log("");
+
+  const dead = [];
+  let tried = 0;
+  for (const f of files) {
+    const p = path.join(JS_DIR, f);
+    const original = fs.readFileSync(p, "utf8");
+    saveBackup(p, original);
+    const lines = original.split(NL);
+    const targets = [];
+    lines.forEach((line, i) => {
+      if (isGateLine(line) && disable(line)) targets.push(i);
+    });
+    if (!targets.length) continue;
+    process.stdout.write(f + " (" + targets.length + "行) ");
+    try {
+      for (const i of targets) {
+        const copy = lines.slice();
+        copy[i] = disable(copy[i]);
+        fs.writeFileSync(p, copy.join(NL));
+        const r = runSuite();
+        const n = failCount(r.out);
+        tried++;
+        if (n === 0) {
+          dead.push({ file: f, line: i + 1, text: lines[i].trim() });
+          process.stdout.write("!");
+        } else {
+          process.stdout.write(".");
+        }
+      }
+    } finally {
+      fs.writeFileSync(p, original);
+      dropBackup(p);
+    }
+    process.stdout.write(NL);
+  }
+
+  console.log("");
+  console.log("外した門 " + tried + "行 のうち、1件も落ちなかったのは " + dead.length + "行");
+  dead.forEach((d) => {
+    console.log("  " + d.file + ":" + d.line + "  " + d.text);
+  });
+  if (!dead.length) console.log("  (無し)");
+  console.log("");
+  console.log("拾った行は (a) 動かない門 か (b) 見張りの無い門 のどちらかである。");
+  console.log("どちらかは人が読んで決めること。");
+  dropLock();
+}
+
+main();
