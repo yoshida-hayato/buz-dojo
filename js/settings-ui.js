@@ -561,6 +561,7 @@ function buildPool(settings) {
 }
 
 function updatePoolCount() {
+  if (typeof MixScreen !== "undefined") MixScreen.ensure();
   const settings = getSettings();
   const pool = buildPool(settings);
   const usesInput =
