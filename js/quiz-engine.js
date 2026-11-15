@@ -679,7 +679,7 @@ function finishAnswer(isCorrect, givenText) {
     Entitlement.recordAnswer(answerSubject);
   }
 
-  const qsAfter = QuizStorage.load().q[questionId];
+  const qsAfter = QuizStorage.questionStatsFor(answerSubject, questionId);
   if (!q.inputMode) {
     const nowChoiceMastered = QuizStorage.isChoiceMastered(qsAfter);
     if (!wasChoiceMastered && nowChoiceMastered) {
