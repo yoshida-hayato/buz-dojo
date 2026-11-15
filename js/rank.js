@@ -418,7 +418,10 @@ function rankInputMasteredCount(stats) {
 }
 
 function masteredPct(count) {
-  return QUIZ_DATA.length === 0 ? 0 : Math.round((count / QUIZ_DATA.length) * 100);
+  // 分母は masteredScopeTotal が決める。ミックス出題では混ぜた科目の
+  // 問題数の合計になり、通常の出題では開いている科目の問題数に落ちる。
+  // 呼び元は repo 全体で結果画面の習得ゲージの4箇所だけである (機械で数えた)。
+  return masteredScopePct(count);
 }
 
 function inputMasteredPct(count) {
