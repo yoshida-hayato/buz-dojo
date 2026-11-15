@@ -422,3 +422,31 @@ function animateInputMasteredGauge(statsBefore, statsAfter) {
     renderMasteredNewList(newList, entries, "今回新しく習得（記述式）");
   }, 600);
 }
+
+// 習得ゲージの見出しに、数えている範囲を書く。
+//
+// ミックス出題では答えが科目ごとの控えへ分かれて残る (QuizStorage の
+// recordForSubject)。だがこのゲージは開いている科目の成績と QUIZ_DATA の
+// 問題数しか見ないので、他科目で習得した問題は1つも数に入らない。
+// 2026-11-15 に本物の Chromium で測ると、3科目を混ぜて10問に答えて
+// ゲージは 0 から 0 / 100問 のままだった (100 は開いている科目の問題数)。
+// 控えには3科目ぶん10問が入っているのに、画面は「何も増えなかった」と
+// 読める。数を科目ごとに足し合わせるのは別便の仕事なので、ここでは
+// 数えている範囲を言う。嘘にならないほうが先である。
+function paintMasteredScopeLabel() {
+  const el =
+    typeof document === "undefined" ? null : document.getElementById("mastered-label");
+  if (!el) return;
+  const base = "選択式習得（2回連続正解）";
+  const mixed = typeof quiz !== "undefined" && quiz && quiz.mixed === true;
+  if (!mixed) {
+    el.textContent = base;
+    return;
+  }
+  const name =
+    typeof CURRENT_SUBJECT !== "undefined" && CURRENT_SUBJECT
+      ? String(CURRENT_SUBJECT.shortTitle || CURRENT_SUBJECT.title || "")
+      : "";
+  const scope = name ? name + "ぶん" : "開いている科目ぶん";
+  el.textContent = base + " ・ " + scope + "。他の科目ぶんは各科目の成績に入ります";
+}
