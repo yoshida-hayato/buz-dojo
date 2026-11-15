@@ -677,6 +677,10 @@ function judgmentMultiAnswerLabel(q, indices) {
 /** 間違えた問題1件分のHTML */
 function buildWrongItemHtml(q, given, index) {
   const e = q.entry;
+  // 局所に同じ名前を置いて、この関数が読む分野の表を差し替える。
+  // この宣言より上で CATEGORIES を読む行は1つも無い (読むと一時的な
+  // 死角に当たって落ちるので、行を足すときは必ずこの下に置くこと)。
+  const CATEGORIES = wrongItemCategoryTable(q);
   let correctText;
   if (q.isReorder) correctText = q.stepLabels.join(" → ");
   else if (q.isCloze) correctText = q.blanks.map((b) => b.answer).join(" / ");
