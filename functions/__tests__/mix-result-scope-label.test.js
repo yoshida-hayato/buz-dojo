@@ -47,16 +47,20 @@ test("ふつうの出題では、見出しを1文字も変えない", () => {
   expect(out).toBe(BASE);
 });
 
-test("ミックス出題では、開いている科目ぶんだと書く", () => {
+// 3波の1波目。ゲージが混ぜた科目ぶんを足し合わせるようになるので、
+// 範囲の言い方が変わる。前と後のどちらでも真になる形に緩めておく。
+// 2波目で文面を直し、3波目でこの2件を新しい文面で締め直す。
+test("ミックス出題では、範囲を言い足す", () => {
   const out = load({ id: "ap-kamoku-b", shortTitle: "応用情報B" }, { mixed: true });
   expect(out.indexOf(BASE)).toBe(0);
-  expect(out.indexOf("応用情報Bぶん")).toBeGreaterThan(-1);
-  expect(out.indexOf("他の科目ぶんは各科目の成績に入ります")).toBeGreaterThan(-1);
+  expect(out.length).toBeGreaterThan(BASE.length);
+  expect(out.indexOf("ぶん")).toBeGreaterThan(-1);
 });
 
 test("科目の題が無くても、範囲は言う", () => {
   const out = load(null, { mixed: true });
-  expect(out.indexOf("開いている科目ぶん")).toBeGreaterThan(-1);
+  expect(out.indexOf(BASE)).toBe(0);
+  expect(out.indexOf("ぶん")).toBeGreaterThan(-1);
 });
 
 test("mixed が真でなければ、どの形でも元の見出しに戻す", () => {
