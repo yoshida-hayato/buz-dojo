@@ -2307,8 +2307,8 @@ const QuizStorage = {
     return daily;
   },
 
-  _bumpDaily(isCorrect) {
-    const s = this.stats;
+  _bumpDaily(isCorrect, target) {
+    const s = target || this.stats;
     if (!s.daily || typeof s.daily !== "object" || Array.isArray(s.daily)) s.daily = {};
     const k = this._todayKey();
     if (!s.daily[k]) s.daily[k] = { a: 0, c: 0 };
