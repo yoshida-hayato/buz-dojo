@@ -341,9 +341,10 @@ function renderMasteredNewList(newList, entries, label) {
 /** クイズ前→クイズ後の習得済み数をゲージでアニメーション表示 */
 function animateMasteredGauge(statsBefore, statsAfter) {
   paintMasteredScopeLabel();
-  const before = masteredCount(statsBefore);
-  const after = masteredCount(statsAfter);
-  const total = QUIZ_DATA.length;
+  const nums = masteredScopeNumbers(statsBefore, statsAfter);
+  const before = nums.before;
+  const after = nums.after;
+  const total = nums.total;
   const fill = $("mastered-fill");
   const badge = $("mastered-badge");
   const text = $("mastered-text");
