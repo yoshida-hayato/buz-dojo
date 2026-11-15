@@ -753,9 +753,30 @@ PDF の頼み事 (情報処理推進機構の公開問題の冊子を src/exams/
   (g) firestore.rules の公開書込の口 (questionReports と siteInquiries) は
   hasAll なので、宣言したキー以外を好きなだけ足せる。認証も要らない。
   売上0件の段では踏む人が居ないが、閉じるなら hasOnly にする。
-  ただしエミュレータが動かないので、落ちても本番でしか分からない。
-  やるなら、字面だけを見るガード (クライアントが書くキーの一覧と
-  rules の一覧を突き合わせる) を同じ便で置くこと。いまの最優先はこれ。
+  いまの最優先はこれ。18:48便 が材料をそろえたので、次の便はすぐ書ける。
+  まず訂正: 「エミュレータが動かないので本番でしか分からない」は、
+  私の手元についてだけ正しい。ブリッジは npm run test:rules を走らせ、
+  それは firebase emulators:exec で本物の Firestore エミュレータを起こして
+  firestore.rules を評価する (scripts/bridge/apply_patch.py の run_tests と
+  package.json を読んで確かめた)。しかもテストが落ちた件は破棄されるので、
+  規則を間違えても本番には出ない。だから rules を触るのは、手元で
+  走らせられないだけで、賭けではない。試験は firestore-tests の下の rules の1枚に
+  足す (いまは entitlements と anonUsers と questionStats の3つを見ている)。
+  クライアントが現に書くキーは機械で数えた。questionReports は19個で
+  questionId / subjectId / subjectTitle / questionCategory / questionModule /
+  questionCode / questionText / registeredAnswer / userAnswer / wasCorrect /
+  reasonIds / reasonLabels / message / note / appVersion / userEmail /
+  userId / status / createdAt。siteInquiries は11個で category /
+  categoryLabel / message / page / subjectId / subjectTitle / appVersion /
+  userEmail / userId / status / createdAt。rules の hasAll は前者が4つ
+  (questionId / message / status / createdAt)、後者が3つ (message / status /
+  createdAt) しか宣言していない。
+  注意が1つ。hasOnly の一覧を手で書くと、クライアントが1つ足した日に
+  利用者の問題指摘が黙って落ちる (fail closed)。そして自分で書いた一覧で
+  自分の試験を書くと、一覧の間違いは試験に映らない。だから同じ便で、
+  js/question-reports.js と js/site-inquiries.js の doc の字面から
+  キーを数えて rules の一覧と突き合わせるガードを置くこと。期待値を
+  手で書かないのが肝である。
   (b) 科目B の着地頁 (guides) を1枚書く。科目Bは競合が過去問を持って
   いない市場で、いまこちらは自作100問を2科目ぶん無料で出している。
   ただし索引に1枚も入っていない段では、効果を測る手が無いことを承知で
