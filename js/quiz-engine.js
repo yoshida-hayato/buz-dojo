@@ -80,6 +80,10 @@ async function startQuizAsync(settings, options = {}) {
     idx: 0,
     correctCount: 0,
     wrongs: [],
+    // ミックス出題かどうか。他科目の答えをその科目の控えへ書き分ける許可を
+    // QuizStorage.record に渡すのに要る。通常の出題では偽なので、宛先が
+    // 食い違う答えは従来どおり捨てられる (科目の切り替えの途中の保険)。
+    mixed: !!mixedSlots,
     settings,
     rankBefore: getRank(statsNow).name,
     // 経験値・習得ゲージ用: クイズ開始時点の成績スナップショット（q で前後比較する）
