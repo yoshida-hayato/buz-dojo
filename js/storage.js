@@ -1694,8 +1694,14 @@ const QuizStorage = {
     this.invalidateStatsSummariesCache();
   },
 
-  _bumpMasteredCounts(wasChoiceMastered, nowChoiceMastered, wasInputMastered, nowInputMastered) {
-    const s = this.stats;
+  _bumpMasteredCounts(
+    wasChoiceMastered,
+    nowChoiceMastered,
+    wasInputMastered,
+    nowInputMastered,
+    target
+  ) {
+    const s = target || this.stats;
     if (typeof s.masteredChoice !== "number") {
       s.masteredChoice = this._countChoiceMasteredFromQ(s.q);
     } else {
