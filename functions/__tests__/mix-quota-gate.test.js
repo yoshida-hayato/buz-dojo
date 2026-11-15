@@ -61,3 +61,68 @@ test("無料科目が1本混ざれば、切り下げは起きない", () => {
   expect(g.cappedTo).toBe(undefined);
 });
 
+
+test("権利を買った後は、切り下げが消える", () => {
+  const h = H.load(H.usageSeed({ sap: 19, "biz-career": 19 }));
+  const before = h.ent.canStartMixed(["sap", "biz-career"], 10);
+  expect(before.cappedTo).toBe(2);
+  h.ent.startSync("uid-3");
+  h.snapshot({ pack: true, subjects: {} });
+  const after = h.ent.canStartMixed(["sap", "biz-career"], 10);
+  expect(Number.isFinite(after.remaining)).toBe(false);
+  expect(after.cappedTo).toBe(undefined);
+});
+
+test("空の一覧では開始できない", () => {
+  const h = H.load(H.usageSeed({}));
+  expect(h.ent.canStartMixed([], 10).ok).toBe(false);
+  expect(h.ent.canStartMixed(null, 10).ok).toBe(false);
+  expect(h.ent.canStartMixed(["", null], 10).ok).toBe(false);
+});
+
+test("頼んだ数が壊れていても、残りを超えない", () => {
+  // 負の数をそのまま返すと、呼び元の slice が末尾から削る形になり、
+  // 残り2問の人に95問を配る (2026-11-15 に実測)。無料枠の境目なので
+  // 読めない数は「指定なし」と同じに扱って残りぜんぶにする。
+  const h = H.load(H.usageSeed({ sap: 18 }));
+  const bads = [-1, -5, 0, "ななめ", null, undefined, NaN, -Infinity];
+  bads.forEach((w) => {
+    const g = h.ent.canStartMixed(["sap"], w);
+    expect(g.ok).toBe(true);
+    expect(g.cappedTo).toBe(2);
+    expect(h.ent.canStart("sap", w).cappedTo).toBe(2);
+  });
+});
+
+test("整数でない数は、切り捨てる", () => {
+  // 3.7 を渡すと「3.7問で始めますか」と聞くことになり、slice も3問しか取らない。
+  const h = H.load(H.usageSeed({}));
+  expect(h.ent.canStartMixed(["sap", "biz-career"], 3.7).cappedTo).toBe(3);
+  expect(h.ent.canStart("sap", 7.9).cappedTo).toBe(7);
+});
+
+test("画面の選択肢では、切り下げの答えが変わっていない", () => {
+  // 1,248通りの組 (科目13本 x 使った数6通り x 科目の組4通り x 選択肢4つ) で
+  // 直す前と後の出力が一致することを測ってある。ここはその代表を固定する。
+  const h = H.load(H.usageSeed({ sap: 12, "biz-career": 20 }));
+  expect(h.ent.canStartMixed(["sap", "biz-career"], 10).cappedTo).toBe(8);
+  expect(h.ent.canStartMixed(["sap", "biz-career"], 20).cappedTo).toBe(8);
+  expect(h.ent.canStartMixed(["sap", "biz-career"], "all").cappedTo).toBe(8);
+  expect(h.ent.canStart("sap", 10).cappedTo).toBe(8);
+  expect(h.ent.canStart("sap", 30).cappedTo).toBe(8);
+});
+
+test("枠を切る所も、読めない数では全部にする", () => {
+  // 無料枠の門を通らない経路 (権利が在る科目) では、頼んだ数が
+  // そのまま slice に渡る。負の数は末尾から削る形になるので、
+  // Entitlement と同じ規則 (読めない数は指定なし) をここでも当てる。
+  const fs = require("fs");
+  const path = require("path");
+  const ENGINE = fs.readFileSync(
+    path.join(__dirname, "..", "..", "js", "quiz-engine.js"),
+    "utf8"
+  );
+  expect(ENGINE.split("slots.slice(0, Number(settings.count))").length - 1).toBe(0);
+  expect(ENGINE.split("const want = Math.floor(Number(settings.count));").length - 1).toBe(1);
+  expect(ENGINE.split("if (want > 0) slots = slots.slice(0, want);").length - 1).toBe(1);
+});
