@@ -87,7 +87,7 @@ test("宛先が接頭からの当て推量ではない", () => {
 });
 
 test("書き込みの3箇所が宛先を受け取っている", () => {
-  expect(countOf(ENGINE, "QuizStorage.record(questionId, isCorrect, !!q.inputMode, answerSubject)")).toBe(1);
+  expect(countOf(ENGINE, "QuizStorage.record(questionId, isCorrect, !!q.inputMode, answerSubject")).toBe(1);
   expect(countOf(ENGINE, "Entitlement.recordAnswer(answerSubject)")).toBe(1);
   expect(countOf(ENGINE, "Entitlement.recordAnswer(CURRENT_SUBJECT.id)")).toBe(0);
   expect(countOf(ENGINE, "showQuestionGlobalRate(questionId, isCorrect, !!q.inputMode, answerSubjectId(q))")).toBe(1);
