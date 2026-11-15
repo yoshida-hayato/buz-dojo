@@ -103,6 +103,15 @@ test("章の進みは、宛先が開いている科目と同じときだけ積�
   expect(cond.indexOf("answerSubject === CURRENT_SUBJECT.id")).toBeGreaterThan(-1);
 });
 
+test("他科目への書き分けは、ミックス出題のときだけ許す", () => {
+  // 通常の出題で許可を真にすると、科目を切り替える途中の食い違いでも
+  // 書いてしまう。許可が立つのは mixedSlots が渡されたときだけである。
+  expect(countOf(ENGINE, "mixed: !!mixedSlots")).toBe(1);
+  expect(countOf(ENGINE, "allowForeign: !!(quiz && quiz.mixed)")).toBe(1);
+  expect(countOf(ENGINE, "allowForeign: true")).toBe(0);
+  expect(countOf(ENGINE, "QuizStorage.record(questionId, isCorrect, !!q.inputMode, answerSubject, {")).toBe(1);
+});
+
 test("問題を組むときに科目 id を添えている", () => {
   expect(countOf(ENGINE, "built.subjectId = slot.subjectId || answerSubjectId(null)")).toBe(1);
 });
