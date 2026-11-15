@@ -174,7 +174,10 @@ const MixScreen = (function () {
       return;
     }
     say("");
-    startQuiz(want, { mixedSlots: slots });
+    startQuiz(want, {
+      mixedSlots: slots,
+      mixedScope: mixedScopeFrom(res.sources),
+    });
   }
 
   // 一覧は開いている科目ごとに1度だけ描く。updatePoolCount は出題設定を
