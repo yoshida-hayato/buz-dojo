@@ -445,10 +445,11 @@ function paintMasteredScopeLabel() {
     el.textContent = base;
     return;
   }
-  const name =
-    typeof CURRENT_SUBJECT !== "undefined" && CURRENT_SUBJECT
-      ? String(CURRENT_SUBJECT.shortTitle || CURRENT_SUBJECT.title || "")
-      : "";
-  const scope = name ? name + "ぶん" : "開いている科目ぶん";
-  el.textContent = base + " ・ " + scope + "。他の科目ぶんは各科目の成績に入ります";
+  // ゲージが混ぜた科目ぶんを足し合わせるようになったので、範囲は
+  // 「混ぜた N 科目ぶん」である。開いている科目の名前は出さない。
+  // 他の科目ぶんも、もうこの数に入っている。
+  const rows = quiz.mixedScope;
+  const n = Array.isArray(rows) ? rows.length : 0;
+  const scope = n > 0 ? "混ぜた" + n + "科目ぶん" : "混ぜた科目ぶん";
+  el.textContent = base + " ・ " + scope;
 }
